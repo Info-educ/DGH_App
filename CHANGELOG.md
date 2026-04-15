@@ -5,6 +5,29 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## [3.1.0] — Sprint 5 bis — UX & Dashboard enrichi
+
+### Ajouté
+- 📐 **HP/HSA sur les heures pédagogiques complémentaires** — chaque HPC peut être déclarée en H-Poste ou HSA ; impact immédiat sur le solde et les totaux du tableau de bord
+- 🖱️ **Bouton « Tout sélectionner / désélectionner »** dans la modal HPC pour sélectionner toutes les classes en un clic
+- 📊 **Encart HP/HSA dans le tableau de bord** — enveloppe / consommées / disponibles, avec barre de progression séparée pour HP et HSA
+- 🔍 **Tooltips au survol des KPI** du tableau de bord (enveloppe, HP, HSA, solde) : détail complet avec ventilation Dotation / HPC
+- ⊞ **Bouton « Tout déplier / replier »** dans Dotation DGH pour afficher tous les groupes de cours en un clic
+- 📋 **Tableau des besoins MEN par niveau** dans Dotation DGH — divisions, h/div, total MEN, HP allouées, HSA, écart par niveau
+- 📊 **Total général** en bas du tableau Dotation (HP + HSA allouées)
+- 🏷️ **Badge « Structure »** dans la colonne Dispositif des classes — s'affiche automatiquement si la classe est rattachée à des groupes de cours ou des HPC
+- 💬 **Titre modal HPC au pluriel** — « Heures complémentaires »
+
+### Corrigé
+- 🐛 **Modal établissement** trop étroit (520px → 640px) — meilleure lisibilité des onglets et champs
+
+### Technique
+- `data.js` v3.1.0 — migration automatique `typeHeure: 'hp'` sur les HPC existantes
+- `bilanDotation()` intègre désormais les HPC dans les totaux HP/HSA
+- Rafraîchissement dashboard après toute modification HPC (ajout, modification, suppression)
+
+---
+
 ## [1.3.0] — Sprint 3 — Dotation DGH
 
 ### Ajouté

@@ -101,16 +101,34 @@ const Calculs = (() => {
     const hPosteEnv = dot.hPosteEnveloppe || 0;
     const hsaEnv    = dot.hsaEnveloppe    || 0;
     const enveloppe = Math.round((hPosteEnv + hsaEnv) * 2) / 2;
-    const repartition = anneeData.repartition || [];
+    const repartition    = anneeData.repartition    || [];
+    const heuresPedaComp = anneeData.heuresPedaComp || [];
     let totalHP = 0, totalHSA = 0;
+    // HP/HSA des disciplines
     repartition.forEach(r => { totalHP += r.hPoste||0; totalHSA += r.hsa||0; });
+    // HP/HSA des heures pédagogiques complémentaires
+    heuresPedaComp.forEach(h => {
+      if ((h.typeHeure||'hp') === 'hsa') totalHSA += h.heures||0;
+      else                               totalHP  += h.heures||0;
+    });
     totalHP  = Math.round(totalHP *2)/2;
     totalHSA = Math.round(totalHSA*2)/2;
     const totalAlloue = Math.round((totalHP+totalHSA)*2)/2;
     const solde       = Math.round((enveloppe-totalAlloue)*2)/2;
     const pctConsomme = enveloppe > 0 ? Math.round((totalAlloue/enveloppe)*100) : 0;
+    // Détail HP/HSA : discipline seule vs HPC seule (utile pour le dashboard)
+    let totalHPDisc = 0, totalHSADisc = 0, totalHPHPC = 0, totalHSAHPC = 0;
+    repartition.forEach(r => { totalHPDisc += r.hPoste||0; totalHSADisc += r.hsa||0; });
+    heuresPedaComp.forEach(h => {
+      if ((h.typeHeure||'hp') === 'hsa') totalHSAHPC += h.heures||0;
+      else                               totalHPHPC  += h.heures||0;
+    });
     return { enveloppe, hPosteEnv, hsaEnv, totalHP, totalHSA, totalAlloue, solde,
-             pctConsomme, nbDisciplines:(anneeData.disciplines||[]).length, depassement:solde<0 };
+             pctConsomme, nbDisciplines:(anneeData.disciplines||[]).length, depassement:solde<0,
+             totalHPDisc: Math.round(totalHPDisc*2)/2,
+             totalHSADisc: Math.round(totalHSADisc*2)/2,
+             totalHPHPC: Math.round(totalHPHPC*2)/2,
+             totalHSAHPC: Math.round(totalHSAHPC*2)/2 };
   }
 
   function besoinsParDiscipline(structures, disciplines, repartition) {

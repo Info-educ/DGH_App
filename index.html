@@ -43,7 +43,7 @@
       <input type="file" id="fileImport" accept=".json" style="display:none" />
     </div>
     <div class="sidebar-footer">
-      <span>v3.0.0</span>
+      <span>v3.1.0</span>
       <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -71,10 +71,10 @@
           <p class="view-subtitle">Vue d'ensemble · <span id="dashYear">2025–2026</span></p>
         </div>
         <div class="kpi-grid">
-          <div class="kpi-card" data-color="blue"><div class="kpi-label">Enveloppe DGH</div><div class="kpi-value" id="kpi-dghtotal">— h</div><div class="kpi-sub">HP + HSA total</div></div>
-          <div class="kpi-card" data-color="green"><div class="kpi-label">Heures-poste</div><div class="kpi-value" id="kpi-hposte">— h</div><div class="kpi-sub" id="kpi-hposte-sub">dotation structurelle</div></div>
-          <div class="kpi-card" data-color="indigo"><div class="kpi-label">HSA</div><div class="kpi-value" id="kpi-hsa-total">— h</div><div class="kpi-sub" id="kpi-hsa-sub">heures sup payées</div></div>
-          <div class="kpi-card" data-color="amber"><div class="kpi-label">Solde disponible</div><div class="kpi-value" id="kpi-solde">— h</div><div class="kpi-sub" id="kpi-solde-sub">heures restantes</div></div>
+          <div class="kpi-card kpi-tooltip-card" data-color="blue" data-kpi="dghtotal"><div class="kpi-label">Enveloppe DGH</div><div class="kpi-value" id="kpi-dghtotal">— h</div><div class="kpi-sub">HP + HSA total</div><div class="kpi-tooltip" id="kpi-tooltip-dghtotal"></div></div>
+          <div class="kpi-card kpi-tooltip-card" data-color="green" data-kpi="hposte"><div class="kpi-label">Heures-poste</div><div class="kpi-value" id="kpi-hposte">— h</div><div class="kpi-sub" id="kpi-hposte-sub">dotation structurelle</div><div class="kpi-tooltip" id="kpi-tooltip-hposte"></div></div>
+          <div class="kpi-card kpi-tooltip-card" data-color="indigo" data-kpi="hsa"><div class="kpi-label">HSA</div><div class="kpi-value" id="kpi-hsa-total">— h</div><div class="kpi-sub" id="kpi-hsa-sub">heures sup payées</div><div class="kpi-tooltip" id="kpi-tooltip-hsa"></div></div>
+          <div class="kpi-card kpi-tooltip-card" data-color="amber" data-kpi="solde"><div class="kpi-label">Solde disponible</div><div class="kpi-value" id="kpi-solde">— h</div><div class="kpi-sub" id="kpi-solde-sub">heures restantes</div><div class="kpi-tooltip" id="kpi-tooltip-solde"></div></div>
           <div class="kpi-card" data-color="red"><div class="kpi-label">Alertes actives</div><div class="kpi-value" id="kpi-alertes">—</div><div class="kpi-sub">dépassements / écarts</div></div>
           <div class="kpi-card" data-color="teal"><div class="kpi-label">Divisions</div><div class="kpi-value" id="kpi-divisions">—</div><div class="kpi-sub" id="kpi-effectif">— élèves</div></div>
         </div>
@@ -87,6 +87,24 @@
           <div class="progress-legend">
             <span class="prog-leg-item prog-leg-hp">H-Poste allouées : <strong id="prog-leg-hp">—</strong></span>
             <span class="prog-leg-item prog-leg-hsa">HSA allouées : <strong id="prog-leg-hsa">—</strong></span>
+          </div>
+        </div>
+        <!-- Encart HP/HSA consommé / disponible -->
+        <div class="dash-hphsa-grid" id="dashHpHsaGrid" style="display:none">
+          <div class="dash-hphsa-block dash-hphsa-hp">
+            <div class="dash-hphsa-title">Heures-Poste (HP)</div>
+            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Enveloppe</span><span class="dash-hphsa-val" id="dash-hp-env">— h</span></div>
+            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Consommées</span><span class="dash-hphsa-val dash-hphsa-used" id="dash-hp-used">— h</span></div>
+            <div class="dash-hphsa-row dash-hphsa-dispo"><span class="dash-hphsa-label">Disponibles</span><span class="dash-hphsa-val dash-hphsa-free" id="dash-hp-free">— h</span></div>
+            <div class="dash-hphsa-bar"><div class="progress-track"><div class="progress-fill dot-bar-hp" id="dash-bar-hp" style="width:0%"></div></div></div>
+          </div>
+          <div class="dash-hphsa-sep">+</div>
+          <div class="dash-hphsa-block dash-hphsa-hsa">
+            <div class="dash-hphsa-title">HSA autorisées</div>
+            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Enveloppe</span><span class="dash-hphsa-val" id="dash-hsa-env">— h</span></div>
+            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Consommées</span><span class="dash-hphsa-val dash-hphsa-used" id="dash-hsa-used">— h</span></div>
+            <div class="dash-hphsa-row dash-hphsa-dispo"><span class="dash-hphsa-label">Disponibles</span><span class="dash-hphsa-val dash-hphsa-free" id="dash-hsa-free">— h</span></div>
+            <div class="dash-hphsa-bar"><div class="progress-track"><div class="progress-fill dot-bar-hsa-part" id="dash-bar-hsa" style="width:0%"></div></div></div>
           </div>
         </div>
         <div class="empty-state" id="emptyState">
@@ -151,6 +169,7 @@
               <p class="view-subtitle">Enveloppe · répartition par discipline · groupes de cours</p>
             </div>
             <div class="view-header-actions">
+              <button class="btn-secondary" id="btnToggleAllGC" title="Déplier/replier tous les groupes de cours">⊞ Tout déplier</button>
               <button class="btn-secondary" id="btnSuggerer">💡 Suggérer HP</button>
               <button class="btn-secondary" id="btnInitDisc">★ Disciplines MEN</button>
               <button class="btn-primary" id="btnAddDisc">+ Discipline</button>
@@ -208,6 +227,15 @@
             <span class="prog-leg-item prog-leg-hsa">HSA : <strong id="dot-leg-hsa">—</strong></span>
           </div>
         </div>
+        <!-- Totaux par niveau MEN -->
+        <div class="section-card dot-niveau-recap-card" id="dotNiveauRecap" style="display:none">
+          <div class="section-card-header"><h2>Besoins MEN par niveau</h2><span class="form-hint">Grille BO spécial n°11 du 26 novembre 2015</span></div>
+          <table class="struct-niveau-table" id="dotNiveauTable">
+            <thead><tr><th>Niveau</th><th class="col-num">Divisions</th><th class="col-num">H/div MEN</th><th class="col-num">Total MEN</th><th class="col-num dot-col-hp">HP allouées</th><th class="col-num dot-col-hsa">HSA allouées</th><th class="col-num">Écart</th></tr></thead>
+            <tbody id="dotNiveauBody"></tbody>
+            <tfoot id="dotNiveauFoot"></tfoot>
+          </table>
+        </div>
         <div class="section-card">
           <div class="section-card-header">
             <h2>Répartition par discipline</h2>
@@ -217,6 +245,13 @@
             </div>
           </div>
           <div id="dot-list"></div>
+          <!-- Total général dotation -->
+          <div class="dot-total-bar" id="dotTotalBar" style="display:none">
+            <span class="dot-total-label">Total alloué (Dotation)</span>
+            <span class="dot-total-hp"><span class="dot-col-badge dot-col-hp">HP</span> <strong id="dot-total-hp-val">0 h</strong></span>
+            <span class="dot-total-hsa"><span class="dot-col-badge dot-col-hsa">HSA</span> <strong id="dot-total-hsa-val">0 h</strong></span>
+            <span class="dot-total-sum">= <strong id="dot-total-sum-val">0 h</strong></span>
+          </div>
         </div>
         <p class="dot-footnote">Besoin théorique calculé d'après les grilles horaires MEN (BO spécial n°11 du 26 novembre 2015) × nombre de divisions par niveau.</p>
       </section>
@@ -437,7 +472,7 @@
   <!-- ══ MODAL HPC ════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="modalHPC" role="dialog" aria-modal="true">
     <div class="modal modal-lg">
-      <div class="modal-header"><h2 id="modalHPCTitle">Ajouter une heure complémentaire</h2><button class="modal-close" id="modalHPCClose">✕</button></div>
+      <div class="modal-header"><h2 id="modalHPCTitle">Ajouter des heures complémentaires</h2><button class="modal-close" id="modalHPCClose">✕</button></div>
       <div class="modal-body">
         <input type="hidden" id="modalHPCId" />
         <div class="form-group"><label for="inputHPCNom">Intitulé <span class="form-required">*</span></label><input type="text" id="inputHPCNom" placeholder="ex. Latin 4e, Labo SVT, Chorale, Savoir nager…" maxlength="80" /></div>
@@ -446,13 +481,24 @@
           <div class="form-group"><label for="inputHPCDisc">Discipline de rattachement</label><select id="inputHPCDisc"><option value="">— Aucune —</option></select></div>
         </div>
         <div class="form-group">
-          <label>Classes concernées</label>
+          <div class="classes-label-row">
+            <label>Classes concernées</label>
+            <button type="button" class="btn-link btn-select-all-hpc" id="btnHPCSelectAll">Tout sélectionner</button>
+          </div>
           <div class="classes-check" id="hpcClassesCheck"></div>
           <div class="gc-effectif-auto" id="hpcEffectifAuto"></div>
         </div>
         <div class="form-row-2">
           <div class="form-group"><label for="inputHPCHeures">Heures / semaine</label><input type="number" id="inputHPCHeures" placeholder="2" min="0" step="0.5" /></div>
           <div class="form-group"><label for="inputHPCEffectif">Effectif (si non calculé)</label><input type="number" id="inputHPCEffectif" placeholder="15" min="0" step="1" /></div>
+        </div>
+        <div class="form-group">
+          <label for="inputHPCTypeHeure">Type d'heures</label>
+          <select id="inputHPCTypeHeure">
+            <option value="hp">H-Poste (HP) — structurelle</option>
+            <option value="hsa">HSA — heures supplémentaires payées</option>
+          </select>
+          <span class="form-hint">Ce choix se répercute dans le tableau de bord et le solde HP/HSA.</span>
         </div>
         <div class="form-group"><label for="inputHPCComment">Commentaire</label><input type="text" id="inputHPCComment" placeholder="Notes…" maxlength="200" /></div>
       </div>

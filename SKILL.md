@@ -2,7 +2,7 @@
 
 > **À fournir à Claude au début de chaque session de développement.**  
 > Ce fichier garantit la cohérence du code sur plusieurs années d'évolution du projet.  
-> Mis à jour à chaque sprint. Version courante : **3.0.2**
+> Mis à jour à chaque sprint. Version courante : **3.1.0**
 
 ---
 
@@ -148,6 +148,7 @@ README.md               → Documentation utilisateur
   categorie: 'option'|'labo'|'dispositif'|'vie-classe'|'arts'|'sport'|'accompagnement'|'autre',
   disciplineId,               // null si hors discipline
   classesIds: [divisionId],   // sélection par classes
+  typeHeure: 'hp'|'hsa',      // v3.1 — H-Poste ou HSA (défaut : hp)
   heures, effectif, commentaire
 }
 ```
@@ -496,4 +497,4 @@ data:     modification du schéma de données
 
 *Ce fichier fait partie intégrante du projet DGH App.*  
 *Le mettre à jour à chaque évolution structurelle ou décision de conception.*  
-*Version : 3.0.2 — Dernière mise à jour : Sprint 5*
+*Version : 3.1.0 — Dernière mise à jour : Sprint 5 bis (UX & Dashboard)*

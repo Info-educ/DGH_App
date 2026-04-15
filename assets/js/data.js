@@ -13,7 +13,7 @@
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '3.0.0';
+  const VERSION = '3.1.0';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   const DISCIPLINES_MEN = [
@@ -130,6 +130,7 @@ const DGHData = (() => {
           if (typeof h.heures   !== 'number') h.heures   = 0;
           if (typeof h.effectif !== 'number') h.effectif = 0;
           if (!h.commentaire) h.commentaire = '';
+          if (!h.typeHeure) h.typeHeure = 'hp';  // migration v3.1 : HP par défaut
         });
       });
     }
@@ -360,6 +361,7 @@ const DGHData = (() => {
                 disciplineId: fields.disciplineId||null,
                 classesIds: Array.isArray(fields.classesIds)?fields.classesIds.slice():[],
                 heures: parseFloat(fields.heures)||0, effectif: parseInt(fields.effectif,10)||0,
+                typeHeure: fields.typeHeure||'hp',
                 commentaire: fields.commentaire||'' };
     ann.heuresPedaComp.push(h); save(); return h;
   }
@@ -374,6 +376,7 @@ const DGHData = (() => {
     if (fields.classesIds!==undefined)   h.classesIds   = Array.isArray(fields.classesIds)?fields.classesIds.slice():[];
     if (fields.heures!==undefined)       h.heures       = parseFloat(fields.heures)||0;
     if (fields.effectif!==undefined)     h.effectif     = parseInt(fields.effectif,10)||0;
+    if (fields.typeHeure!==undefined)     h.typeHeure    = fields.typeHeure||'hp';
     if (fields.commentaire!==undefined)  h.commentaire  = fields.commentaire||'';
     save(); return true;
   }
