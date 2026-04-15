@@ -317,7 +317,10 @@ const DGHData = (() => {
 
   function isEmpty() {
     const ann = getAnnee();
-    return !_data.etablissement.nom && ann.dotation.enveloppe === 0 && ann.enseignants.length === 0;
+    return !_data.etablissement.nom
+      && ann.dotation.enveloppe === 0
+      && ann.enseignants.length === 0
+      && ann.structures.length === 0;
   }
 
   return {

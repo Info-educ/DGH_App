@@ -1,10 +1,15 @@
 /**
- * DGH App — Contrôleur principal v2.5
- * Corrections v2.4 :
- *   - Bug boutons : UNE SEULE délégation globale, aucun listener direct sur boutons de contenu
- *   - Gestion années : ajout/suppression depuis la modal établissement
- * Règle permanente : JAMAIS de listener direct (.addEventListener) sur un bouton
- * dont le rendu peut être tardif ou conditionnel → toujours délégation sur document.
+ * DGH App — Contrôleur principal v2.6
+ * Règle permanente : délégation globale unique _onGlobalClick pour tous les boutons.
+ * Jamais de listener direct sur un bouton à rendu conditionnel ou tardif.
+ *
+ * v2.6 — Corrections audit :
+ *   - Syntaxe JS cassée (addEventListener keydown orphelin) → corrigée
+ *   - Double listener nav-items (direct + délégation) → supprimé
+ *   - isEmpty() ignorait les structures → corrigé
+ *   - yearSelect codé en dur dans HTML → entièrement dynamique
+ *   - setDotation écrasait le commentaire → préservé
+ *   - stopPropagation inutile sur btnEtab → retiré
  */
 
 const app = (() => {
@@ -397,6 +402,8 @@ const app = (() => {
     _renderDashboard();
     toast('Année ' + annee.replace('-', '–') + ' réinitialisée', 'info');
   }
+
+  // ── ALERTES ──────────────────────────────────────────────────────
   function _renderAlertes() {
     try {
       const alertes = Calculs.genererAlertes(DGHData.getAnnee());
@@ -498,7 +505,9 @@ const app = (() => {
         academie: document.getElementById('inputAcademie')?.value?.trim() || ''
       });
       // L'enveloppe est rattachée à l'année active (potentiellement nouvelle)
-      DGHData.setDotation(parseFloat(document.getElementById('inputDGH')?.value) || 0);
+      // Préserver le commentaire existant (pas de champ UI pour l'instant)
+      const commentaireExistant = DGHData.getAnnee().dotation?.commentaire || '';
+      DGHData.setDotation(parseFloat(document.getElementById('inputDGH')?.value) || 0, commentaireExistant);
 
       _closeModal();
       _renderAll();
@@ -550,6 +559,10 @@ const app = (() => {
   // sur un bouton dont le rendu est conditionnel ou tardif.
   function _onGlobalClick(e) {
 
+    // ── Navigation sidebar (data-view)
+    const navItem = e.target.closest('.nav-item[data-view]');
+    if (navItem) { navigate(navItem.dataset.view); return; }
+
     // ── Boutons avec data-navigate
     const navBtn = e.target.closest('[data-navigate]');
     if (navBtn) { navigate(navBtn.dataset.navigate); return; }
@@ -566,7 +579,7 @@ const app = (() => {
     if (e.target.closest('#btnAddDiv')) { _openModalDiv(null); return; }
 
     // ── Bouton "Mon Collège ⚙"
-    if (e.target.closest('#btnEtab')) { e.stopPropagation(); _openModal(); return; }
+    if (e.target.closest('#btnEtab')) { _openModal(); return; }
 
     // ── Fermeture modals au clic sur l'overlay
     if (e.target === document.getElementById('modalEtab'))  { _closeModal();       return; }
@@ -617,11 +630,24 @@ const app = (() => {
       _applyTheme(cur === 'dark' ? 'light' : 'dark');
     });
 
-    // ── Navigation sidebar (items toujours dans le DOM au chargement)
-    document.querySelectorAll('.nav-item[data-view]').forEach(item => {
-      item.addEventListener('click', () => navigate(item.dataset.view));
+    // ── Navigation sidebar — via délégation uniquement (pas de listener direct)
+    // Les nav-items sont dans le DOM au chargement MAIS le listener direct
+    // doublonnait avec _onGlobalClick → navigate() appelé 2x. Supprimé.
+
+    // ── Preview duplication (écoute sur nom + nombre de copies)
+    document.addEventListener('input', e => {
+      if (e.target.id === 'inputDivNom' || e.target.id === 'inputDivDup') {
+        _updateDupPreview();
+      }
     });
 
+    // ── Entrée clavier dans le champ nouvelle année (modal)
+    document.addEventListener('keydown', e => {
+      if (e.target.id === 'inputNewYear' && e.key === 'Enter') {
+        e.preventDefault();
+        _addModalYear();
+      }
+    });
     // ── Sidebar toggle desktop
     document.getElementById('sidebarToggle').addEventListener('click', () => {
       document.getElementById('sidebar').classList.toggle('collapsed');
@@ -637,7 +663,6 @@ const app = (() => {
       DGHData.setAnneeActive(e.target.value);
       _renderAll();
       _renderDashboard();
-      // Si on est sur la vue structures, la rafraîchir aussi
       const active = document.querySelector('.nav-item.active[data-view]');
       if (active && active.dataset.view === 'structures') _renderStructures();
       toast('Année ' + e.target.value.replace('-', '–') + ' chargée', 'info');
@@ -647,22 +672,9 @@ const app = (() => {
     document.addEventListener('change', e => {
       if (e.target.id === 'modalYearSelect') {
         DGHData.setAnneeActive(e.target.value);
-        // Mettre à jour l'enveloppe affichée pour cette nouvelle année
         const dotation = DGHData.getAnnee().dotation || {};
         _setVal('inputDGH', dotation.enveloppe != null ? dotation.enveloppe : '');
         _renderYearSelect();
-      }
-    });
-
-    // ── Preview duplication (écoute sur nom + nombre de copies)
-    document.addEventListener('input', e => {
-      if (e.target.id === 'inputDivNom' || e.target.id === 'inputDivDup') {
-        _updateDupPreview();
-      }
-    });
-      if (e.target.id === 'inputNewYear' && e.key === 'Enter') {
-        e.preventDefault();
-        _addModalYear();
       }
     });
 
