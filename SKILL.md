@@ -30,10 +30,24 @@ Après chaque modification, **vérifier qu'aucun résidu de l'ancienne version n
 - Aucun import de police ou de bibliothèque qui ne sert plus
 - Aucun bloc CSS injecté en JS qui double des règles dans `style.css`
 
-### 3. Zéro onclick inline
+### 3. Zéro onclick inline — et UNE SEULE délégation globale
 **Interdiction absolue** d'utiliser `onclick="..."` dans le HTML.
-Tous les événements sont liés via `addEventListener` dans `_bindEvents()` de `app.js`.
-Pour les boutons dynamiques, utiliser `data-navigate="viewId"` + délégation globale.
+
+**Règle permanente anti-boutons-muets** (introduite après bug Sprint 2) :
+- **JAMAIS** de `addEventListener` direct sur un bouton dont le rendu est conditionnel ou tardif (bouton dans une vue qui démarre `display:none`, bouton généré par `innerHTML`, etc.)
+- **TOUJOURS** passer par la délégation globale `_onGlobalClick` dans `app.js`
+- `_bindEvents()` ne lie en direct **que** les éléments garantis dans le DOM au chargement : `themeToggle`, `sidebarToggle`, `mobileMenuBtn`, `yearSelect`, `btnExport`, `btnImport`, `fileImport`
+- Tous les autres boutons (modals, actions dans les vues, boutons ajoutés dynamiquement) sont gérés dans `_onGlobalClick` via `e.target.closest('#id')` ou `e.target.closest('[data-action]')`
+
+```js
+// ✅ Correct — dans _onGlobalClick
+if (e.target.closest('#btnAddDiv')) { _openModalDiv(null); return; }
+
+// ❌ Interdit — dans _bindEvents
+document.getElementById('btnAddDiv').addEventListener('click', () => _openModalDiv(null));
+// Raison : btnAddDiv est dans view-structures qui est display:none au chargement
+// Le querySelector réussit, mais des conflits entre listeners peuvent silencieusement neutraliser le bouton
+```
 
 ### 4. Vérification d'intégrité après chaque livraison
 Avant de livrer des fichiers, vérifier :

@@ -1,7 +1,10 @@
 /**
- * DGH App — Contrôleur principal v2.3
- * Sprint 2 : module Structures de classes
- * Zéro onclick inline · Zéro localStorage direct · Un fichier = une responsabilité
+ * DGH App — Contrôleur principal v2.4
+ * Corrections v2.4 :
+ *   - Bug boutons : UNE SEULE délégation globale, aucun listener direct sur boutons de contenu
+ *   - Gestion années : ajout/suppression depuis la modal établissement
+ * Règle permanente : JAMAIS de listener direct (.addEventListener) sur un bouton
+ * dont le rendu peut être tardif ou conditionnel → toujours délégation sur document.
  */
 
 const app = (() => {
@@ -53,9 +56,9 @@ const app = (() => {
       document.getElementById('sidebar').classList.remove('open');
     }
 
-    if (viewId === 'dashboard')   _renderDashboard();
-    if (viewId === 'alertes')     _renderAlertes();
-    if (viewId === 'structures')  _renderStructures();
+    if (viewId === 'dashboard')  _renderDashboard();
+    if (viewId === 'alertes')    _renderAlertes();
+    if (viewId === 'structures') _renderStructures();
   }
 
   // ── DASHBOARD ────────────────────────────────────────────────────
@@ -67,10 +70,10 @@ const app = (() => {
       const resume  = Calculs.resumeStructures(DGHData.getStructures());
 
       _set('dashYear',          DGHData.getAnneeActive().replace('-', '–'));
-      _set('kpi-dghtotal',      bilan.enveloppe      ? bilan.enveloppe + ' h'       : '— h');
-      _set('kpi-affectees',     bilan.heuresAllouees ? bilan.heuresAllouees + ' h'  : '— h');
-      _set('kpi-affectees-pct', bilan.enveloppe      ? bilan.pctConsomme + ' %'     : '— %');
-      _set('kpi-solde',         bilan.enveloppe      ? bilan.solde + ' h'           : '— h');
+      _set('kpi-dghtotal',      bilan.enveloppe      ? bilan.enveloppe + ' h'      : '— h');
+      _set('kpi-affectees',     bilan.heuresAllouees ? bilan.heuresAllouees + ' h' : '— h');
+      _set('kpi-affectees-pct', bilan.enveloppe      ? bilan.pctConsomme + ' %'    : '— %');
+      _set('kpi-solde',         bilan.enveloppe      ? bilan.solde + ' h'          : '— h');
       _set('kpi-alertes',       alertes.filter(a => a.severite !== 'info').length || '—');
       _set('kpi-enseignants',   bilan.nbEnseignants || '—');
       _set('kpi-tzr',           'dont ' + (bilan.nbTZR || 0) + ' TZR');
@@ -101,9 +104,10 @@ const app = (() => {
         bar.style.width      = pct + '%';
         bar.style.background = pct > 100 ? 'var(--c-red)' : pct > 90 ? 'var(--c-amber)' : 'var(--c-accent)';
       }
-      if (lbl) lbl.textContent = bilan.enveloppe > 0 ? bilan.heuresAllouees + ' / ' + bilan.enveloppe + ' h' : '0 / 0 h';
+      if (lbl) lbl.textContent = bilan.enveloppe > 0
+        ? bilan.heuresAllouees + ' / ' + bilan.enveloppe + ' h' : '0 / 0 h';
 
-      // Empty state / résumé disciplines
+      // Empty state
       const isEmpty  = DGHData.isEmpty();
       const emptyEl  = document.getElementById('emptyState');
       const resumeEl = document.getElementById('disciplineResume');
@@ -129,35 +133,28 @@ const app = (() => {
     }
   }
 
-  // ── MODULE STRUCTURES ─────────────────────────────────────────────
+  // ── MODULE STRUCTURES ────────────────────────────────────────────
   function _renderStructures() {
     try {
       const structures = DGHData.getStructures();
       const resume     = Calculs.resumeStructures(structures);
 
-      // ── KPI structures
       _set('struct-kpi-divisions', resume.nbDivisions);
       _set('struct-kpi-effectif',  resume.effectifTotal);
       const niveauxEl = document.getElementById('struct-kpi-niveaux');
       if (niveauxEl) niveauxEl.textContent = resume.niveauxPresents.join(', ') || '—';
 
-      // ── Tableau par niveau
       const byNiveauEl = document.getElementById('struct-by-niveau');
       if (byNiveauEl) {
-        if (resume.parNiveau.length === 0) {
-          byNiveauEl.innerHTML = '';
-        } else {
-          byNiveauEl.innerHTML = resume.parNiveau.map(n =>
-            '<div class="niveau-row">'
-            + '<span class="niveau-badge niveau-' + n.niveau.toLowerCase().replace(/[^a-z0-9]/g,'') + '">' + n.niveau + '</span>'
-            + '<span class="niveau-count">' + n.nbDivisions + ' div.</span>'
-            + '<span class="niveau-effectif">' + n.effectif + ' élèves</span>'
-            + '</div>'
-          ).join('');
-        }
+        byNiveauEl.innerHTML = resume.parNiveau.map(n =>
+          '<div class="niveau-row">'
+          + '<span class="niveau-badge niveau-' + n.niveau.toLowerCase().replace(/[^a-z0-9]/g,'') + '">' + n.niveau + '</span>'
+          + '<span class="niveau-count">' + n.nbDivisions + ' div.</span>'
+          + '<span class="niveau-effectif">' + n.effectif + ' élèves</span>'
+          + '</div>'
+        ).join('');
       }
 
-      // ── Liste des divisions
       const listEl = document.getElementById('struct-list');
       if (!listEl) return;
 
@@ -166,20 +163,20 @@ const app = (() => {
           '<div class="struct-empty">'
           + '<div class="struct-empty-icon">⊞</div>'
           + '<p>Aucune division saisie pour cette année.</p>'
-          + '<p class="struct-empty-sub">Cliquez sur «&nbsp;Ajouter une division&nbsp;» pour commencer.</p>'
+          + '<p class="struct-empty-sub">Cliquez sur «\u00a0Ajouter une division\u00a0» pour commencer.</p>'
           + '</div>';
         return;
       }
 
-      // Construire le tableau HTML — entête fixe + lignes
       let html = '<table class="struct-table">'
         + '<thead><tr>'
-        + '<th>Division</th><th>Niveau</th><th>Effectif</th><th>Options / Dispositif</th><th class="col-actions">Actions</th>'
+        + '<th>Division</th><th>Niveau</th><th>Effectif</th>'
+        + '<th>Options / Dispositif</th><th class="col-actions">Actions</th>'
         + '</tr></thead><tbody>';
 
       structures.forEach(div => {
         const tags = [];
-        if (div.options && div.options.length) div.options.forEach(o => tags.push('<span class="div-tag">' + _esc(o) + '</span>'));
+        (div.options || []).forEach(o => tags.push('<span class="div-tag">' + _esc(o) + '</span>'));
         if (div.dispositif) tags.push('<span class="div-tag div-tag-disp">' + _esc(div.dispositif) + '</span>');
 
         html += '<tr>'
@@ -190,12 +187,10 @@ const app = (() => {
           + '<td class="col-actions">'
           + '<button class="btn-icon-sm" data-action="edit-div" data-id="' + div.id + '" title="Modifier">✎</button>'
           + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-div" data-id="' + div.id + '" title="Supprimer">✕</button>'
-          + '</td>'
-          + '</tr>';
+          + '</td></tr>';
       });
 
-      html += '</tbody></table>';
-      listEl.innerHTML = html;
+      listEl.innerHTML = html + '</tbody></table>';
 
     } catch(e) {
       console.error('[DGH] Erreur renderStructures:', e);
@@ -203,41 +198,36 @@ const app = (() => {
   }
 
   // ── MODAL DIVISION ────────────────────────────────────────────────
-  /** Ouvre la modal en mode ajout ou modification */
   function _openModalDiv(id) {
     const modal  = document.getElementById('modalDiv');
     const title  = document.getElementById('modalDivTitle');
     const saveId = document.getElementById('modalDivId');
     if (!modal) return;
 
-    // Peupler le select niveaux
     const sel = document.getElementById('inputDivNiveau');
     if (sel) {
-      sel.innerHTML = DGHData.getNiveaux().map(n =>
-        '<option value="' + n + '">' + n + '</option>'
-      ).join('');
+      sel.innerHTML = DGHData.getNiveaux()
+        .map(n => '<option value="' + n + '">' + n + '</option>').join('');
     }
 
     if (id) {
-      // Mode édition
       const div = DGHData.getDivision(id);
       if (!div) return;
-      if (title)  title.textContent   = 'Modifier la division';
-      if (saveId) saveId.value        = id;
-      if (sel)    sel.value           = div.niveau;
-      _setVal('inputDivNom',      div.nom);
-      _setVal('inputDivEffectif', div.effectif);
-      _setVal('inputDivOptions',  (div.options || []).join(', '));
+      if (title)  title.textContent = 'Modifier la division';
+      if (saveId) saveId.value      = id;
+      if (sel)    sel.value         = div.niveau;
+      _setVal('inputDivNom',        div.nom);
+      _setVal('inputDivEffectif',   div.effectif);
+      _setVal('inputDivOptions',    (div.options || []).join(', '));
       _setVal('inputDivDispositif', div.dispositif || '');
     } else {
-      // Mode ajout
       if (title)  title.textContent = 'Ajouter une division';
       if (saveId) saveId.value      = '';
       if (sel)    sel.value         = '6e';
-      _setVal('inputDivNom',       '');
-      _setVal('inputDivEffectif',  '');
-      _setVal('inputDivOptions',   '');
-      _setVal('inputDivDispositif','');
+      _setVal('inputDivNom',        '');
+      _setVal('inputDivEffectif',   '');
+      _setVal('inputDivOptions',    '');
+      _setVal('inputDivDispositif', '');
     }
 
     modal.classList.add('modal-open');
@@ -255,12 +245,12 @@ const app = (() => {
     if (!nom) { toast('Le nom de la division est requis', 'warning'); return; }
 
     const fields = {
-      niveau:     (document.getElementById('inputDivNiveau')    || {}).value || '6e',
+      niveau:     (document.getElementById('inputDivNiveau')     || {}).value || '6e',
       nom,
-      effectif:   parseInt((document.getElementById('inputDivEffectif') || {}).value, 10) || 0,
-      options:    ((document.getElementById('inputDivOptions')   || {}).value || '')
+      effectif:   parseInt((document.getElementById('inputDivEffectif')  || {}).value, 10) || 0,
+      options:    ((document.getElementById('inputDivOptions')    || {}).value || '')
                     .split(',').map(s => s.trim()).filter(Boolean),
-      dispositif: ((document.getElementById('inputDivDispositif')|| {}).value || '').trim() || null
+      dispositif: ((document.getElementById('inputDivDispositif') || {}).value || '').trim() || null
     };
 
     if (id) {
@@ -276,14 +266,13 @@ const app = (() => {
     _renderDashboard();
   }
 
-  /** Confirmation et suppression d'une division */
   function _confirmDeleteDiv(id) {
     const div = DGHData.getDivision(id);
     if (!div) return;
     const confirmEl = document.getElementById('confirmDiv');
     const msgEl     = document.getElementById('confirmDivMsg');
     if (!confirmEl) return;
-    if (msgEl) msgEl.textContent = 'Supprimer la division « ' + div.nom + ' » (niveau ' + div.niveau + ') ?';
+    if (msgEl) msgEl.textContent = 'Supprimer «\u00a0' + div.nom + '\u00a0» (niveau ' + div.niveau + ') ?';
     confirmEl.dataset.targetId   = id;
     confirmEl.classList.add('modal-open');
   }
@@ -294,7 +283,7 @@ const app = (() => {
   }
 
   function _execDeleteDiv() {
-    const id = (document.getElementById('confirmDiv') || {}).dataset?.targetId;
+    const id = document.getElementById('confirmDiv')?.dataset?.targetId;
     if (!id) return;
     DGHData.deleteDivision(id);
     _closeConfirmDiv();
@@ -310,8 +299,8 @@ const app = (() => {
       const zone    = document.getElementById('alertes-zone');
       if (!zone) return;
       const ICONS = { error: '✕', warning: '⚠', info: 'ℹ' };
-      zone.className = 'section-card';
-      zone.innerHTML = '<div class="alertes-list">'
+      zone.className  = 'section-card';
+      zone.innerHTML  = '<div class="alertes-list">'
         + (alertes.length
           ? alertes.map(a =>
               '<div class="alerte-item sev-' + a.severite + '">'
@@ -334,44 +323,56 @@ const app = (() => {
   function _renderYearSelect() {
     const sel = document.getElementById('yearSelect');
     if (!sel) return;
-    const existing = Array.from(sel.options).map(o => o.value);
+    // Reconstruire entièrement pour rester synchrone avec DGHData
+    const active = DGHData.getAnneeActive();
+    sel.innerHTML = '';
     DGHData.getAnnees().forEach(a => {
-      if (!existing.includes(a)) {
-        const opt = document.createElement('option');
-        opt.value = a; opt.textContent = a.replace('-', ' – ');
-        sel.appendChild(opt);
-      }
+      const opt = document.createElement('option');
+      opt.value       = a;
+      opt.textContent = a.replace('-', ' – ');
+      if (a === active) opt.selected = true;
+      sel.appendChild(opt);
     });
-    sel.value = DGHData.getAnneeActive();
   }
 
-  // ── MODAL ÉTABLISSEMENT ──────────────────────────────────────────
+  // ── MODAL ÉTABLISSEMENT (avec gestion années) ─────────────────────
   function _openModal() {
     try {
       const etab     = DGHData.getEtab()  || {};
       const annee    = DGHData.getAnnee() || {};
-      const dotation = (annee.dotation)   || {};
+      const dotation = annee.dotation     || {};
+      const modalEl  = document.getElementById('modalEtab');
+      if (!modalEl) return;
 
-      const nomEl      = document.getElementById('inputNomEtab');
-      const uaiEl      = document.getElementById('inputUAI');
-      const academieEl = document.getElementById('inputAcademie');
-      const dghEl      = document.getElementById('inputDGH');
-      const modalEl    = document.getElementById('modalEtab');
+      _setVal('inputNomEtab',  etab.nom      || '');
+      _setVal('inputUAI',      etab.uai      || '');
+      _setVal('inputAcademie', etab.academie || '');
+      _setVal('inputDGH',      dotation.enveloppe != null ? dotation.enveloppe : '');
 
-      if (!modalEl) { console.error('[DGH] #modalEtab introuvable'); return; }
-
-      if (nomEl)      nomEl.value      = etab.nom      || '';
-      if (uaiEl)      uaiEl.value      = etab.uai      || '';
-      if (academieEl) academieEl.value = etab.academie || '';
-      if (dghEl)      dghEl.value      = (dotation.enveloppe != null) ? dotation.enveloppe : '';
+      // Peupler le select années dans la modal
+      _renderModalYearSelect();
 
       modalEl.classList.add('modal-open');
-      setTimeout(() => { if (nomEl) nomEl.focus(); }, 60);
-
+      setTimeout(() => { document.getElementById('inputNomEtab')?.focus(); }, 60);
     } catch(e) {
       console.error('[DGH] Erreur ouverture modal:', e);
       toast('Impossible d\'ouvrir les paramètres', 'error');
     }
+  }
+
+  /** Reconstruit le select des années dans la modal établissement */
+  function _renderModalYearSelect() {
+    const sel = document.getElementById('modalYearSelect');
+    if (!sel) return;
+    const active = DGHData.getAnneeActive();
+    sel.innerHTML = '';
+    DGHData.getAnnees().forEach(a => {
+      const opt = document.createElement('option');
+      opt.value       = a;
+      opt.textContent = a.replace('-', ' – ');
+      if (a === active) opt.selected = true;
+      sel.appendChild(opt);
+    });
   }
 
   function _closeModal() {
@@ -381,12 +382,20 @@ const app = (() => {
 
   function _saveModal() {
     try {
+      // Changer l'année active si modifiée dans la modal
+      const modalSel = document.getElementById('modalYearSelect');
+      if (modalSel && modalSel.value && modalSel.value !== DGHData.getAnneeActive()) {
+        DGHData.setAnneeActive(modalSel.value);
+      }
+
       DGHData.setEtab({
-        nom:      (document.getElementById('inputNomEtab')  || {}).value?.trim() || '',
-        uai:      (document.getElementById('inputUAI')      || {}).value?.trim() || '',
-        academie: (document.getElementById('inputAcademie') || {}).value?.trim() || ''
+        nom:      document.getElementById('inputNomEtab')?.value?.trim()  || '',
+        uai:      document.getElementById('inputUAI')?.value?.trim()      || '',
+        academie: document.getElementById('inputAcademie')?.value?.trim() || ''
       });
-      DGHData.setDotation(parseFloat((document.getElementById('inputDGH') || {}).value) || 0);
+      // L'enveloppe est rattachée à l'année active (potentiellement nouvelle)
+      DGHData.setDotation(parseFloat(document.getElementById('inputDGH')?.value) || 0);
+
       _closeModal();
       _renderAll();
       _renderDashboard();
@@ -397,118 +406,162 @@ const app = (() => {
     }
   }
 
-  // ── EVENTS ───────────────────────────────────────────────────────
-  function _bindEvents() {
+  /** Ajoute une nouvelle année depuis la modal et sélectionne la saisie */
+  function _addModalYear() {
+    const input = document.getElementById('inputNewYear');
+    if (!input) return;
+    const val = input.value.trim();
 
-    // Thème
-    document.getElementById('themeToggle').addEventListener('click', () => {
-      const cur = document.documentElement.getAttribute('data-theme') || 'light';
-      _applyTheme(cur === 'dark' ? 'light' : 'dark');
-    });
+    // Validation format AAAA-AAAA
+    if (!/^\d{4}-\d{4}$/.test(val)) {
+      toast('Format requis : 2026-2027', 'warning');
+      input.focus();
+      return;
+    }
+    const [debut, fin] = val.split('-').map(Number);
+    if (fin !== debut + 1) {
+      toast('Les deux années doivent se suivre (ex. 2026-2027)', 'warning');
+      input.focus();
+      return;
+    }
+    if (DGHData.getAnnees().includes(val)) {
+      toast('Cette année existe déjà', 'info');
+      // Sélectionner quand même dans le select
+      const sel = document.getElementById('modalYearSelect');
+      if (sel) sel.value = val;
+      input.value = '';
+      return;
+    }
 
-    // Navigation sidebar
-    document.querySelectorAll('.nav-item[data-view]').forEach(item => {
-      item.addEventListener('click', () => navigate(item.dataset.view));
-    });
+    // Créer l'année (setAnneeActive crée l'entrée si elle n'existe pas)
+    DGHData.setAnneeActive(val);
+    input.value = '';
+    _renderModalYearSelect();
+    _renderYearSelect();
+    toast('Année ' + val.replace('-', '–') + ' créée et sélectionnée', 'success');
+  }
 
-    // Délégation globale : data-navigate
-    document.addEventListener('click', e => {
-      const btn = e.target.closest('[data-navigate]');
-      if (btn) navigate(btn.dataset.navigate);
-    });
+  // ── DÉLÉGATION GLOBALE UNIQUE ─────────────────────────────────────
+  // RÈGLE : tous les clics passent par ici. Aucun addEventListener direct
+  // sur un bouton dont le rendu est conditionnel ou tardif.
+  function _onGlobalClick(e) {
 
-    // Délégation globale : actions structures (edit-div, delete-div)
-    document.addEventListener('click', e => {
-      const btn = e.target.closest('[data-action]');
-      if (!btn) return;
-      const action = btn.dataset.action;
-      const id     = btn.dataset.id;
-      if (action === 'edit-div')   _openModalDiv(id);
-      if (action === 'delete-div') _confirmDeleteDiv(id);
-    });
+    // ── Boutons avec data-navigate
+    const navBtn = e.target.closest('[data-navigate]');
+    if (navBtn) { navigate(navBtn.dataset.navigate); return; }
 
-    // Sidebar toggle desktop
-    document.getElementById('sidebarToggle').addEventListener('click', () => {
-      document.getElementById('sidebar').classList.toggle('collapsed');
-    });
+    // ── Actions structures (délégation sur tableau dynamique)
+    const actionBtn = e.target.closest('[data-action]');
+    if (actionBtn) {
+      const { action, id } = actionBtn.dataset;
+      if (action === 'edit-div')   { _openModalDiv(id);      return; }
+      if (action === 'delete-div') { _confirmDeleteDiv(id);  return; }
+    }
 
-    // Menu mobile
-    document.getElementById('mobileMenuBtn').addEventListener('click', () => {
-      document.getElementById('sidebar').classList.toggle('open');
-    });
+    // ── Bouton "Ajouter une division" (dans view-structures)
+    if (e.target.closest('#btnAddDiv')) { _openModalDiv(null); return; }
 
-    // Fermer sidebar mobile au clic extérieur
-    document.addEventListener('click', e => {
-      if (window.innerWidth > 768) return;
+    // ── Bouton "Mon Collège ⚙"
+    if (e.target.closest('#btnEtab')) { e.stopPropagation(); _openModal(); return; }
+
+    // ── Fermeture modals au clic sur l'overlay
+    if (e.target === document.getElementById('modalEtab'))  { _closeModal();       return; }
+    if (e.target === document.getElementById('modalDiv'))   { _closeModalDiv();    return; }
+    if (e.target === document.getElementById('confirmDiv')) { _closeConfirmDiv();  return; }
+
+    // ── Boutons modal établissement
+    if (e.target.closest('#modalClose'))  { _closeModal();   return; }
+    if (e.target.closest('#modalCancel')) { _closeModal();   return; }
+    if (e.target.closest('#modalSave'))   { _saveModal();    return; }
+    if (e.target.closest('#btnAddYear'))  { _addModalYear(); return; }
+
+    // ── Boutons modal division
+    if (e.target.closest('#modalDivClose'))  { _closeModalDiv();  return; }
+    if (e.target.closest('#modalDivCancel')) { _closeModalDiv();  return; }
+    if (e.target.closest('#modalDivSave'))   { _saveModalDiv();   return; }
+
+    // ── Boutons modal confirmation
+    if (e.target.closest('#confirmDivCancel'))  { _closeConfirmDiv(); return; }
+    if (e.target.closest('#confirmDivAnnuler')) { _closeConfirmDiv(); return; }
+    if (e.target.closest('#confirmDivOk'))      { _execDeleteDiv();   return; }
+
+    // ── Sidebar mobile : fermer au clic extérieur
+    if (window.innerWidth <= 768) {
       const sb = document.getElementById('sidebar');
       const mb = document.getElementById('mobileMenuBtn');
       if (sb && mb && !sb.contains(e.target) && !mb.contains(e.target)) {
         sb.classList.remove('open');
       }
+    }
+  }
+
+  // ── EVENTS ───────────────────────────────────────────────────────
+  function _bindEvents() {
+
+    // ── UNE SEULE délégation globale pour tous les clics
+    document.addEventListener('click', _onGlobalClick);
+
+    // ── Thème (toujours présent dans le DOM au chargement, OK en direct)
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-theme') || 'light';
+      _applyTheme(cur === 'dark' ? 'light' : 'dark');
     });
 
-    // Changement d'année
+    // ── Navigation sidebar (items toujours dans le DOM au chargement)
+    document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+      item.addEventListener('click', () => navigate(item.dataset.view));
+    });
+
+    // ── Sidebar toggle desktop
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    });
+
+    // ── Menu mobile
+    document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+    });
+
+    // ── Changement d'année via sidebar select
     document.getElementById('yearSelect').addEventListener('change', e => {
       DGHData.setAnneeActive(e.target.value);
       _renderAll();
       _renderDashboard();
+      // Si on est sur la vue structures, la rafraîchir aussi
+      const active = document.querySelector('.nav-item.active[data-view]');
+      if (active && active.dataset.view === 'structures') _renderStructures();
       toast('Année ' + e.target.value.replace('-', '–') + ' chargée', 'info');
     });
 
-    // Bouton "Mon Collège ⚙"
-    const btnEtab = document.getElementById('btnEtab');
-    if (btnEtab) {
-      btnEtab.addEventListener('click', function(e) {
-        e.stopPropagation();
-        _openModal();
-      });
-    }
-
-    // Modal établissement
-    const modalClose  = document.getElementById('modalClose');
-    const modalCancel = document.getElementById('modalCancel');
-    const modalSave   = document.getElementById('modalSave');
-    const modalEtab   = document.getElementById('modalEtab');
-    if (modalClose)  modalClose.addEventListener('click', _closeModal);
-    if (modalCancel) modalCancel.addEventListener('click', _closeModal);
-    if (modalSave)   modalSave.addEventListener('click', _saveModal);
-    if (modalEtab)   modalEtab.addEventListener('click', e => { if (e.target === e.currentTarget) _closeModal(); });
-
-    // Bouton Ajouter une division
-    const btnAddDiv = document.getElementById('btnAddDiv');
-    if (btnAddDiv) btnAddDiv.addEventListener('click', () => _openModalDiv(null));
-
-    // Modal division
-    const modalDivClose  = document.getElementById('modalDivClose');
-    const modalDivCancel = document.getElementById('modalDivCancel');
-    const modalDivSave   = document.getElementById('modalDivSave');
-    const modalDivEl     = document.getElementById('modalDiv');
-    if (modalDivClose)  modalDivClose.addEventListener('click', _closeModalDiv);
-    if (modalDivCancel) modalDivCancel.addEventListener('click', _closeModalDiv);
-    if (modalDivSave)   modalDivSave.addEventListener('click', _saveModalDiv);
-    if (modalDivEl)     modalDivEl.addEventListener('click', e => { if (e.target === e.currentTarget) _closeModalDiv(); });
-
-    // Modal confirmation suppression
-    const confirmCancel = document.getElementById('confirmDivCancel');
-    const confirmAnnuler = document.getElementById('confirmDivAnnuler');
-    const confirmOk     = document.getElementById('confirmDivOk');
-    const confirmEl     = document.getElementById('confirmDiv');
-    if (confirmCancel)  confirmCancel.addEventListener('click', _closeConfirmDiv);
-    if (confirmAnnuler) confirmAnnuler.addEventListener('click', _closeConfirmDiv);
-    if (confirmOk)      confirmOk.addEventListener('click', _execDeleteDiv);
-    if (confirmEl)      confirmEl.addEventListener('click', e => { if (e.target === e.currentTarget) _closeConfirmDiv(); });
-
-    // Touche Échap (toutes les modals)
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
-        const etabM   = document.getElementById('modalEtab');
-        const divM    = document.getElementById('modalDiv');
-        const confirmM= document.getElementById('confirmDiv');
-        if (etabM    && etabM.classList.contains('modal-open'))    _closeModal();
-        if (divM     && divM.classList.contains('modal-open'))     _closeModalDiv();
-        if (confirmM && confirmM.classList.contains('modal-open')) _closeConfirmDiv();
+    // ── Changement d'année via select de la modal établissement
+    document.addEventListener('change', e => {
+      if (e.target.id === 'modalYearSelect') {
+        DGHData.setAnneeActive(e.target.value);
+        // Mettre à jour l'enveloppe affichée pour cette nouvelle année
+        const dotation = DGHData.getAnnee().dotation || {};
+        _setVal('inputDGH', dotation.enveloppe != null ? dotation.enveloppe : '');
+        _renderYearSelect();
       }
-      // Ctrl+S / Cmd+S → export
+    });
+
+    // ── Entrée clavier dans le champ nouvelle année (modal)
+    document.addEventListener('keydown', e => {
+      if (e.target.id === 'inputNewYear' && e.key === 'Enter') {
+        e.preventDefault();
+        _addModalYear();
+      }
+    });
+
+    // ── Échap : fermer la modal ouverte
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      if (document.getElementById('modalEtab')?.classList.contains('modal-open'))  _closeModal();
+      if (document.getElementById('modalDiv')?.classList.contains('modal-open'))   _closeModalDiv();
+      if (document.getElementById('confirmDiv')?.classList.contains('modal-open')) _closeConfirmDiv();
+    });
+
+    // ── Ctrl+S / Cmd+S → export
+    document.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         try { toast('Exporté : ' + DGHData.exportJSON(), 'success'); }
@@ -516,15 +569,15 @@ const app = (() => {
       }
     });
 
-    // Export
+    // ── Export bouton sidebar
     document.getElementById('btnExport').addEventListener('click', () => {
       try { toast('Exporté : ' + DGHData.exportJSON(), 'success'); }
       catch(e) { toast('Erreur export : ' + e.message, 'error'); }
     });
 
-    // Import
+    // ── Import
     const fileImport = document.getElementById('fileImport');
-    document.getElementById('btnImport').addEventListener('click',      () => fileImport.click());
+    document.getElementById('btnImport').addEventListener('click', () => fileImport.click());
     document.getElementById('btnImportEmpty').addEventListener('click', () => fileImport.click());
     fileImport.addEventListener('change', async e => {
       const file = e.target.files[0];
@@ -539,7 +592,7 @@ const app = (() => {
       fileImport.value = '';
     });
 
-    // Erreur storage
+    // ── Erreur storage
     document.addEventListener('dgh:storage-error', () => {
       toast('Erreur de sauvegarde locale', 'error', 6000);
     });
@@ -553,7 +606,7 @@ const app = (() => {
     if (!c) return;
     const el = document.createElement('div');
     el.className = 'toast ' + type;
-    el.innerHTML = '<span class="toast-icon">' + (ICONS[type] || 'ℹ') + '</span><span>' + msg + '</span>';
+    el.innerHTML = '<span class="toast-icon">' + (ICONS[type]||'ℹ') + '</span><span>' + msg + '</span>';
     c.appendChild(el);
     setTimeout(() => {
       el.style.cssText += 'opacity:0;transform:translateX(10px);transition:.2s ease;';
@@ -572,9 +625,10 @@ const app = (() => {
     if (el) el.value = val;
   }
 
-  /** Échappe le HTML pour éviter les injections dans innerHTML */
   function _esc(str) {
-    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   return { init, navigate, toast };

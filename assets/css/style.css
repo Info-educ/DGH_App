@@ -692,3 +692,32 @@ input::placeholder { color: var(--c-text-dim); }
   transition: background var(--tf), box-shadow var(--tf);
 }
 .btn-danger:hover { background: #a93226; box-shadow: 0 4px 12px rgba(192,57,43,.3); }
+
+/* ══════════════════════════════════════════════════════════════════
+   MODAL ÉTABLISSEMENT ENRICHIE — Gestion années
+   ══════════════════════════════════════════════════════════════════ */
+
+.modal.modal-lg { max-width: 520px; }
+
+.modal-section-title {
+  font-size: .68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .1em;
+  color: var(--c-text-muted);
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--c-border);
+  margin-bottom: .75rem;
+}
+.modal-section-sep { margin-top: 1.25rem; }
+
+.year-add-row {
+  display: flex; gap: .625rem; align-items: center; margin-top: .5rem;
+}
+.year-add-input {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .85rem;
+}
+.btn-add-year {
+  white-space: nowrap; flex-shrink: 0;
+  font-size: .8rem; padding: .5rem .875rem;
+}
