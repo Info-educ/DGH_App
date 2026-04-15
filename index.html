@@ -419,12 +419,12 @@
 
         <!-- Duplication rapide — visible uniquement en mode AJOUT -->
         <div class="form-group dup-group" id="dupGroup">
-          <label for="inputDivDup">Créer aussi les divisions suivantes</label>
+          <label>Créer plusieurs divisions d'un coup</label>
           <div class="dup-row">
             <input type="number" id="inputDivDup" min="0" max="9" step="1" value="0" class="dup-input" />
-            <span class="dup-hint" id="dupHint">copies supplémentaires (0 = aucune)</span>
+            <span class="dup-hint">copies supplémentaires à créer après celle-ci</span>
           </div>
-          <span class="form-hint">Ex. : saisissez 6eA + 2 copies → crée automatiquement 6eB et 6eC</span>
+          <div class="dup-preview" id="dupPreview"></div>
         </div>
 
         <div class="form-group">

@@ -241,9 +241,73 @@ const app = (() => {
     setTimeout(() => { const f = document.getElementById('inputDivNom'); if (f) f.focus(); }, 60);
   }
 
+  /** Met à jour la preview de duplication en temps réel */
+  function _updateDupPreview() {
+    const preview = document.getElementById('dupPreview');
+    if (!preview) return;
+    const nomInput = document.getElementById('inputDivNom');
+    const dupInput = document.getElementById('inputDivDup');
+    if (!nomInput || !dupInput) return;
+
+    const nom      = nomInput.value.trim();
+    const dupCount = parseInt(dupInput.value, 10) || 0;
+
+    if (!nom || dupCount <= 0) {
+      preview.innerHTML = '';
+      return;
+    }
+
+    // Calculer les noms qui seront créés (logique miroir de data.js)
+    const noms = [nom];
+    let cur = nom;
+    for (let i = 0; i < dupCount; i++) {
+      cur = _previewNextName(cur);
+      noms.push(cur);
+    }
+
+    preview.innerHTML = '<span class="dup-preview-label">Sera créé\u00a0:</span>'
+      + noms.map(n => '<span class="dup-preview-chip">' + _esc(n) + '</span>').join('');
+  }
+
+  /**
+   * Miroir de DGHData._nextDivName — fonction pure côté UI pour la preview.
+   * Doit rester synchronisée avec data.js.
+   */
+  function _previewNextName(nom) {
+    if (!nom) return nom;
+    // Suffixe numérique
+    const numM = nom.match(/^(.*?)(\d+)$/);
+    if (numM) {
+      const n      = parseInt(numM[2], 10) + 1;
+      const padded = numM[2].length > 1 ? String(n).padStart(numM[2].length, '0') : String(n);
+      return numM[1] + padded;
+    }
+    // Suffixe lettres majuscules
+    const majM = nom.match(/^(.*?)([A-Z]+)$/);
+    if (majM) return majM[1] + _nextAlpha(majM[2]);
+    // Suffixe lettres minuscules
+    const minM = nom.match(/^(.*?)([a-z]+)$/);
+    if (minM) return minM[1] + _nextAlpha(minM[2].toUpperCase()).toLowerCase();
+    return nom + '2';
+  }
+
+  function _nextAlpha(s) {
+    const chars = s.split('');
+    let i = chars.length - 1;
+    while (i >= 0) {
+      const code = chars[i].charCodeAt(0);
+      if (code < 90) { chars[i] = String.fromCharCode(code + 1); return chars.join(''); }
+      chars[i] = 'A';
+      i--;
+    }
+    return 'A' + chars.join('');
+  }
+
   function _closeModalDiv() {
     const m = document.getElementById('modalDiv');
     if (m) m.classList.remove('modal-open');
+    const preview = document.getElementById('dupPreview');
+    if (preview) preview.innerHTML = '';
   }
 
   function _saveModalDiv() {
@@ -590,8 +654,12 @@ const app = (() => {
       }
     });
 
-    // ── Entrée clavier dans le champ nouvelle année (modal)
-    document.addEventListener('keydown', e => {
+    // ── Preview duplication (écoute sur nom + nombre de copies)
+    document.addEventListener('input', e => {
+      if (e.target.id === 'inputDivNom' || e.target.id === 'inputDivDup') {
+        _updateDupPreview();
+      }
+    });
       if (e.target.id === 'inputNewYear' && e.key === 'Enter') {
         e.preventDefault();
         _addModalYear();
