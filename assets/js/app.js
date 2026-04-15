@@ -678,6 +678,12 @@ const app = (() => {
   function _closeConfirmHPC() { const m=document.getElementById('confirmHPC'); if(m){m.classList.remove('modal-open');m.dataset.targetId='';} }
   function _execDeleteHPC() { const id=document.getElementById('confirmHPC')?.dataset?.targetId; if(!id) return; DGHData.deleteHPC(id); _closeConfirmHPC(); _renderHPC(); toast('Entrée supprimée','info'); }
 
+  // ── ONGLETS MODAL ÉTABLISSEMENT ──────────────────────────────────
+  function _switchModalTab(tab) {
+    document.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    document.querySelectorAll('.modal-tab-panel').forEach(p => p.style.display = p.id === 'tab-' + tab ? '' : 'none');
+  }
+
   // ── MODAL ÉTABLISSEMENT ───────────────────────────────────────────
   function _openModal() {
     try {
@@ -690,6 +696,7 @@ const app = (() => {
       _setVal('inputDGH_HSA', dot.hsaEnveloppe    != null ? dot.hsaEnveloppe    : '');
       _updateModalDotTotal();
       _renderModalYearSelect(); _renderYearListAdmin();
+      _switchModalTab('etab');
       m.classList.add('modal-open');
       setTimeout(()=>document.getElementById('inputNomEtab')?.focus(),60);
     } catch(e) { console.error('[DGH] modal etab:', e); toast('Impossible d\'ouvrir les paramètres','error'); }
@@ -804,6 +811,10 @@ const app = (() => {
 
     const btnDeleteAnnee = e.target.closest('.btn-delete-annee');
     if (btnDeleteAnnee) { _openConfirmDeleteAnnee(btnDeleteAnnee.dataset.annee); return; }
+
+    // Onglets internes modal établissement
+    const modalTab = e.target.closest('.modal-tab');
+    if (modalTab) { _switchModalTab(modalTab.dataset.tab); return; }
 
     if (e.target.closest('#btnAddDiv'))    { _openModalDiv(null);     return; }
     if (e.target.closest('#btnMatrice'))   { _openModalMatrice();     return; }

@@ -177,7 +177,7 @@
                 <input type="number" id="inputEnvHSA" class="dot-env-input" placeholder="30" min="0" step="0.5" />
                 <span class="dot-env-unit">h</span>
               </div>
-              <span class="dot-env-hint">Votées en CA — budget établissement</span>
+              <span class="dot-env-hint">Budget établissement</span>
             </div>
             <div class="dot-env-equals">=</div>
             <div class="dot-env-block dot-env-total">
@@ -272,47 +272,63 @@
   <!-- ══ MODAL ÉTABLISSEMENT ══════════════════════════════════════════ -->
   <div class="modal-overlay" id="modalEtab" role="dialog" aria-modal="true">
     <div class="modal modal-lg">
-      <div class="modal-header"><h2>Paramètres de l'établissement</h2><button class="modal-close" id="modalClose">✕</button></div>
+      <div class="modal-header"><h2>Paramètres</h2><button class="modal-close" id="modalClose">✕</button></div>
+
+      <!-- Onglets internes -->
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="etab">Établissement</button>
+        <button class="modal-tab" data-tab="annees">Années</button>
+        <button class="modal-tab" data-tab="danger">⚠ Danger</button>
+      </div>
+
       <div class="modal-body">
-        <div class="modal-section-title">Établissement</div>
-        <div class="form-group"><label for="inputNomEtab">Nom de l'établissement</label><input type="text" id="inputNomEtab" placeholder="Collège Jean Moulin" /></div>
-        <div class="form-row-2">
-          <div class="form-group"><label for="inputUAI">UAI / RNE</label><input type="text" id="inputUAI" placeholder="0750001A" maxlength="8" /></div>
-          <div class="form-group"><label for="inputAcademie">Académie</label><input type="text" id="inputAcademie" placeholder="Paris" /></div>
-        </div>
 
-        <div class="modal-section-title modal-section-sep">Dotation de l'année active</div>
-        <div class="form-row-2">
-          <div class="form-group">
-            <label for="inputDGH_HP">Heures-Poste (HP) <span class="form-required">*</span></label>
-            <input type="number" id="inputDGH_HP" placeholder="320" min="0" step="0.5" />
-            <span class="form-hint">Postes structurels — DSDEN</span>
+        <!-- Onglet 1 : Établissement + Dotation -->
+        <div class="modal-tab-panel active" id="tab-etab">
+          <div class="form-group"><label for="inputNomEtab">Nom de l'établissement</label><input type="text" id="inputNomEtab" placeholder="Collège Jean Moulin" /></div>
+          <div class="form-row-2">
+            <div class="form-group"><label for="inputUAI">UAI / RNE</label><input type="text" id="inputUAI" placeholder="0750001A" maxlength="8" /></div>
+            <div class="form-group"><label for="inputAcademie">Académie</label><input type="text" id="inputAcademie" placeholder="Paris" /></div>
           </div>
+          <div class="modal-section-title modal-section-sep">Dotation de l'année active</div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="inputDGH_HP">Heures-Poste (HP)</label>
+              <input type="number" id="inputDGH_HP" placeholder="320" min="0" step="0.5" />
+              <span class="form-hint">Postes structurels — DSDEN</span>
+            </div>
+            <div class="form-group">
+              <label for="inputDGH_HSA">HSA autorisées</label>
+              <input type="number" id="inputDGH_HSA" placeholder="30" min="0" step="0.5" />
+              <span class="form-hint">Budget établissement</span>
+            </div>
+          </div>
+          <div class="dot-env-total-hint" id="modalDotTotal"></div>
+        </div>
+
+        <!-- Onglet 2 : Années scolaires -->
+        <div class="modal-tab-panel" id="tab-annees" style="display:none">
           <div class="form-group">
-            <label for="inputDGH_HSA">HSA autorisées</label>
-            <input type="number" id="inputDGH_HSA" placeholder="30" min="0" step="0.5" />
-            <span class="form-hint">Votées en CA</span>
+            <label for="modalYearSelect">Année active</label>
+            <select id="modalYearSelect"></select>
+            <span class="form-hint">Changer l'année bascule toutes les données.</span>
+          </div>
+          <div class="modal-section-title modal-section-sep">Créer une nouvelle année</div>
+          <div class="year-add-row">
+            <input type="text" id="inputNewYear" placeholder="ex. 2026-2027" maxlength="9" class="year-add-input" />
+            <button class="btn-secondary btn-add-year" id="btnAddYear">+ Créer</button>
+          </div>
+          <div id="yearListAdmin" class="year-list-admin"></div>
+        </div>
+
+        <!-- Onglet 3 : Zone de danger -->
+        <div class="modal-tab-panel" id="tab-danger" style="display:none">
+          <div class="danger-zone">
+            <div class="danger-zone-text"><strong>Réinitialiser l'année active</strong><span>Efface structures, dotation et enseignants. Irréversible.</span></div>
+            <button class="btn-danger btn-sm" id="btnResetAnnee">Réinitialiser</button>
           </div>
         </div>
-        <div class="dot-env-total-hint" id="modalDotTotal"></div>
 
-        <div class="modal-section-title modal-section-sep">Années scolaires</div>
-        <div class="form-group">
-          <label for="modalYearSelect">Année active</label>
-          <select id="modalYearSelect"></select>
-          <span class="form-hint">Changer l'année bascule toutes les données.</span>
-        </div>
-        <div class="year-add-row">
-          <input type="text" id="inputNewYear" placeholder="ex. 2026-2027" maxlength="9" class="year-add-input" />
-          <button class="btn-secondary btn-add-year" id="btnAddYear">+ Créer</button>
-        </div>
-        <div id="yearListAdmin" class="year-list-admin"></div>
-
-        <div class="modal-section-title modal-section-sep modal-section-danger">Zone de danger</div>
-        <div class="danger-zone">
-          <div class="danger-zone-text"><strong>Réinitialiser l'année active</strong><span>Efface structures, dotation et enseignants. Irréversible.</span></div>
-          <button class="btn-danger btn-sm" id="btnResetAnnee">Réinitialiser</button>
-        </div>
       </div>
       <div class="modal-footer"><button class="btn-secondary" id="modalCancel">Annuler</button><button class="btn-primary" id="modalSave">Enregistrer</button></div>
     </div>

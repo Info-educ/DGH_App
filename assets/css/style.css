@@ -484,6 +484,8 @@ input::placeholder { color: var(--c-text-dim); }
   border-radius: var(--r-xl); width: 100%; max-width: 420px;
   box-shadow: var(--sh-lg);
   animation: modalIn .22s ease;
+  display: flex; flex-direction: column;
+  max-height: calc(100vh - 2rem);
 }
 @keyframes modalIn { from { opacity:0; transform:scale(.97) translateY(8px); } to { opacity:1; transform:none; } }
 .modal-header {
@@ -498,7 +500,7 @@ input::placeholder { color: var(--c-text-dim); }
   transition: all var(--tf);
 }
 .modal-close:hover { background: var(--c-surface2); color: var(--c-text); }
-.modal-body   { padding: 1.25rem; display: flex; flex-direction: column; gap: .875rem; }
+.modal-body   { padding: 1.25rem; display: flex; flex-direction: column; gap: .875rem; overflow-y: auto; flex: 1; }
 .modal-footer { display: flex; justify-content: flex-end; gap: .625rem; padding: .875rem 1.25rem; border-top: 1px solid var(--c-border); }
 .form-group label {
   display: block; font-size: .72rem; font-weight: 600;
@@ -1154,3 +1156,20 @@ input::placeholder { color: var(--c-text-dim); }
 
 /* Modal dot total hint */
 .dot-env-total-hint { font-size:.8rem; color:var(--c-accent); font-weight:600; font-family:'JetBrains Mono',monospace; margin-top:.3rem; }
+
+/* ══════════════════════════════════════════════════════════════════
+   MODAL — Onglets internes
+   ══════════════════════════════════════════════════════════════════ */
+.modal-tabs {
+  display: flex; gap: 0; border-bottom: 1.5px solid var(--c-border);
+  background: var(--c-surface2); flex-shrink: 0;
+}
+.modal-tab {
+  flex: 1; padding: .6rem .5rem; font-size: .78rem; font-weight: 600;
+  color: var(--c-text-muted); background: none; border: none;
+  border-bottom: 2.5px solid transparent; margin-bottom: -1.5px;
+  cursor: pointer; transition: all var(--tf); white-space: nowrap;
+}
+.modal-tab:hover { color: var(--c-text); background: var(--c-surface3); }
+.modal-tab.active { color: var(--c-accent); border-bottom-color: var(--c-accent); background: var(--c-surface); }
+.modal-tab-panel { display: flex; flex-direction: column; gap: .875rem; }
