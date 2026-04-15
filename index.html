@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DGH App — Pilotage de la Dotation Globale Horaire</title>
   <meta name="description" content="Outil de pilotage DGH pour collège — gestion des services, HSA, simulation de scénarios." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Polices chargées via CSS @import -->
   <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body>
@@ -16,7 +14,7 @@
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="logo-mark">
-        <span class="logo-icon">◈</span>
+      <div class="logo-icon">DGH</div>
         <div>
           <div class="logo-title">DGH App</div>
           <div class="logo-sub">Collège</div>
@@ -94,17 +92,19 @@
     <!-- Actions données -->
     <div class="sidebar-actions">
       <button class="btn-data" id="btnExport" title="Exporter les données (JSON)">
-        <span>↓</span> Exporter
+        <span class="btn-data-icon">↓</span>
+        <span class="btn-data-label">Exporter</span>
       </button>
       <button class="btn-data import" id="btnImport" title="Importer des données (JSON)">
-        <span>↑</span> Importer
+        <span class="btn-data-icon">↑</span>
+        <span class="btn-data-label">Importer</span>
       </button>
       <input type="file" id="fileImport" accept=".json" style="display:none" />
     </div>
 
     <div class="sidebar-footer">
       <span class="version-tag">v1.0.0</span>
-      <a href="https://github.com" target="_blank" class="gh-link" title="Voir sur GitHub">GitHub ↗</a>
+      <a href="https://github.com/Info-educ/DGH_App" target="_blank" class="gh-link" title="Voir sur GitHub">GitHub ↗</a>
     </div>
   </nav>
 
@@ -123,7 +123,11 @@
         <div class="topbar-stats" id="topbarStats">
           <!-- Rempli dynamiquement -->
         </div>
-        <div class="établissement-name" id="etablissementName">Mon Collège</div>
+        <button class="theme-toggle" id="themeToggle" title="Basculer dark / light" aria-label="Changer de thème">
+          <span class="icon-sun">☀︎</span>
+          <span class="icon-moon">☽</span>
+        </button>
+        <div class="établissement-name" id="etablissementName">Mon Collège ⚙</div>
       </div>
     </header>
 
