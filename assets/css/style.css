@@ -888,3 +888,121 @@ input::placeholder { color: var(--c-text-dim); }
   font-family: 'JetBrains Mono', monospace; font-size: .8rem;
   color: var(--c-text-muted);
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   v2.0.0 — Structures : header avec plusieurs boutons
+   ══════════════════════════════════════════════════════════════════ */
+.view-header-actions { display:flex; gap:.625rem; align-items:center; flex-wrap:wrap; }
+@media (max-width:600px) { .view-header-actions { width:100%; justify-content:flex-start; } }
+
+/* ══════════════════════════════════════════════════════════════════
+   MODULE DOTATION DGH — HP + HSA
+   ══════════════════════════════════════════════════════════════════ */
+.dot-kpi-bar {
+  background:var(--c-surface); border:1.5px solid var(--c-border);
+  border-radius:var(--r-lg); padding:.875rem 1.25rem;
+  display:flex; align-items:center; gap:1.25rem;
+  margin-bottom:1.25rem; flex-wrap:wrap;
+}
+.dot-solde-pos { color:var(--c-green); }
+.dot-solde-neg { color:var(--c-red); }
+
+/* Couleurs HP et HSA */
+.dot-col-hp  { color:var(--c-accent); }
+.dot-col-hsa { color:var(--c-indigo); }
+.dot-col-badge { display:inline-flex; align-items:center; font-size:.68rem; font-weight:700; padding:.15rem .5rem; border-radius:4px; }
+.dot-col-legend { display:flex; gap:.5rem; }
+.dot-col-badge.dot-col-hp  { background:var(--c-accent-light); color:var(--c-accent); }
+.dot-col-badge.dot-col-hsa { background:var(--c-indigo-bg);    color:var(--c-indigo); }
+
+/* Barre de progression duale */
+.progress-track { position:relative; height:5px; background:var(--c-surface2); border-radius:99px; overflow:visible; border:1px solid var(--c-border); }
+.dot-bar-hp     { background:var(--c-accent)  !important; border-radius:99px; transition:width .6s ease; }
+.dot-bar-hsa-part { position:absolute; top:0; height:100%; background:var(--c-indigo) !important; border-radius:99px; transition:width .6s ease, margin-left .6s ease; }
+.progress-legend { display:flex; gap:1.25rem; margin-top:.5rem; }
+.prog-leg-item { font-size:.72rem; color:var(--c-text-muted); }
+.prog-leg-hp  strong { color:var(--c-accent); font-family:'JetBrains Mono',monospace; }
+.prog-leg-hsa strong { color:var(--c-indigo); font-family:'JetBrains Mono',monospace; }
+
+/* Tableau disciplines */
+.dot-table { width:100%; border-collapse:collapse; font-size:.845rem; }
+.dot-table thead th { background:var(--c-surface2); color:var(--c-text-muted); font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.07em; padding:.625rem 1rem; text-align:left; border-bottom:1.5px solid var(--c-border); }
+.dot-table thead th.col-num { text-align:right; }
+.dot-table thead th.col-actions { text-align:right; }
+.dot-table thead th.dot-col-hp { color:var(--c-accent); }
+.dot-table thead th.dot-col-hsa { color:var(--c-indigo); }
+.dot-table tbody tr { border-bottom:1px solid var(--c-border); transition:background var(--tf); }
+.dot-table tbody tr:last-child { border-bottom:none; }
+.dot-table tbody tr:hover { background:var(--c-surface2); }
+.dot-table td { padding:.65rem 1rem; vertical-align:middle; }
+.dot-table td.col-num { text-align:right; }
+.dot-table td.col-actions { text-align:right; white-space:nowrap; }
+
+.disc-color-dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:.45rem; vertical-align:middle; flex-shrink:0; }
+.dot-theorique  { font-family:'JetBrains Mono',monospace; color:var(--c-text-muted); font-size:.8rem; }
+
+.dot-input-h { width:72px; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600; font-size:.9rem; padding:.3rem .5rem; border-radius:6px; border:1.5px solid var(--c-border); background:var(--c-surface); color:var(--c-text); transition:border-color var(--tf); }
+.dot-input-h:focus { border-color:var(--c-accent); box-shadow:0 0 0 3px rgba(45,106,79,.15); outline:none; }
+.dot-input-hp:focus  { border-color:var(--c-accent); }
+.dot-input-hsa:focus { border-color:var(--c-indigo); box-shadow:0 0 0 3px rgba(67,56,202,.12); }
+
+.dot-ecart { display:inline-block; font-family:'JetBrains Mono',monospace; font-weight:600; font-size:.78rem; padding:.15rem .5rem; border-radius:5px; }
+.dot-ecart-ok    { background:var(--c-green-bg);  color:var(--c-green); }
+.dot-ecart-over  { background:var(--c-amber-bg);  color:var(--c-amber); }
+.dot-ecart-under { background:var(--c-red-bg);    color:var(--c-red); }
+
+.dot-bar-track { height:6px; background:var(--c-surface2); border-radius:99px; overflow:hidden; border:1px solid var(--c-border); min-width:60px; display:inline-block; vertical-align:middle; width:100%; }
+.dot-bar-fill  { height:100%; border-radius:99px; transition:width .4s ease; }
+.dot-bar-pct   { font-size:.7rem; color:var(--c-text-dim); margin-left:.4rem; font-family:'JetBrains Mono',monospace; vertical-align:middle; }
+.col-bar       { display:flex; align-items:center; gap:.25rem; min-width:110px; }
+
+.dot-footnote { font-size:.7rem; color:var(--c-text-dim); margin-top:.875rem; line-height:1.6; padding:0 .25rem; }
+
+/* Color picker */
+.color-picker-row { display:flex; align-items:center; gap:.75rem; }
+.color-input { width:48px; height:36px; padding:2px; border-radius:var(--r); border:1.5px solid var(--c-border); background:var(--c-surface); cursor:pointer; flex-shrink:0; }
+.color-hint  { font-family:'JetBrains Mono',monospace; font-size:.8rem; color:var(--c-text-muted); }
+
+/* ══════════════════════════════════════════════════════════════════
+   MODULE GROUPES & ACTIVITÉS
+   ══════════════════════════════════════════════════════════════════ */
+.grp-type-badge { display:inline-flex; align-items:center; background:var(--c-surface2); border:1px solid var(--c-border); color:var(--c-text-muted); font-size:.68rem; font-weight:500; padding:.1rem .5rem; border-radius:4px; }
+.grp-niveaux { font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--c-text-muted); }
+.grp-comment { font-size:.72rem; color:var(--c-text-dim); }
+
+/* Checkboxes niveaux dans modal groupe */
+.niveaux-check { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.35rem; }
+.niv-check-label { display:inline-flex; align-items:center; gap:.35rem; cursor:pointer; background:var(--c-surface2); border:1.5px solid var(--c-border); border-radius:6px; padding:.3rem .7rem; font-size:.8rem; font-weight:500; transition:all var(--tf); }
+.niv-check-label:hover { border-color:var(--c-accent); }
+.niv-check-label input:checked ~ span { color:var(--c-accent); font-weight:700; }
+.niv-check-label:has(input:checked) { background:var(--c-accent-light); border-color:var(--c-accent); }
+.niv-check { display:none; }
+
+/* ══════════════════════════════════════════════════════════════════
+   MODAL SAISIE MATRICIELLE
+   ══════════════════════════════════════════════════════════════════ */
+.matrice-table { width:100%; border-collapse:collapse; margin-bottom:.25rem; }
+.matrice-table th { font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--c-text-muted); padding:.5rem .75rem; border-bottom:1.5px solid var(--c-border); text-align:left; }
+.matrice-table th:not(:first-child) { text-align:center; }
+.matrice-table td { padding:.5rem .75rem; border-bottom:1px solid var(--c-border); vertical-align:middle; }
+.matrice-table tr:last-child td { border-bottom:none; }
+.matrice-input { width:80px; text-align:center; font-family:'JetBrains Mono',monospace; font-weight:600; font-size:.95rem; padding:.35rem .5rem; border-radius:6px; border:1.5px solid var(--c-border); background:var(--c-surface); color:var(--c-text); }
+.matrice-input:focus { border-color:var(--c-accent); outline:none; box-shadow:0 0 0 3px rgba(45,106,79,.15); }
+.matrice-replace-label { display:inline-flex; align-items:center; gap:.5rem; cursor:pointer; font-size:.83rem; }
+.matrice-replace-label input { width:auto; }
+
+/* ══════════════════════════════════════════════════════════════════
+   MODAL ÉTABLISSEMENT — liste années + suppression
+   ══════════════════════════════════════════════════════════════════ */
+.year-list-admin { margin-top:.75rem; display:flex; flex-direction:column; gap:.375rem; }
+.year-list-admin-title { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--c-red); margin-bottom:.25rem; }
+.year-admin-row { display:flex; align-items:center; justify-content:space-between; background:var(--c-surface2); border:1px solid var(--c-border); border-radius:var(--r); padding:.45rem .75rem; gap:.75rem; }
+.year-admin-label { font-size:.83rem; font-weight:500; color:var(--c-text-muted); font-family:'JetBrains Mono',monospace; }
+.year-admin-active { color:var(--c-accent); font-weight:700; }
+
+/* Modal établissement — responsive */
+@media (max-width:480px) {
+  .modal.modal-lg { max-width:100%; margin:.5rem; }
+  .year-add-row { flex-direction:column; align-items:stretch; }
+  .btn-add-year { width:100%; justify-content:center; }
+}
