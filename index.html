@@ -189,10 +189,10 @@
           <p>Commencez par configurer votre établissement et saisir votre dotation DGH.<br>
           Ou importez un fichier de données existant.</p>
           <div class="empty-actions">
-            <button class="btn-primary" onclick="app.navigate('structures')">
+            <button class="btn-primary" data-navigate="structures">
               Saisir les structures →
             </button>
-            <button class="btn-secondary" onclick="document.getElementById('btnImport').click()">
+            <button class="btn-secondary" id="btnImportEmpty">
               Importer des données
             </button>
           </div>
@@ -202,7 +202,7 @@
         <div class="section-card hidden" id="disciplineResume">
           <div class="section-card-header">
             <h2>Répartition par discipline</h2>
-            <button class="btn-link" onclick="app.navigate('dotation')">Voir tout →</button>
+            <button class="btn-link" data-navigate="dotation">Voir tout →</button>
           </div>
           <div class="discipline-list" id="disciplineList">
             <!-- Rempli dynamiquement -->
