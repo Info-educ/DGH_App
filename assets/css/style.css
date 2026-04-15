@@ -1217,7 +1217,7 @@ input::placeholder { color: var(--c-text-dim); }
 .kpi-tooltip-card { position: relative; cursor: help; }
 .kpi-tooltip {
   display: none; position: absolute; z-index: 9000;
-  bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+  top: calc(100% + 10px); left: 50%; transform: translateX(-50%);
   background: var(--c-surface); border: 1.5px solid var(--c-border);
   border-radius: var(--r); padding: .65rem .9rem;
   font-size: .76rem; line-height: 1.6; color: var(--c-text);
@@ -1259,3 +1259,15 @@ input::placeholder { color: var(--c-text-dim); }
   font-size: .67rem; color: var(--c-text-dim);
   font-family: 'JetBrains Mono', monospace;
 }
+
+/* ── Badge HP/HSA cliquable dans tableau HPC ─────────────────────── */
+.hpc-type-toggle {
+  cursor: pointer; border: none; font-size: .72rem; font-weight: 700;
+  padding: .2rem .55rem; border-radius: 4px;
+  transition: filter var(--tf), transform var(--tf);
+  letter-spacing: .04em;
+}
+.hpc-type-toggle:hover { filter: brightness(1.15); transform: scale(1.07); }
+
+/* ── Tooltip sur lignes disciplines dashboard ───────────────────── */
+.disc-resume-tooltip-row { cursor: help; }

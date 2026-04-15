@@ -144,15 +144,26 @@ const Calculs = (() => {
       const hPoste = rep.hPoste||0, hsa = rep.hsa||0;
       const total  = Math.round((hPoste+hsa)*2)/2;
       const gcs    = rep.groupesCours || [];
-      const heuresGroupes = Math.round(gcs.reduce((s,g)=>s+(g.heures||0),0)*2)/2;
-      // Si des groupes de cours existent, leur total PRÉVAUT sur le besoin MEN théorique
-      // Logique métier : LV2 Espagnol (2.5h) + LV2 Allemand (2.5h) = 5h réel,
-      // indépendamment du besoin théorique MEN par division
-      const besoinTheorique = heuresGroupes > 0 ? heuresGroupes : besoinMEN;
+      // Besoin réel par groupe = heures × nb_classes_sélectionnées dans ce groupe
+      // Ex : Espagnol 2.5h × 16 classes + Allemand 2.5h × 3 classes = 47.5h
+      // (structures passé en paramètre pour compter les classes disponibles)
+      const heuresGroupesBrut = gcs.reduce((s,g) => s + (g.heures||0), 0);
+      const heuresGroupesReel = Math.round(
+        gcs.reduce((s,g) => {
+          const nbClasses = (g.classesIds||[]).length;
+          // Si aucune classe sélectionnée, on prend 1 prof (coût minimal)
+          return s + (g.heures||0) * (nbClasses > 0 ? nbClasses : 1);
+        }, 0) * 2
+      ) / 2;
+      const hasGroupes = gcs.length > 0;
+      // Besoin affiché : si groupes → coût réel (h × classes), sinon besoin MEN
+      const besoinTheorique = hasGroupes ? heuresGroupesReel : besoinMEN;
       return {
         disciplineId: disc.id, nom: disc.nom, couleur: disc.couleur,
-        besoinTheorique, besoinMEN, hPoste, hsa, total, heuresGroupes,
-        hasGroupes: heuresGroupes > 0,
+        besoinTheorique, besoinMEN, hPoste, hsa, total,
+        heuresGroupes: Math.round(heuresGroupesBrut*2)/2,
+        heuresGroupesReel,
+        hasGroupes,
         ecart: Math.round((total - besoinTheorique)*2)/2,
         commentaire: rep.commentaire||'', groupesCours: gcs
       };

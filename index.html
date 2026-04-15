@@ -454,7 +454,10 @@
         <input type="hidden" id="modalGCId" />
         <div class="form-group"><label for="inputGCNom">Nom du groupe <span class="form-required">*</span></label><input type="text" id="inputGCNom" placeholder="ex. LV2 Espagnol, LV2 Allemand, Groupe besoin Maths…" maxlength="80" /></div>
         <div class="form-group">
-          <label>Classes concernées</label>
+          <div class="classes-label-row">
+            <label>Classes concernées</label>
+            <button type="button" class="btn-link btn-select-all-gc" id="btnGCSelectAll">Tout sélectionner</button>
+          </div>
           <p class="form-hint" style="margin-bottom:.5rem">Sélectionnez les classes qui constituent ce groupe. L'effectif est calculé automatiquement.</p>
           <div class="classes-check" id="gcClassesCheck"></div>
           <div class="gc-effectif-auto" id="gcEffectifAuto"></div>

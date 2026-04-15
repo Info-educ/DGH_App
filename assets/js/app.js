@@ -176,7 +176,16 @@ const app = (() => {
           besoins.forEach(b => {
             const pct = bilan.enveloppe > 0 ? Math.min(100, Math.round((b.total / bilan.enveloppe) * 100)) : 0;
             const ecartCls = b.ecart > 0 ? 'dot-ecart-over' : b.ecart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
-            html += '<div class="disc-resume-row">'
+            // Tooltip : detail HP/HSA/besoin/ecart
+            const tipLines = [
+              'HP : ' + b.hPoste + ' h',
+              'HSA : ' + b.hsa + ' h',
+              b.hasGroupes
+                ? 'Besoin réel (GC) : ' + (b.heuresGroupesReel||b.heuresGroupes) + ' h'
+                : (b.besoinMEN > 0 ? 'Besoin MEN : ' + b.besoinMEN + ' h' : null),
+              b.besoinTheorique > 0 ? 'Écart : ' + (b.ecart >= 0 ? '+' : '') + b.ecart + ' h' : null
+            ].filter(Boolean).join(' | ');
+            html += '<div class="disc-resume-row disc-resume-tooltip-row" title="' + _esc(tipLines) + '">'
               + '<span class="disc-color-dot" style="background:' + _esc(b.couleur) + '"></span>'
               + '<span class="disc-resume-nom">' + _esc(b.nom) + '</span>'
               + '<span class="disc-resume-h">' + b.total + ' h</span>'
@@ -252,19 +261,34 @@ const app = (() => {
           + '<p class="struct-empty-sub">Utilisez «\u00a0Saisie rapide\u00a0» pour créer toutes vos divisions en une fois.</p></div>';
         return;
       }
-      // Calculer quelles classes ont des groupes de cours ou HPC
+      // Calculer quelles classes ont des groupes/HPC - avec noms reels
       const annData   = DGHData.getAnnee();
       const repartit  = annData.repartition || [];
       const hpcList   = annData.heuresPedaComp || [];
-      const classesAvecStructure = new Set();
-      repartit.forEach(r => { (r.groupesCours||[]).forEach(gc => { (gc.classesIds||[]).forEach(id => classesAvecStructure.add(id)); }); });
-      hpcList.forEach(h => { (h.classesIds||[]).forEach(id => classesAvecStructure.add(id)); });
+      // Map : divisionId -> liste de noms (groupes de cours + HPC)
+      const classeNomsMap = {};
+      repartit.forEach(r => {
+        (r.groupesCours||[]).forEach(gc => {
+          (gc.classesIds||[]).forEach(id => {
+            if (!classeNomsMap[id]) classeNomsMap[id] = [];
+            if (gc.nom) classeNomsMap[id].push(gc.nom);
+          });
+        });
+      });
+      hpcList.forEach(h => {
+        (h.classesIds||[]).forEach(id => {
+          if (!classeNomsMap[id]) classeNomsMap[id] = [];
+          if (h.nom) classeNomsMap[id].push(h.nom);
+        });
+      });
 
-      let html = '<table class="struct-table"><thead><tr><th>Division</th><th>Niveau</th><th>Effectif</th><th>Dispositif / Structure</th><th class="col-actions">Actions</th></tr></thead><tbody>';
+      let html = '<table class="struct-table"><thead><tr><th>Division</th><th>Niveau</th><th>Effectif</th><th>Dispositif / Groupes</th><th class="col-actions">Actions</th></tr></thead><tbody>';
       structures.forEach(div => {
         const tags = [];
         if (div.dispositif) tags.push('<span class="div-tag div-tag-disp">' + _esc(div.dispositif) + '</span>');
-        if (classesAvecStructure.has(div.id)) tags.push('<span class="div-tag div-tag-struct" title="Groupes de cours ou HPC liés à cette classe">Structure</span>');
+        (classeNomsMap[div.id]||[]).forEach(nom => {
+          tags.push('<span class="div-tag div-tag-struct">' + _esc(nom) + '</span>');
+        });
         const dispTag = tags.length > 0 ? tags.join(' ') : '<span class="no-tag">—</span>';
         html += '<tr>'
           + '<td><strong class="div-nom">' + _esc(div.nom||'—') + '</strong></td>'
@@ -414,7 +438,10 @@ const app = (() => {
           + '</td>'
           + '<td><span class="disc-color-dot" style="background:' + _esc(disc.couleur) + '"></span><strong class="div-nom">' + _esc(disc.nom) + '</strong>'
           + (nbGC > 0 ? '<span class="gc-count-badge">' + nbGC + ' groupe' + (nbGC>1?'s':'') + '</span>' : '') + '</td>'
-          + '<td class="col-num dot-theorique">' + (b.hasGroupes ? b.heuresGroupes + ' h <span class="dot-besoin-gc-tag" title="Total groupes (MEN: ' + (b.besoinMEN||0) + ' h)">GC</span>' + (b.besoinMEN > 0 ? '<br><small class="dot-besoin-men-hint">MEN: ' + b.besoinMEN + ' h</small>' : '') : (b.besoinTheorique > 0 ? b.besoinTheorique + ' h' : '<span class="no-tag">—</span>')) + '</td>'
+          + '<td class="col-num dot-theorique">' + (b.hasGroupes
+            ? (b.heuresGroupesReel||b.heuresGroupes) + ' h <span class="dot-besoin-gc-tag" title="' + (b.groupesCours||[]).map(gc=>(gc.nom||'?')+'�: '+(gc.heures||0)+'h×'+(gc.classesIds&&gc.classesIds.length>0?gc.classesIds.length:1)).join(' | ') + '">GC</span>'
+            + (b.besoinMEN > 0 ? '<br><small class="dot-besoin-men-hint">MEN�: ' + b.besoinMEN + ' h</small>' : '')
+            : (b.besoinTheorique > 0 ? b.besoinTheorique + ' h' : '<span class="no-tag">—</span>')) + '</td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hp" data-disc-id="' + disc.id + '" data-field="hPoste" value="' + b.hPoste + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hsa" data-disc-id="' + disc.id + '" data-field="hsa" value="' + b.hsa + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + b.total + ' h</strong></td>'
@@ -547,12 +574,13 @@ const app = (() => {
   function _toggleAllGC() {
     const btn = document.getElementById('btnToggleAllGC'); if (!btn) return;
     const allSubRows = document.querySelectorAll('[id^="gc-sub-"]');
-    const anyHidden  = Array.from(allSubRows).some(r => r.style.display === 'none' || r.style.display === '');
-    // Si au moins un est fermé → tout ouvrir ; sinon → tout fermer
-    const open = anyHidden;
-    allSubRows.forEach(r => { r.style.display = open ? '' : 'none'; });
-    document.querySelectorAll('.btn-toggle-gc').forEach(b => { b.textContent = open ? '▼' : '▶'; });
-    btn.textContent = open ? '⊟ Tout replier' : '⊞ Tout déplier';
+    if (allSubRows.length === 0) return;
+    // Un sous-panneau est 'ouvert' si display != 'none' (vide ou explicitement '')
+    const allOpen = Array.from(allSubRows).every(r => r.style.display !== 'none');
+    const shouldOpen = !allOpen; // si tout est ouvert on ferme, sinon on ouvre
+    allSubRows.forEach(r => { r.style.display = shouldOpen ? '' : 'none'; });
+    document.querySelectorAll('.btn-toggle-gc').forEach(b => { b.textContent = shouldOpen ? '▼' : '▶'; });
+    btn.textContent = shouldOpen ? '⊟ Tout replier' : '⊞ Tout déplier';
   }
 
   function _saveEnveloppe() {
@@ -650,6 +678,8 @@ const app = (() => {
 
     _updateGCEffectif();
     classesDiv?.querySelectorAll('.classe-check').forEach(cb => cb.addEventListener('change', _updateGCEffectif));
+    const btnGCAll = document.getElementById('btnGCSelectAll');
+    if (btnGCAll) btnGCAll.textContent = 'Tout sélectionner';
     modal.classList.add('modal-open');
     setTimeout(()=>document.getElementById('inputGCNom')?.focus(),60);
   }
@@ -724,8 +754,8 @@ const app = (() => {
         const isHSA = (h.typeHeure||'hp') === 'hsa';
         if (isHSA) totalHPCHsa += h.heures||0; else totalHPCHp += h.heures||0;
         const typeBadge = isHSA
-          ? '<span class="dot-col-badge dot-col-hsa">HSA</span>'
-          : '<span class="dot-col-badge dot-col-hp">HP</span>';
+          ? '<button class="dot-col-badge dot-col-hsa hpc-type-toggle" data-action="toggle-hpc-type" data-id="' + h.id + '" title="Cliquer pour passer en HP">⇄ HSA</button>'
+          : '<button class="dot-col-badge dot-col-hp hpc-type-toggle" data-action="toggle-hpc-type" data-id="' + h.id + '" title="Cliquer pour passer en HSA">⇄ HP</button>';
         html += '<tr>'
           + '<td><strong class="div-nom">' + _esc(h.nom||'—') + '</strong>' + (h.commentaire?'<br><span class="grp-comment">'+_esc(h.commentaire)+'</span>':'') + '</td>'
           + '<td><span class="grp-type-badge">' + _esc(catLabel) + '</span></td>'
@@ -796,6 +826,15 @@ const app = (() => {
     if (checked.length > 0) _setVal('inputHPCEffectif', total);
   }
 
+  function _gcSelectAllClasses() {
+    const allChecked = Array.from(document.querySelectorAll('#gcClassesCheck .classe-check'));
+    const anyUnchecked = allChecked.some(cb => !cb.checked);
+    allChecked.forEach(cb => { cb.checked = anyUnchecked; });
+    _updateGCEffectif();
+    const btn = document.getElementById('btnGCSelectAll');
+    if (btn) btn.textContent = anyUnchecked ? 'Tout désélectionner' : 'Tout sélectionner';
+  }
+
   function _hpcSelectAllClasses() {
     const allChecked = Array.from(document.querySelectorAll('#hpcClassesCheck .hpc-classe-check'));
     const anyUnchecked = allChecked.some(cb => !cb.checked);
@@ -803,6 +842,14 @@ const app = (() => {
     _updateHPCEffectif();
     const btn = document.getElementById('btnHPCSelectAll');
     if (btn) btn.textContent = anyUnchecked ? 'Tout désélectionner' : 'Tout sélectionner';
+  }
+
+  function _toggleHPCType(id) {
+    const h = DGHData.getHPC(id); if (!h) return;
+    const nouveau = (h.typeHeure||'hp') === 'hp' ? 'hsa' : 'hp';
+    DGHData.updateHPC(id, { typeHeure: nouveau });
+    _renderHPC(); _renderDashboard();
+    toast(h.nom + ' passé en ' + nouveau.toUpperCase(), 'success', 2000);
   }
 
   function _closeModalHPC() { const m=document.getElementById('modalHPC'); if(m) m.classList.remove('modal-open'); }
@@ -959,6 +1006,7 @@ const app = (() => {
       if (action==='delete-gc')   { _confirmDeleteGC(discId||actionBtn.dataset.discId, gcId||actionBtn.dataset.gcId); return; }
       if (action==='edit-hpc')    { _openModalHPC(id);              return; }
       if (action==='delete-hpc')  { _confirmDeleteHPC(id);          return; }
+      if (action==='toggle-hpc-type') { _toggleHPCType(id);         return; }
     }
 
     const btnDeleteAnnee = e.target.closest('.btn-delete-annee');
@@ -974,6 +1022,7 @@ const app = (() => {
     if (e.target.closest('#btnInitDisc'))  { _initDisciplinesMEN();   return; }
     if (e.target.closest('#btnSuggerer'))  { _suggererHP();           return; }
     if (e.target.closest('#btnToggleAllGC')) { _toggleAllGC();          return; }
+    if (e.target.closest('#btnGCSelectAll'))  { _gcSelectAllClasses();   return; }
     if (e.target.closest('#btnAddHPC'))    { _openModalHPC(null);     return; }
     if (e.target.closest('#btnHPCSelectAll')) { _hpcSelectAllClasses();  return; }
     if (e.target.closest('#btnEtab'))      { _openModal();            return; }
