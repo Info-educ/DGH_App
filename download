@@ -1,0 +1,21 @@
+# ═══════════════════════════════════════════════════════════
+# DGH App — .gitignore
+# RGPD : les fichiers de données ne doivent JAMAIS
+# être poussés sur le dépôt GitHub public.
+# ═══════════════════════════════════════════════════════════
+
+# Données locales (contiennent des noms d'enseignants)
+data/
+*.json
+
+# Sauf le fichier d'exemple anonymisé
+!data/exemple.json
+
+# Éditeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log

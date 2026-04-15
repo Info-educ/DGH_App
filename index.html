@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DGH App — Pilotage de la Dotation Globale Horaire</title>
+  <meta name="description" content="Outil de pilotage DGH pour collège — gestion des services, HSA, simulation de scénarios." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════ SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-mark">
+        <span class="logo-icon">◈</span>
+        <div>
+          <div class="logo-title">DGH App</div>
+          <div class="logo-sub">Collège</div>
+        </div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Réduire le menu">‹</button>
+    </div>
+
+    <!-- Année scolaire -->
+    <div class="year-selector">
+      <label class="year-label">Année scolaire</label>
+      <select id="yearSelect" class="year-select">
+        <option value="2024-2025">2024 – 2025</option>
+        <option value="2025-2026" selected>2025 – 2026</option>
+      </select>
+    </div>
+
+    <!-- Navigation principale -->
+    <ul class="nav-list" role="navigation" aria-label="Navigation principale">
+      <li class="nav-section-label">Pilotage</li>
+
+      <li class="nav-item active" data-view="dashboard">
+        <span class="nav-icon">⬡</span>
+        <span class="nav-label">Tableau de bord</span>
+        <span class="nav-badge" id="badge-dashboard"></span>
+      </li>
+
+      <li class="nav-item" data-view="structures">
+        <span class="nav-icon">⊞</span>
+        <span class="nav-label">Structures</span>
+        <span class="nav-badge" id="badge-structures"></span>
+      </li>
+
+      <li class="nav-item" data-view="dotation">
+        <span class="nav-icon">◎</span>
+        <span class="nav-label">Dotation DGH</span>
+        <span class="nav-badge" id="badge-dotation"></span>
+      </li>
+
+      <li class="nav-item" data-view="enseignants">
+        <span class="nav-icon">◉</span>
+        <span class="nav-label">Enseignants</span>
+        <span class="nav-badge" id="badge-enseignants"></span>
+      </li>
+
+      <li class="nav-section-label">Analyse</li>
+
+      <li class="nav-item" data-view="simulation">
+        <span class="nav-icon">⟳</span>
+        <span class="nav-label">Simulation</span>
+        <span class="nav-badge" id="badge-simulation"></span>
+      </li>
+
+      <li class="nav-item" data-view="alertes">
+        <span class="nav-icon">◬</span>
+        <span class="nav-label">Alertes</span>
+        <span class="nav-badge alert" id="badge-alertes"></span>
+      </li>
+
+      <li class="nav-section-label">Restitution</li>
+
+      <li class="nav-item" data-view="synthese">
+        <span class="nav-icon">▤</span>
+        <span class="nav-label">Synthèses</span>
+        <span class="nav-badge" id="badge-synthese"></span>
+      </li>
+
+      <li class="nav-item" data-view="historique">
+        <span class="nav-icon">◷</span>
+        <span class="nav-label">Historique</span>
+        <span class="nav-badge" id="badge-historique"></span>
+      </li>
+    </ul>
+
+    <!-- Actions données -->
+    <div class="sidebar-actions">
+      <button class="btn-data" id="btnExport" title="Exporter les données (JSON)">
+        <span>↓</span> Exporter
+      </button>
+      <button class="btn-data import" id="btnImport" title="Importer des données (JSON)">
+        <span>↑</span> Importer
+      </button>
+      <input type="file" id="fileImport" accept=".json" style="display:none" />
+    </div>
+
+    <div class="sidebar-footer">
+      <span class="version-tag">v1.0.0</span>
+      <a href="https://github.com" target="_blank" class="gh-link" title="Voir sur GitHub">GitHub ↗</a>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════ MAIN -->
+  <main class="main-content" id="mainContent">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">☰</button>
+        <div class="breadcrumb" id="breadcrumb">
+          <span>Tableau de bord</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-stats" id="topbarStats">
+          <!-- Rempli dynamiquement -->
+        </div>
+        <div class="établissement-name" id="etablissementName">Mon Collège</div>
+      </div>
+    </header>
+
+    <!-- Zone de contenu des vues -->
+    <div class="view-container" id="viewContainer">
+
+      <!-- ═══ VUE : DASHBOARD ═══ -->
+      <section class="view active" id="view-dashboard">
+        <div class="view-header">
+          <h1 class="view-title">Tableau de bord</h1>
+          <p class="view-subtitle">Vue d'ensemble de la DGH <span id="dashYear">2025–2026</span></p>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid" id="kpiGrid">
+          <div class="kpi-card" data-color="blue">
+            <div class="kpi-label">Enveloppe DGH</div>
+            <div class="kpi-value" id="kpi-dghtotal">— h</div>
+            <div class="kpi-sub">dotation globale</div>
+          </div>
+          <div class="kpi-card" data-color="green">
+            <div class="kpi-label">Heures affectées</div>
+            <div class="kpi-value" id="kpi-affectees">— h</div>
+            <div class="kpi-sub" id="kpi-affectees-pct">— %</div>
+          </div>
+          <div class="kpi-card" data-color="amber">
+            <div class="kpi-label">Solde disponible</div>
+            <div class="kpi-value" id="kpi-solde">— h</div>
+            <div class="kpi-sub">heures restantes</div>
+          </div>
+          <div class="kpi-card" data-color="red">
+            <div class="kpi-label">Alertes actives</div>
+            <div class="kpi-value" id="kpi-alertes">—</div>
+            <div class="kpi-sub">dépassements / écarts</div>
+          </div>
+          <div class="kpi-card" data-color="indigo">
+            <div class="kpi-label">Enseignants</div>
+            <div class="kpi-value" id="kpi-enseignants">—</div>
+            <div class="kpi-sub" id="kpi-tzr">dont — TZR / compl.</div>
+          </div>
+          <div class="kpi-card" data-color="teal">
+            <div class="kpi-label">HSA totales</div>
+            <div class="kpi-value" id="kpi-hsa">— h</div>
+            <div class="kpi-sub">heures suppl. annuelles</div>
+          </div>
+        </div>
+
+        <!-- Barre de progression DGH -->
+        <div class="progress-section">
+          <div class="progress-header">
+            <span>Consommation DGH</span>
+            <span id="progress-label">0 / 0 h</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Message d'accueil si données vides -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">◈</div>
+          <h2>Bienvenue dans DGH App</h2>
+          <p>Commencez par configurer votre établissement et saisir votre dotation DGH.<br>
+          Ou importez un fichier de données existant.</p>
+          <div class="empty-actions">
+            <button class="btn-primary" onclick="app.navigate('structures')">
+              Saisir les structures →
+            </button>
+            <button class="btn-secondary" onclick="document.getElementById('btnImport').click()">
+              Importer des données
+            </button>
+          </div>
+        </div>
+
+        <!-- Résumé par discipline (affiché si données présentes) -->
+        <div class="section-card hidden" id="disciplineResume">
+          <div class="section-card-header">
+            <h2>Répartition par discipline</h2>
+            <button class="btn-link" onclick="app.navigate('dotation')">Voir tout →</button>
+          </div>
+          <div class="discipline-list" id="disciplineList">
+            <!-- Rempli dynamiquement -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ VUE : STRUCTURES ═══ -->
+      <section class="view" id="view-structures">
+        <div class="view-header">
+          <h1 class="view-title">Structures de classes</h1>
+          <p class="view-subtitle">Divisions par niveau, effectifs et dispositifs</p>
+        </div>
+        <div class="placeholder-view">
+          <div class="placeholder-icon">⊞</div>
+          <p>Module <strong>Structures</strong> — Sprint 2</p>
+          <p class="placeholder-sub">Saisie des divisions 6e / 5e / 4e / 3e, options, dispositifs (ULIS, UPE2A, SEGPA)</p>
+        </div>
+      </section>
+
+      <!-- ═══ VUE : DOTATION ═══ -->
+      <section class="view" id="view-dotation">
+        <div class="view-header">
+          <h1 class="view-title">Dotation DGH</h1>
+          <p class="view-subtitle">Enveloppe globale et répartition par discipline</p>
+        </div>
+        <div class="placeholder-view">
+          <div class="placeholder-icon">◎</div>
+          <p>Module <strong>Dotation DGH</strong> — Sprint 3</p>
+          <p class="placeholder-sub">Enveloppe DGH → besoins calculés via grilles MEN → affectation par discipline</p>
+        </div>
+      </section>
+
+      <!-- ═══ VUE : ENSEIGNANTS ═══ -->
+      <section class="view" id="view-enseignants">
+        <div class="view-header">
+          <h1 class="view-title">Enseignants</h1>
+          <p class="view-subtitle">Services individuels, ORS, HSA, Pacte, IMP</p>
+        </div>
+        <div class="placeholder-view">
+          <div class="placeholder-icon">◉</div>
+          <p>Module <strong>Enseignants</strong> — Sprint 4</p>
+          <p class="placeholder-sub">Fiche par enseignant : corps/grade → ORS auto, heures affectées, HSA, TZR, compléments</p>
+        </div>
+      </section>
+
+      <!-- ═══ VUE : SIMULATION ═══ -->
+      <section class="view" id="view-simulation">
+        <div class="view-header">
+          <h1 class="view-title">Simulation</h1>
+          <p class="view-subtitle">Testez des scénarios sans modifier vos données réelles</p>
+        </div>
+        <div class="placeholder-view">
+          <div class="placeholder-icon">⟳</div>
+          <p>Module <strong>Simulation</strong> — Sprint 5</p>
+          <p class="placeholder-sub">Mode bac à sable : ajouter/retirer des heures, comparer des scénarios</p>
+        </div>
+      </section>
+
+      <!-- ═══ VUE : ALERTES ═══ -->
+      <section class="view" id="view-alertes">
+        <div class="view-header">
+          <h1 class="view-title">Alertes</h1>
+          <p class="view-subtitle">Dépassements, sous-services, anomalies détectées</p>
+        </div>
+        <div class="placeholder-view">
+          <div class="placeholder-icon">◬</div>
+          <p>Module <strong>Alertes</strong> — Sprint 5</p>
+          <p class="placeholder-sub">Signalement automatique des incohérences et dépassements</p>
+        </div>
+      </section>
+
+      <!-- ═══ VUE : SYNTHÈSE ═══ -->
+      <section class="view" id="view-synthese">
+        <div class="view-header">
+          <h1 class="view-title">Synthèses</h1>
+          <p class="view-subtitle">Documents pour le CA et les équipes pédagogiques</p>
+        </div>
+        <div class="placeholder-view">
+          <div class="placeholder-icon">▤</div>
+          <p>Module <strong>Synthèses</strong> — Sprint 6</p>
+          <p class="placeholder-sub">Export PDF imprimable + tableaux HTML copiables</p>
+        </div>
+      </section>
+
+      <!-- ═══ VUE : HISTORIQUE ═══ -->
+      <section class="view" id="view-historique">
+        <div class="view-header">
+          <h1 class="view-title">Historique</h1>
+          <p class="view-subtitle">Suivi pluriannuel de la DGH</p>
+        </div>
+        <div class="placeholder-view">
+          <div class="placeholder-icon">◷</div>
+          <p>Module <strong>Historique</strong> — Sprint 7</p>
+          <p class="placeholder-sub">Basculement entre années scolaires, comparaisons, évolution des services</p>
+        </div>
+      </section>
+
+    </div><!-- /view-container -->
+  </main>
+
+  <!-- Toast notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Modal paramètres établissement -->
+  <div class="modal-overlay hidden" id="modalEtablissement">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Paramètres de l'établissement</h2>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nom de l'établissement</label>
+          <input type="text" id="inputNomEtab" placeholder="Collège Jean Moulin" />
+        </div>
+        <div class="form-group">
+          <label>UAI / RNE</label>
+          <input type="text" id="inputUAI" placeholder="0750001A" maxlength="8" />
+        </div>
+        <div class="form-group">
+          <label>Académie</label>
+          <input type="text" id="inputAcademie" placeholder="Paris" />
+        </div>
+        <div class="form-group">
+          <label>Enveloppe DGH totale (heures)</label>
+          <input type="number" id="inputDGH" placeholder="450" min="0" step="0.5" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="modalCancel">Annuler</button>
+        <button class="btn-primary" id="modalSave">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/calculs.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
