@@ -1,24 +1,22 @@
 /**
- * DGH App — Contrôleur principal v2
- * Navigation, rendu dashboard, events UI
- * Règle : zéro onclick inline, zéro variable dupliquée, zéro code zombie
+ * DGH App — Contrôleur principal v2.1
+ * Zéro onclick inline · Zéro variable dupliquée · Zéro code zombie
  */
 
 const app = (() => {
 
-  // ── Registre des vues ────────────────────────────────────────────
   const VIEWS = {
-    'dashboard':   'Tableau de bord',
-    'structures':  'Structures',
-    'dotation':    'Dotation DGH',
-    'enseignants': 'Enseignants',
-    'simulation':  'Simulation',
-    'alertes':     'Alertes',
-    'synthese':    'Synthèses',
-    'historique':  'Historique'
+    dashboard:   'Tableau de bord',
+    structures:  'Structures',
+    dotation:    'Dotation DGH',
+    enseignants: 'Enseignants',
+    simulation:  'Simulation',
+    alertes:     'Alertes',
+    synthese:    'Synthèses',
+    historique:  'Historique'
   };
 
-  // ── INITIALISATION ───────────────────────────────────────────────
+  // ── INIT ─────────────────────────────────────────────────────────
   function init() {
     _applyTheme(localStorage.getItem('dgh-theme') || 'light');
     DGHData.init();
@@ -27,10 +25,12 @@ const app = (() => {
     navigate('dashboard');
   }
 
-  // ── THÈME dark / light ───────────────────────────────────────────
+  // ── THÈME ────────────────────────────────────────────────────────
   function _applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('dgh-theme', theme);
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = theme === 'dark' ? '☽' : '☀︎';
   }
 
   // ── NAVIGATION ───────────────────────────────────────────────────
@@ -49,8 +49,7 @@ const app = (() => {
     if (bc) bc.textContent = VIEWS[viewId];
 
     if (window.innerWidth <= 768) {
-      const sidebar = document.getElementById('sidebar');
-      if (sidebar) sidebar.classList.remove('open');
+      document.getElementById('sidebar').classList.remove('open');
     }
 
     if (viewId === 'dashboard') _renderDashboard();
@@ -59,134 +58,109 @@ const app = (() => {
 
   // ── DASHBOARD ────────────────────────────────────────────────────
   function _renderDashboard() {
-    const anneeData = DGHData.getAnnee();
-    const bilan     = Calculs.bilanDGH(anneeData);
-    const alertes   = Calculs.genererAlertes(anneeData);
+    const data    = DGHData.getAnnee();
+    const bilan   = Calculs.bilanDGH(data);
+    const alertes = Calculs.genererAlertes(data);
 
-    // Année
-    _setText('dashYear', DGHData.getAnneeActive().replace('-', '–'));
-
-    // KPIs
-    _setText('kpi-dghtotal',     bilan.enveloppe       ? bilan.enveloppe + ' h'          : '— h');
-    _setText('kpi-affectees',    bilan.heuresAllouees   ? bilan.heuresAllouees + ' h'     : '— h');
-    _setText('kpi-affectees-pct',bilan.enveloppe        ? bilan.pctConsomme + ' %'        : '— %');
-    _setText('kpi-solde',        bilan.enveloppe        ? bilan.solde + ' h'              : '— h');
-    _setText('kpi-alertes',      alertes.filter(a => a.severite !== 'info').length || '—');
-    _setText('kpi-enseignants',  bilan.nbEnseignants    || '—');
-    _setText('kpi-tzr',          'dont ' + bilan.nbTZR + ' TZR / compl.');
-    _setText('kpi-hsa',          bilan.totalHSA         ? bilan.totalHSA + ' h'          : '— h');
+    _set('dashYear',        DGHData.getAnneeActive().replace('-', '–'));
+    _set('kpi-dghtotal',    bilan.enveloppe     ? bilan.enveloppe + ' h'        : '— h');
+    _set('kpi-affectees',   bilan.heuresAllouees ? bilan.heuresAllouees + ' h'  : '— h');
+    _set('kpi-affectees-pct', bilan.enveloppe   ? bilan.pctConsomme + ' %'      : '— %');
+    _set('kpi-solde',       bilan.enveloppe     ? bilan.solde + ' h'            : '— h');
+    _set('kpi-alertes',     alertes.filter(a => a.severite !== 'info').length || '—');
+    _set('kpi-enseignants', bilan.nbEnseignants || '—');
+    _set('kpi-tzr',         'dont ' + bilan.nbTZR + ' TZR');
+    _set('kpi-hsa',         bilan.totalHSA ? bilan.totalHSA + ' h' : '— h');
 
     // Badge alertes sidebar
-    const nbAlertes = alertes.filter(a => a.severite === 'error' || a.severite === 'warning').length;
+    const nb = alertes.filter(a => a.severite === 'error' || a.severite === 'warning').length;
     const badge = document.getElementById('badge-alertes');
-    if (badge) {
-      badge.textContent   = nbAlertes || '';
-      badge.style.display = nbAlertes ? '' : 'none';
-    }
+    if (badge) { badge.textContent = nb || ''; badge.style.display = nb ? '' : 'none'; }
 
-    // Topbar stats
+    // Stats topbar
     const stats = document.getElementById('topbarStats');
     if (stats) {
       stats.innerHTML = bilan.enveloppe > 0
-        ? '<div class="topbar-stat"><span class="topbar-stat-label">DGH</span><span class="topbar-stat-val">' + bilan.enveloppe + 'h</span></div>'
-        + '<div class="topbar-stat"><span class="topbar-stat-label">Affecté</span><span class="topbar-stat-val">' + bilan.pctConsomme + '%</span></div>'
-        + '<div class="topbar-stat"><span class="topbar-stat-label">Solde</span><span class="topbar-stat-val">' + bilan.solde + 'h</span></div>'
+        ? '<div class="topbar-stat"><span>DGH</span><span class="topbar-stat-val">' + bilan.enveloppe + 'h</span></div>'
+        + '<div class="topbar-stat"><span>Affecté</span><span class="topbar-stat-val">' + bilan.pctConsomme + '%</span></div>'
+        + '<div class="topbar-stat"><span>Solde</span><span class="topbar-stat-val">' + bilan.solde + 'h</span></div>'
         : '';
     }
 
-    // Barre de progression
+    // Barre progression
     const bar = document.getElementById('progressBar');
     const lbl = document.getElementById('progress-label');
     if (bar) {
       const pct = bilan.enveloppe > 0 ? Math.min(100, bilan.pctConsomme) : 0;
       bar.style.width      = pct + '%';
-      bar.style.background = pct > 100 ? 'var(--c-red)'
-        : pct > 90  ? 'linear-gradient(90deg, var(--c-amber), var(--c-red))'
-        : 'var(--c-accent)';
+      bar.style.background = pct > 100 ? 'var(--c-red)' : pct > 90 ? 'var(--c-amber)' : 'var(--c-accent)';
     }
-    if (lbl) {
-      lbl.innerHTML = bilan.enveloppe > 0
-        ? '<strong>' + bilan.heuresAllouees + ' / ' + bilan.enveloppe + ' h</strong>'
-        : '0 / 0 h';
-    }
+    if (lbl) lbl.textContent = bilan.enveloppe > 0 ? bilan.heuresAllouees + ' / ' + bilan.enveloppe + ' h' : '0 / 0 h';
 
-    // Empty state
+    // Empty state / résumé
     const isEmpty  = DGHData.isEmpty();
     const emptyEl  = document.getElementById('emptyState');
     const resumeEl = document.getElementById('disciplineResume');
     if (emptyEl)  emptyEl.style.display = isEmpty ? '' : 'none';
-    if (resumeEl) resumeEl.classList.toggle('hidden', isEmpty);
+    if (resumeEl) resumeEl.style.display = isEmpty ? 'none' : '';
 
-    // Nom établissement topbar
-    const etab   = DGHData.getEtab();
-    const etabEl = document.getElementById('etablissementName');
-    if (etabEl) etabEl.textContent = etab.nom || 'Mon Collège ⚙';
+    // Nom établissement
+    const etab = DGHData.getEtab();
+    _set('btnEtab', etab.nom || 'Mon Collège ⚙');
   }
 
   // ── ALERTES ──────────────────────────────────────────────────────
   function _renderAlertes() {
-    const alertes   = Calculs.genererAlertes(DGHData.getAnnee());
-    const container = document.getElementById('view-alertes');
-    if (!container) return;
-
-    const ICONES = { error: '✕', warning: '⚠', info: 'ℹ' };
-
-    const html = alertes.length
-      ? alertes.map(a =>
-          '<div class="alerte-item sev-' + a.severite + '">'
-          + '<span class="alerte-icon">' + (ICONES[a.severite] || '·') + '</span>'
-          + '<span class="alerte-msg">' + a.message + '</span>'
-          + '</div>'
-        ).join('')
-      : '<div class="empty-alertes">✓ Aucune alerte — tout est en ordre.</div>';
-
-    let zone = container.querySelector('.alertes-zone');
-    if (!zone) {
-      zone = document.createElement('div');
-      zone.className = 'alertes-zone section-card';
-      container.appendChild(zone);
-    }
-    zone.innerHTML = '<div class="alertes-list">' + html + '</div>';
+    const alertes = Calculs.genererAlertes(DGHData.getAnnee());
+    const zone    = document.getElementById('alertes-zone');
+    if (!zone) return;
+    const ICONS = { error: '✕', warning: '⚠', info: 'ℹ' };
+    zone.className = 'section-card';
+    zone.innerHTML = '<div class="alertes-list">'
+      + (alertes.length
+        ? alertes.map(a =>
+            '<div class="alerte-item sev-' + a.severite + '">'
+            + '<span class="alerte-dot">' + (ICONS[a.severite] || '·') + '</span>'
+            + '<span class="alerte-msg">' + a.message + '</span>'
+            + '</div>').join('')
+        : '<div class="alertes-empty">✓ Aucune alerte — tout est en ordre.</div>')
+      + '</div>';
   }
 
-  // ── RENDU GLOBAL (partagé) ───────────────────────────────────────
+  // ── RENDU GLOBAL ─────────────────────────────────────────────────
   function _renderAll() {
-    const etab   = DGHData.getEtab();
-    const etabEl = document.getElementById('etablissementName');
-    if (etabEl) etabEl.textContent = etab.nom || 'Mon Collège ⚙';
+    const etab = DGHData.getEtab();
+    _set('btnEtab', etab.nom || 'Mon Collège ⚙');
     _renderYearSelect();
   }
 
   function _renderYearSelect() {
-    const select = document.getElementById('yearSelect');
-    if (!select) return;
-    const annees   = DGHData.getAnnees();
-    const active   = DGHData.getAnneeActive();
-    const existing = Array.from(select.options).map(o => o.value);
-    annees.forEach(a => {
+    const sel = document.getElementById('yearSelect');
+    if (!sel) return;
+    const existing = Array.from(sel.options).map(o => o.value);
+    DGHData.getAnnees().forEach(a => {
       if (!existing.includes(a)) {
         const opt = document.createElement('option');
-        opt.value       = a;
-        opt.textContent = a.replace('-', ' – ');
-        select.appendChild(opt);
+        opt.value = a; opt.textContent = a.replace('-', ' – ');
+        sel.appendChild(opt);
       }
     });
-    select.value = active;
+    sel.value = DGHData.getAnneeActive();
   }
 
-  // ── MODAL ÉTABLISSEMENT ──────────────────────────────────────────
+  // ── MODAL ────────────────────────────────────────────────────────
   function _openModal() {
     const etab  = DGHData.getEtab();
     const annee = DGHData.getAnnee();
-    document.getElementById('inputNomEtab').value = etab.nom      || '';
-    document.getElementById('inputUAI').value      = etab.uai      || '';
-    document.getElementById('inputAcademie').value = etab.academie || '';
+    document.getElementById('inputNomEtab').value = etab.nom       || '';
+    document.getElementById('inputUAI').value      = etab.uai       || '';
+    document.getElementById('inputAcademie').value = etab.academie  || '';
     document.getElementById('inputDGH').value      = annee.dotation.enveloppe || '';
-    document.getElementById('modalEtablissement').classList.remove('hidden');
+    document.getElementById('modalEtab').classList.add('modal-open');
   }
 
   function _closeModal() {
-    document.getElementById('modalEtablissement').classList.add('hidden');
+    document.getElementById('modalEtab').classList.remove('modal-open');
   }
 
   function _saveModal() {
@@ -202,13 +176,13 @@ const app = (() => {
     toast('Paramètres enregistrés', 'success');
   }
 
-  // ── BINDING ÉVÉNEMENTS ───────────────────────────────────────────
+  // ── EVENTS ───────────────────────────────────────────────────────
   function _bindEvents() {
 
-    // Thème dark/light
-    document.getElementById('themeToggle')?.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme') || 'light';
-      _applyTheme(current === 'dark' ? 'light' : 'dark');
+    // Thème
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-theme') || 'light';
+      _applyTheme(cur === 'dark' ? 'light' : 'dark');
     });
 
     // Navigation sidebar
@@ -222,123 +196,105 @@ const app = (() => {
       if (btn) navigate(btn.dataset.navigate);
     });
 
-    // Sidebar toggle (desktop)
-    document.getElementById('sidebarToggle')?.addEventListener('click', () => {
-      document.getElementById('sidebar')?.classList.toggle('collapsed');
+    // Sidebar toggle desktop
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('collapsed');
     });
 
     // Menu mobile
-    document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
-      document.getElementById('sidebar')?.classList.toggle('open');
+    document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
     });
 
     // Fermer sidebar mobile au clic extérieur
     document.addEventListener('click', e => {
       if (window.innerWidth > 768) return;
-      const sidebar   = document.getElementById('sidebar');
-      const menuBtn   = document.getElementById('mobileMenuBtn');
-      if (sidebar && !sidebar.contains(e.target) && !menuBtn?.contains(e.target)) {
-        sidebar.classList.remove('open');
+      const sb = document.getElementById('sidebar');
+      const mb = document.getElementById('mobileMenuBtn');
+      if (sb && !sb.contains(e.target) && !mb.contains(e.target)) {
+        sb.classList.remove('open');
       }
     });
 
     // Changement d'année
-    document.getElementById('yearSelect')?.addEventListener('change', e => {
+    document.getElementById('yearSelect').addEventListener('change', e => {
       DGHData.setAnneeActive(e.target.value);
       _renderAll();
       _renderDashboard();
       toast('Année ' + e.target.value.replace('-', '–') + ' chargée', 'info');
     });
 
-    // Établissement — ouvrir modal
-    document.getElementById('etablissementName')?.addEventListener('click', _openModal);
+    // Établissement
+    document.getElementById('btnEtab').addEventListener('click', _openModal);
 
-    // Modal — fermer
-    document.getElementById('modalClose')?.addEventListener('click',  _closeModal);
-    document.getElementById('modalCancel')?.addEventListener('click', _closeModal);
-    document.getElementById('modalEtablissement')?.addEventListener('click', e => {
+    // Modal
+    document.getElementById('modalClose').addEventListener('click',  _closeModal);
+    document.getElementById('modalCancel').addEventListener('click', _closeModal);
+    document.getElementById('modalSave').addEventListener('click',   _saveModal);
+    document.getElementById('modalEtab').addEventListener('click', e => {
       if (e.target === e.currentTarget) _closeModal();
     });
 
-    // Modal — enregistrer
-    document.getElementById('modalSave')?.addEventListener('click', _saveModal);
-
-    // Export JSON
-    document.getElementById('btnExport')?.addEventListener('click', () => {
-      const filename = DGHData.exportJSON();
-      toast('Exporté : ' + filename, 'success');
+    // Export
+    document.getElementById('btnExport').addEventListener('click', () => {
+      toast('Exporté : ' + DGHData.exportJSON(), 'success');
     });
 
-    // Import JSON — bouton sidebar
-    const btnImport  = document.getElementById('btnImport');
+    // Import
     const fileImport = document.getElementById('fileImport');
-    btnImport?.addEventListener('click', () => fileImport?.click());
-
-    // Import JSON — bouton empty state
-    document.getElementById('btnImportEmpty')?.addEventListener('click', () => {
-      fileImport?.click();
-    });
-
-    // Import JSON — lecture du fichier
-    fileImport?.addEventListener('change', async e => {
+    document.getElementById('btnImport').addEventListener('click',      () => fileImport.click());
+    document.getElementById('btnImportEmpty').addEventListener('click', () => fileImport.click());
+    fileImport.addEventListener('change', async e => {
       const file = e.target.files[0];
       if (!file) return;
       try {
-        const result = await DGHData.importJSON(file);
-        _renderAll();
-        _renderDashboard();
-        toast('Données importées — ' + result.etablissement, 'success');
-      } catch (err) {
-        toast('Erreur d\'import : ' + err.message, 'error', 5000);
+        const r = await DGHData.importJSON(file);
+        _renderAll(); _renderDashboard();
+        toast('Importé — ' + r.etablissement, 'success');
+      } catch(err) {
+        toast('Erreur : ' + err.message, 'error', 5000);
       }
       fileImport.value = '';
     });
 
-    // Ctrl+S → export rapide
+    // Ctrl+S
     document.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        toast('Ctrl+S — Exporté : ' + DGHData.exportJSON(), 'success');
+        toast('Exporté : ' + DGHData.exportJSON(), 'success');
       }
     });
 
-    // Erreur localStorage
+    // Erreur storage
     document.addEventListener('dgh:storage-error', () => {
-      toast('Erreur de sauvegarde — vérifiez l\'espace disponible', 'error', 6000);
+      toast('Erreur de sauvegarde locale', 'error', 6000);
     });
   }
 
   // ── TOAST ────────────────────────────────────────────────────────
-  function toast(message, type, duration) {
-    type     = type     || 'info';
-    duration = duration || 3500;
+  function toast(msg, type, duration) {
+    type = type || 'info'; duration = duration || 3500;
     const ICONS = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-
+    const c = document.getElementById('toastContainer');
+    if (!c) return;
     const el = document.createElement('div');
     el.className = 'toast ' + type;
-    el.innerHTML =
-      '<span class="toast-icon">' + (ICONS[type] || 'ℹ') + '</span>'
-      + '<span>' + message + '</span>';
-    container.appendChild(el);
-
+    el.innerHTML = '<span class="toast-icon">' + ICONS[type] + '</span><span>' + msg + '</span>';
+    c.appendChild(el);
     setTimeout(() => {
-      el.style.cssText += 'opacity:0;transform:translateX(12px);transition:0.25s ease;';
-      setTimeout(() => el.remove(), 250);
+      el.style.cssText += 'opacity:0;transform:translateX(10px);transition:.2s ease;';
+      setTimeout(() => el.remove(), 200);
     }, duration);
   }
 
-  // ── UTILITAIRE ───────────────────────────────────────────────────
-  function _setText(id, value) {
+  // ── UTIL ─────────────────────────────────────────────────────────
+  function _set(id, val) {
     const el = document.getElementById(id);
-    if (el) el.textContent = value;
+    if (el) el.textContent = val;
   }
 
-  // ── API PUBLIQUE ─────────────────────────────────────────────────
   return { init, navigate, toast };
 
 })();
 
-// Démarrage après chargement du DOM
 document.addEventListener('DOMContentLoaded', () => app.init());
