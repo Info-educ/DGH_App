@@ -1,6 +1,6 @@
 /**
- * DGH App — Contrôleur principal v2.1
- * Zéro onclick inline · Zéro variable dupliquée · Zéro code zombie
+ * DGH App — Contrôleur principal v2.2
+ * Corrections : modal Mon Collège robuste, protection null, icône ⚙ persistante
  */
 
 const app = (() => {
@@ -58,79 +58,98 @@ const app = (() => {
 
   // ── DASHBOARD ────────────────────────────────────────────────────
   function _renderDashboard() {
-    const data    = DGHData.getAnnee();
-    const bilan   = Calculs.bilanDGH(data);
-    const alertes = Calculs.genererAlertes(data);
+    try {
+      const data    = DGHData.getAnnee();
+      const bilan   = Calculs.bilanDGH(data);
+      const alertes = Calculs.genererAlertes(data);
 
-    _set('dashYear',        DGHData.getAnneeActive().replace('-', '–'));
-    _set('kpi-dghtotal',    bilan.enveloppe     ? bilan.enveloppe + ' h'        : '— h');
-    _set('kpi-affectees',   bilan.heuresAllouees ? bilan.heuresAllouees + ' h'  : '— h');
-    _set('kpi-affectees-pct', bilan.enveloppe   ? bilan.pctConsomme + ' %'      : '— %');
-    _set('kpi-solde',       bilan.enveloppe     ? bilan.solde + ' h'            : '— h');
-    _set('kpi-alertes',     alertes.filter(a => a.severite !== 'info').length || '—');
-    _set('kpi-enseignants', bilan.nbEnseignants || '—');
-    _set('kpi-tzr',         'dont ' + bilan.nbTZR + ' TZR');
-    _set('kpi-hsa',         bilan.totalHSA ? bilan.totalHSA + ' h' : '— h');
+      _set('dashYear',          DGHData.getAnneeActive().replace('-', '–'));
+      _set('kpi-dghtotal',      bilan.enveloppe      ? bilan.enveloppe + ' h'       : '— h');
+      _set('kpi-affectees',     bilan.heuresAllouees ? bilan.heuresAllouees + ' h'  : '— h');
+      _set('kpi-affectees-pct', bilan.enveloppe      ? bilan.pctConsomme + ' %'     : '— %');
+      _set('kpi-solde',         bilan.enveloppe      ? bilan.solde + ' h'           : '— h');
+      _set('kpi-alertes',       alertes.filter(a => a.severite !== 'info').length || '—');
+      _set('kpi-enseignants',   bilan.nbEnseignants || '—');
+      _set('kpi-tzr',           'dont ' + (bilan.nbTZR || 0) + ' TZR');
+      _set('kpi-hsa',           bilan.totalHSA ? bilan.totalHSA + ' h' : '— h');
 
-    // Badge alertes sidebar
-    const nb = alertes.filter(a => a.severite === 'error' || a.severite === 'warning').length;
-    const badge = document.getElementById('badge-alertes');
-    if (badge) { badge.textContent = nb || ''; badge.style.display = nb ? '' : 'none'; }
+      // Badge alertes sidebar
+      const nb = alertes.filter(a => a.severite === 'error' || a.severite === 'warning').length;
+      const badge = document.getElementById('badge-alertes');
+      if (badge) { badge.textContent = nb || ''; badge.style.display = nb ? '' : 'none'; }
 
-    // Stats topbar
-    const stats = document.getElementById('topbarStats');
-    if (stats) {
-      stats.innerHTML = bilan.enveloppe > 0
-        ? '<div class="topbar-stat"><span>DGH</span><span class="topbar-stat-val">' + bilan.enveloppe + 'h</span></div>'
-        + '<div class="topbar-stat"><span>Affecté</span><span class="topbar-stat-val">' + bilan.pctConsomme + '%</span></div>'
-        + '<div class="topbar-stat"><span>Solde</span><span class="topbar-stat-val">' + bilan.solde + 'h</span></div>'
-        : '';
+      // Stats topbar
+      const stats = document.getElementById('topbarStats');
+      if (stats) {
+        stats.innerHTML = bilan.enveloppe > 0
+          ? '<div class="topbar-stat"><span>DGH</span><span class="topbar-stat-val">' + bilan.enveloppe + 'h</span></div>'
+          + '<div class="topbar-stat"><span>Affecté</span><span class="topbar-stat-val">' + bilan.pctConsomme + '%</span></div>'
+          + '<div class="topbar-stat"><span>Solde</span><span class="topbar-stat-val">' + bilan.solde + 'h</span></div>'
+          : '';
+      }
+
+      // Barre progression
+      const bar = document.getElementById('progressBar');
+      const lbl = document.getElementById('progress-label');
+      if (bar) {
+        const pct = bilan.enveloppe > 0 ? Math.min(100, bilan.pctConsomme) : 0;
+        bar.style.width      = pct + '%';
+        bar.style.background = pct > 100 ? 'var(--c-red)' : pct > 90 ? 'var(--c-amber)' : 'var(--c-accent)';
+      }
+      if (lbl) lbl.textContent = bilan.enveloppe > 0 ? bilan.heuresAllouees + ' / ' + bilan.enveloppe + ' h' : '0 / 0 h';
+
+      // Empty state / résumé disciplines
+      const isEmpty  = DGHData.isEmpty();
+      const emptyEl  = document.getElementById('emptyState');
+      const resumeEl = document.getElementById('disciplineResume');
+      if (emptyEl)  emptyEl.style.display = isEmpty ? '' : 'none';
+      if (resumeEl) resumeEl.style.display = isEmpty ? 'none' : '';
+
+    } catch(e) {
+      console.error('[DGH] Erreur renderDashboard:', e);
     }
 
-    // Barre progression
-    const bar = document.getElementById('progressBar');
-    const lbl = document.getElementById('progress-label');
-    if (bar) {
-      const pct = bilan.enveloppe > 0 ? Math.min(100, bilan.pctConsomme) : 0;
-      bar.style.width      = pct + '%';
-      bar.style.background = pct > 100 ? 'var(--c-red)' : pct > 90 ? 'var(--c-amber)' : 'var(--c-accent)';
+    // Mis à jour du bouton établissement TOUJOURS exécutée
+    _updateBtnEtab();
+  }
+
+  // ── BOUTON ÉTABLISSEMENT ─────────────────────────────────────────
+  function _updateBtnEtab() {
+    const btn = document.getElementById('btnEtab');
+    if (!btn) return;
+    try {
+      const etab = DGHData.getEtab() || {};
+      btn.textContent = (etab.nom && etab.nom.trim()) ? etab.nom.trim() + ' ⚙' : 'Mon Collège ⚙';
+    } catch(e) {
+      btn.textContent = 'Mon Collège ⚙';
     }
-    if (lbl) lbl.textContent = bilan.enveloppe > 0 ? bilan.heuresAllouees + ' / ' + bilan.enveloppe + ' h' : '0 / 0 h';
-
-    // Empty state / résumé
-    const isEmpty  = DGHData.isEmpty();
-    const emptyEl  = document.getElementById('emptyState');
-    const resumeEl = document.getElementById('disciplineResume');
-    if (emptyEl)  emptyEl.style.display = isEmpty ? '' : 'none';
-    if (resumeEl) resumeEl.style.display = isEmpty ? 'none' : '';
-
-    // Nom établissement
-    const etab = DGHData.getEtab();
-    _set('btnEtab', etab.nom || 'Mon Collège ⚙');
   }
 
   // ── ALERTES ──────────────────────────────────────────────────────
   function _renderAlertes() {
-    const alertes = Calculs.genererAlertes(DGHData.getAnnee());
-    const zone    = document.getElementById('alertes-zone');
-    if (!zone) return;
-    const ICONS = { error: '✕', warning: '⚠', info: 'ℹ' };
-    zone.className = 'section-card';
-    zone.innerHTML = '<div class="alertes-list">'
-      + (alertes.length
-        ? alertes.map(a =>
-            '<div class="alerte-item sev-' + a.severite + '">'
-            + '<span class="alerte-dot">' + (ICONS[a.severite] || '·') + '</span>'
-            + '<span class="alerte-msg">' + a.message + '</span>'
-            + '</div>').join('')
-        : '<div class="alertes-empty">✓ Aucune alerte — tout est en ordre.</div>')
-      + '</div>';
+    try {
+      const alertes = Calculs.genererAlertes(DGHData.getAnnee());
+      const zone    = document.getElementById('alertes-zone');
+      if (!zone) return;
+      const ICONS = { error: '✕', warning: '⚠', info: 'ℹ' };
+      zone.className = 'section-card';
+      zone.innerHTML = '<div class="alertes-list">'
+        + (alertes.length
+          ? alertes.map(a =>
+              '<div class="alerte-item sev-' + a.severite + '">'
+              + '<span class="alerte-dot">' + (ICONS[a.severite] || '·') + '</span>'
+              + '<span class="alerte-msg">' + a.message + '</span>'
+              + '</div>').join('')
+          : '<div class="alertes-empty">✓ Aucune alerte — tout est en ordre.</div>')
+        + '</div>';
+    } catch(e) {
+      console.error('[DGH] Erreur renderAlertes:', e);
+    }
   }
 
   // ── RENDU GLOBAL ─────────────────────────────────────────────────
   function _renderAll() {
-    const etab = DGHData.getEtab();
-    _set('btnEtab', etab.nom || 'Mon Collège ⚙');
+    _updateBtnEtab();
     _renderYearSelect();
   }
 
@@ -148,32 +167,57 @@ const app = (() => {
     sel.value = DGHData.getAnneeActive();
   }
 
-  // ── MODAL ────────────────────────────────────────────────────────
+  // ── MODAL ÉTABLISSEMENT ──────────────────────────────────────────
   function _openModal() {
-    const etab  = DGHData.getEtab();
-    const annee = DGHData.getAnnee();
-    document.getElementById('inputNomEtab').value = etab.nom       || '';
-    document.getElementById('inputUAI').value      = etab.uai       || '';
-    document.getElementById('inputAcademie').value = etab.academie  || '';
-    document.getElementById('inputDGH').value      = annee.dotation.enveloppe || '';
-    document.getElementById('modalEtab').classList.add('modal-open');
+    try {
+      const etab     = DGHData.getEtab()  || {};
+      const annee    = DGHData.getAnnee() || {};
+      const dotation = (annee.dotation)   || {};
+
+      const nomEl      = document.getElementById('inputNomEtab');
+      const uaiEl      = document.getElementById('inputUAI');
+      const academieEl = document.getElementById('inputAcademie');
+      const dghEl      = document.getElementById('inputDGH');
+      const modalEl    = document.getElementById('modalEtab');
+
+      if (!modalEl) { console.error('[DGH] #modalEtab introuvable'); return; }
+
+      if (nomEl)      nomEl.value      = etab.nom      || '';
+      if (uaiEl)      uaiEl.value      = etab.uai      || '';
+      if (academieEl) academieEl.value = etab.academie || '';
+      // Affiche 0 correctement (|| '' cache un 0 légitime)
+      if (dghEl)      dghEl.value      = (dotation.enveloppe != null) ? dotation.enveloppe : '';
+
+      modalEl.classList.add('modal-open');
+      setTimeout(() => { if (nomEl) nomEl.focus(); }, 60);
+
+    } catch(e) {
+      console.error('[DGH] Erreur ouverture modal:', e);
+      toast('Impossible d\'ouvrir les paramètres', 'error');
+    }
   }
 
   function _closeModal() {
-    document.getElementById('modalEtab').classList.remove('modal-open');
+    const m = document.getElementById('modalEtab');
+    if (m) m.classList.remove('modal-open');
   }
 
   function _saveModal() {
-    DGHData.setEtab({
-      nom:      document.getElementById('inputNomEtab').value.trim(),
-      uai:      document.getElementById('inputUAI').value.trim(),
-      academie: document.getElementById('inputAcademie').value.trim()
-    });
-    DGHData.setDotation(parseFloat(document.getElementById('inputDGH').value) || 0);
-    _closeModal();
-    _renderAll();
-    _renderDashboard();
-    toast('Paramètres enregistrés', 'success');
+    try {
+      DGHData.setEtab({
+        nom:      (document.getElementById('inputNomEtab')  || {}).value?.trim() || '',
+        uai:      (document.getElementById('inputUAI')      || {}).value?.trim() || '',
+        academie: (document.getElementById('inputAcademie') || {}).value?.trim() || ''
+      });
+      DGHData.setDotation(parseFloat((document.getElementById('inputDGH') || {}).value) || 0);
+      _closeModal();
+      _renderAll();
+      _renderDashboard();
+      toast('Paramètres enregistrés', 'success');
+    } catch(e) {
+      console.error('[DGH] Erreur sauvegarde:', e);
+      toast('Erreur lors de la sauvegarde', 'error');
+    }
   }
 
   // ── EVENTS ───────────────────────────────────────────────────────
@@ -211,7 +255,7 @@ const app = (() => {
       if (window.innerWidth > 768) return;
       const sb = document.getElementById('sidebar');
       const mb = document.getElementById('mobileMenuBtn');
-      if (sb && !sb.contains(e.target) && !mb.contains(e.target)) {
+      if (sb && mb && !sb.contains(e.target) && !mb.contains(e.target)) {
         sb.classList.remove('open');
       }
     });
@@ -224,20 +268,46 @@ const app = (() => {
       toast('Année ' + e.target.value.replace('-', '–') + ' chargée', 'info');
     });
 
-    // Établissement
-    document.getElementById('btnEtab').addEventListener('click', _openModal);
+    // ── Bouton "Mon Collège ⚙" — listener direct + stopPropagation ──
+    const btnEtab = document.getElementById('btnEtab');
+    if (btnEtab) {
+      btnEtab.addEventListener('click', function(e) {
+        e.stopPropagation(); // Empêche la délégation globale d'interférer
+        _openModal();
+      });
+    }
 
     // Modal
-    document.getElementById('modalClose').addEventListener('click',  _closeModal);
-    document.getElementById('modalCancel').addEventListener('click', _closeModal);
-    document.getElementById('modalSave').addEventListener('click',   _saveModal);
-    document.getElementById('modalEtab').addEventListener('click', e => {
+    const modalClose  = document.getElementById('modalClose');
+    const modalCancel = document.getElementById('modalCancel');
+    const modalSave   = document.getElementById('modalSave');
+    const modalEtab   = document.getElementById('modalEtab');
+
+    if (modalClose)  modalClose.addEventListener('click', _closeModal);
+    if (modalCancel) modalCancel.addEventListener('click', _closeModal);
+    if (modalSave)   modalSave.addEventListener('click', _saveModal);
+    if (modalEtab)   modalEtab.addEventListener('click', e => {
       if (e.target === e.currentTarget) _closeModal();
+    });
+
+    // Touche Échap pour fermer la modal
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        const m = document.getElementById('modalEtab');
+        if (m && m.classList.contains('modal-open')) _closeModal();
+      }
+      // Ctrl+S / Cmd+S → export
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        try { toast('Exporté : ' + DGHData.exportJSON(), 'success'); }
+        catch(err) { toast('Erreur export', 'error'); }
+      }
     });
 
     // Export
     document.getElementById('btnExport').addEventListener('click', () => {
-      toast('Exporté : ' + DGHData.exportJSON(), 'success');
+      try { toast('Exporté : ' + DGHData.exportJSON(), 'success'); }
+      catch(e) { toast('Erreur export : ' + e.message, 'error'); }
     });
 
     // Import
@@ -250,19 +320,11 @@ const app = (() => {
       try {
         const r = await DGHData.importJSON(file);
         _renderAll(); _renderDashboard();
-        toast('Importé — ' + r.etablissement, 'success');
+        toast('Importé — ' + (r.etablissement || '?'), 'success');
       } catch(err) {
         toast('Erreur : ' + err.message, 'error', 5000);
       }
       fileImport.value = '';
-    });
-
-    // Ctrl+S
-    document.addEventListener('keydown', e => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        toast('Exporté : ' + DGHData.exportJSON(), 'success');
-      }
     });
 
     // Erreur storage
@@ -279,7 +341,7 @@ const app = (() => {
     if (!c) return;
     const el = document.createElement('div');
     el.className = 'toast ' + type;
-    el.innerHTML = '<span class="toast-icon">' + ICONS[type] + '</span><span>' + msg + '</span>';
+    el.innerHTML = '<span class="toast-icon">' + (ICONS[type] || 'ℹ') + '</span><span>' + msg + '</span>';
     c.appendChild(el);
     setTimeout(() => {
       el.style.cssText += 'opacity:0;transform:translateX(10px);transition:.2s ease;';
