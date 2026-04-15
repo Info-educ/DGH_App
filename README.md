@@ -37,11 +37,11 @@ DGH App permet à une équipe de direction de collège de **piloter, simuler et 
 ## 🚀 Utilisation
 
 ### Accès en ligne
-👉 **[Ouvrir DGH App](https://votre-username.github.io/dgh-app/)**
+👉 **[Ouvrir DGH App](https://info-educ.github.io/DGH_App/)**
 
 ### En local (sans connexion)
 ```bash
-git clone https://github.com/votre-username/dgh-app.git
+git clone https://info-educ.github.io/DGH_App/
 # Ouvrir index.html dans votre navigateur
 ```
 
