@@ -25,6 +25,10 @@ const app = (() => {
   // INITIALISATION
   // ─────────────────────────────────────────────
   function init() {
+    // Thème : light par défaut, respecte le choix sauvegardé
+    const savedTheme = localStorage.getItem('dgh-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
     DGHData.init();
     _bindEvents();
     _renderAll();
@@ -246,17 +250,16 @@ const app = (() => {
     const container = document.getElementById('toastContainer');
     if (!container) return;
 
-    const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
-    const el    = document.createElement('div');
+    const el = document.createElement('div');
     el.className = `toast ${type}`;
-    el.innerHTML = `<span>${icons[type] || '·'}</span> ${message}`;
+    el.innerHTML = `<span class="toast-dot"></span>${message}`;
     container.appendChild(el);
 
     setTimeout(() => {
       el.style.opacity   = '0';
-      el.style.transform = 'translateX(16px)';
-      el.style.transition = '0.3s ease';
-      setTimeout(() => el.remove(), 300);
+      el.style.transform = 'translateY(6px)';
+      el.style.transition = '0.25s ease';
+      setTimeout(() => el.remove(), 250);
     }, duration);
   }
 
@@ -264,6 +267,39 @@ const app = (() => {
   // EVENTS
   // ─────────────────────────────────────────────
   function _bindEvents() {
+
+    // ── Bouton dark / light ──────────────────────────────────────
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon   = document.getElementById('themeIcon');
+    const themeLabel  = document.getElementById('themeLabel');
+
+    // Restaurer le thème sauvegardé
+    const savedTheme = localStorage.getItem('dgh-theme') || 'light';
+    _applyTheme(savedTheme);
+
+    themeToggle?.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next    = current === 'dark' ? 'light' : 'dark';
+      _applyTheme(next);
+      localStorage.setItem('dgh-theme', next);
+    });
+
+    function _applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      if (themeIcon)  themeIcon.textContent  = theme === 'dark' ? '☀️' : '🌙';
+      if (themeLabel) themeLabel.textContent  = theme === 'dark' ? 'Mode clair' : 'Mode sombre';
+    }
+
+    // Bouton dark/light
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const newTheme = isDark ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('dgh-theme', newTheme);
+      });
+    }
 
     // Navigation sidebar
     document.querySelectorAll('.nav-item[data-view]').forEach(item => {
