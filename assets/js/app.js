@@ -126,6 +126,34 @@ const app = (() => {
       if (emptyEl)  emptyEl.style.display  = isEmpty ? '' : 'none';
       if (resumeEl) resumeEl.style.display = isEmpty ? 'none' : '';
 
+      // Résumé disciplines dans le dashboard
+      const discListEl = document.getElementById('disciplineList');
+      if (discListEl && !isEmpty) {
+        const disciplines = DGHData.getDisciplines();
+        const repartition = DGHData.getRepartition();
+        const structures  = DGHData.getStructures();
+        const besoins     = Calculs.besoinsParDiscipline(structures, disciplines, repartition);
+        if (disciplines.length === 0) {
+          discListEl.innerHTML = '<p style="color:var(--c-text-muted);font-size:.83rem;padding:.5rem 0">Aucune discipline — initialisez les <a href="#" data-navigate="dotation" style="color:var(--c-accent)">disciplines MEN</a> dans Dotation.</p>';
+        } else {
+          const enveloppe = bilan.enveloppe;
+          let html = '<div class="disc-resume-grid">';
+          besoins.forEach(b => {
+            const pct = enveloppe > 0 ? Math.min(100, Math.round((b.total / enveloppe) * 100)) : 0;
+            const ecartCls = b.ecart > 0 ? 'dot-ecart-over' : b.ecart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
+            html += '<div class="disc-resume-row">'
+              + '<span class="disc-color-dot" style="background:' + _esc(b.couleur) + '"></span>'
+              + '<span class="disc-resume-nom">' + _esc(b.nom) + '</span>'
+              + '<span class="disc-resume-h" style="font-family:\'JetBrains Mono\',monospace">' + b.total + ' h</span>'
+              + (b.besoinTheorique > 0 ? '<span class="dot-ecart ' + ecartCls + '" style="font-size:.68rem">' + (b.ecart >= 0 ? '+' : '') + b.ecart + '</span>' : '<span></span>')
+              + '<div class="dot-bar-track" style="flex:1;min-width:40px"><div class="dot-bar-fill" style="width:' + pct + '%;background:' + _esc(b.couleur) + '"></div></div>'
+              + '</div>';
+          });
+          html += '</div>';
+          discListEl.innerHTML = html;
+        }
+      }
+
     } catch(e) { console.error('[DGH] Erreur renderDashboard:', e); }
     _updateBtnEtab();
   }

@@ -1006,3 +1006,19 @@ input::placeholder { color: var(--c-text-dim); }
   .year-add-row { flex-direction:column; align-items:stretch; }
   .btn-add-year { width:100%; justify-content:center; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   DASHBOARD — Résumé disciplines
+   ══════════════════════════════════════════════════════════════════ */
+.disc-resume-grid { display:flex; flex-direction:column; gap:.35rem; }
+.disc-resume-row {
+  display:flex; align-items:center; gap:.6rem;
+  padding:.4rem .5rem; border-radius:var(--r);
+  background:var(--c-surface2);
+  font-size:.82rem;
+  transition:background var(--tf);
+}
+.disc-resume-row:hover { background:var(--c-surface3); }
+.disc-resume-nom { flex:0 0 160px; font-weight:500; color:var(--c-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.disc-resume-h   { flex:0 0 52px; text-align:right; font-weight:600; color:var(--c-text); font-size:.8rem; }
+@media(max-width:600px) { .disc-resume-nom { flex:1; } }
