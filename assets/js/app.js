@@ -270,6 +270,17 @@ const app = (() => {
       item.addEventListener('click', () => navigate(item.dataset.view));
     });
 
+    // Boutons data-navigate (remplace tous les onclick inline)
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-navigate]');
+      if (btn) navigate(btn.dataset.navigate);
+    });
+
+    // Bouton "Importer" dans l'empty state
+    document.getElementById('btnImportEmpty')?.addEventListener('click', () => {
+      document.getElementById('fileImport')?.click();
+    });
+
     // Toggle sidebar (desktop)
     const toggleBtn = document.getElementById('sidebarToggle');
     const sidebar   = document.getElementById('sidebar');
