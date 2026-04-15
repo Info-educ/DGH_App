@@ -1,13 +1,13 @@
 # SKILL.md — Instructions de développement DGH App
 
-> Ce fichier est à fournir à Claude au début de chaque session de développement.  
+> Ce fichier est à fournir à Claude au début de chaque session de développement.
 > Il garantit la cohérence du code sur plusieurs années d'évolution du projet.
 
 ---
 
 ## Contexte du projet
 
-**DGH App** est une application web monopage (SPA) de pilotage de la Dotation Globale Horaire pour collège.  
+**DGH App** est une application web monopage (SPA) de pilotage de la Dotation Globale Horaire pour collège.
 - Hébergée sur **GitHub Pages** (HTML/CSS/JS Vanilla — zéro framework, zéro build)
 - Données stockées en **localStorage** + export/import **JSON local** (RGPD : aucun serveur)
 - Utilisateurs : équipe de direction (principal + principal adjoint)
@@ -15,50 +15,103 @@
 
 ---
 
+## ⚠️ RÈGLES DE QUALITÉ — NON NÉGOCIABLES
+
+Ces règles s'appliquent à chaque modification, sans exception.
+
+### 1. Lire avant d'écrire
+Avant toute modification, **lire le fichier entier** avec le `view` tool.
+Ne jamais modifier à l'aveugle sur la base d'un contexte partiel.
+
+### 2. Zéro code zombie
+Après chaque modification, **vérifier qu'aucun résidu de l'ancienne version ne subsiste** :
+- Aucune variable déclarée deux fois
+- Aucun `id` HTML référencé dans le JS qui n'existe plus dans le HTML
+- Aucun import de police ou de bibliothèque qui ne sert plus
+- Aucun bloc CSS injecté en JS qui double des règles dans `style.css`
+
+### 3. Zéro onclick inline
+**Interdiction absolue** d'utiliser `onclick="..."` dans le HTML.
+Tous les événements sont liés via `addEventListener` dans `_bindEvents()` de `app.js`.
+Pour les boutons dynamiques, utiliser `data-navigate="viewId"` + délégation globale.
+
+### 4. Vérification d'intégrité après chaque livraison
+Avant de livrer des fichiers, vérifier :
+```bash
+# Aucun onclick inline
+grep -n "onclick" index.html   # doit retourner vide
+
+# Aucune variable dupliquée dans app.js
+grep -n "const themeToggle\|let themeToggle\|var themeToggle" assets/js/app.js  # max 1 résultat
+
+# Aucune référence à d'anciennes polices
+grep -n "Syne\|DM Mono\|Inter\|Roboto\|Arial" assets/css/style.css  # doit retourner vide
+```
+
+### 5. Cohérence HTML ↔ JS
+Chaque `id` utilisé dans `app.js` doit exister dans `index.html`.
+Chaque `id` dans `index.html` doit être utilisé soit en JS, soit avoir une raison d'être.
+
+### 6. Un fichier = une responsabilité
+- `data.js`    → SEUL fichier qui touche localStorage. Jamais de `localStorage` dans app.js.
+- `calculs.js` → fonctions pures uniquement. Jamais de DOM, jamais de `DGHData.save()`.
+- `app.js`     → contrôleur UI. Jamais de calculs métier, jamais de localStorage direct.
+- `style.css`  → SEUL endroit pour les styles. Jamais de `<style>` injecté en JS.
+
+---
+
 ## Architecture — NE PAS MODIFIER sans raison valide
 
 ```
-index.html          → Point d'entrée unique, contient toutes les vues (sections HTML)
+index.html           → Point d'entrée unique, toutes les vues (sections HTML)
 assets/css/style.css → Design system complet avec variables CSS
-assets/js/data.js   → Couche données (SEUL fichier qui touche localStorage)
-assets/js/calculs.js → Moteur de calcul pur (ORS, HSA, DGH, alertes) — sans effets de bord
-assets/js/app.js    → Contrôleur UI (navigation, rendu, events)
+assets/js/data.js    → Couche données (SEUL fichier qui touche localStorage)
+assets/js/calculs.js → Moteur de calcul pur (ORS, HSA, DGH, alertes)
+assets/js/app.js     → Contrôleur UI (navigation, rendu, events)
+data/exemple.json    → Données fictives anonymisées pour démonstration
 ```
-
-**Règle d'or :** chaque fichier a une responsabilité unique. Ne jamais mélanger les couches.
 
 ---
 
 ## Design System — Règles strictes
 
-### Variables CSS (ne pas hardcoder de couleurs)
+### Variables CSS (ne jamais hardcoder de couleurs)
 ```css
---c-bg, --c-surface, --c-surface2   /* fonds */
---c-border, --c-border2             /* bordures */
---c-text, --c-text-muted, --c-text-dim  /* textes */
---c-accent, --c-accent-hover, --c-accent-dim  /* bleu principal */
---c-green, --c-amber, --c-red       /* statuts */
---c-indigo, --c-teal                /* secondaires */
+--c-bg, --c-surface, --c-surface2, --c-surface3   /* fonds */
+--c-border, --c-border2                            /* bordures */
+--c-text, --c-text-muted, --c-text-dim             /* textes */
+--c-accent, --c-accent-hover, --c-accent-light     /* vert sauge principal */
+--c-green, --c-green-bg                            /* validation */
+--c-amber, --c-amber-bg                            /* attention */
+--c-red, --c-red-bg                                /* erreur */
+--c-blue, --c-blue-bg                              /* info */
+--c-indigo, --c-indigo-bg                          /* secondaire */
+--c-sidebar-bg, --c-sidebar-text, ...              /* sidebar (toujours sombre) */
 ```
 
 ### Typographie
-- **Titres, labels, boutons** : `font-family: 'Syne', sans-serif`
-- **Données chiffrées, code, inputs** : `font-family: 'DM Mono', monospace`
-- Ne jamais utiliser Arial, Inter, Roboto ou System fonts
+- **UI, titres, labels, boutons** : `font-family: 'Outfit', sans-serif`
+- **Données chiffrées, valeurs DGH** : `font-family: 'JetBrains Mono', monospace`
+- Polices chargées via `@import` dans `style.css` — jamais de `<link>` dans le HTML
+
+### Thème dark/light
+- Light par défaut (`localStorage.getItem('dgh-theme') || 'light'`)
+- Appliqué via `data-theme="dark|light"` sur `<html>`
+- Toutes les variables CSS ont leur contrepartie dans `[data-theme="dark"]`
 
 ### Composants existants (réutiliser, ne pas recréer)
-- `.kpi-card[data-color="blue|green|amber|red|indigo|teal"]` — carte KPI
-- `.section-card` + `.section-card-header` — bloc avec titre
-- `.btn-primary`, `.btn-secondary`, `.btn-link` — boutons
-- `.modal-overlay` + `.modal` — fenêtre modale
-- `app.toast(message, 'success|error|info|warning')` — notification
-- `.view` + `.view-header` + `.view-title` — structure d'une vue
+- `.kpi-card[data-color="blue|green|amber|red|indigo|teal"]`
+- `.section-card` + `.section-card-header`
+- `.btn-primary`, `.btn-secondary`, `.btn-link`
+- `.modal-overlay.hidden` + `.modal`
+- `app.toast(message, 'success|error|info|warning')`
+- `.view` + `.view-header` + `.view-title`
 
 ---
 
 ## Couche données — Règles strictes
 
-### Accès aux données : TOUJOURS via DGHData
+### Accès TOUJOURS via DGHData
 ```js
 // ✅ Correct
 const annee = DGHData.getAnnee();
@@ -70,77 +123,71 @@ localStorage.setItem('truc', JSON.stringify(data));
 ```
 
 ### Modification du schéma JSON
-Si on ajoute un champ au schéma :
 1. Ajouter le champ dans `defaultSchema()` ou `defaultAnnee()` dans `data.js`
 2. Ajouter une migration dans `_migrate()` pour les fichiers existants
 3. Mettre à jour `data/exemple.json`
-4. Incrémenter la version dans `data.js` (constante `VERSION`)
+4. Incrémenter la version (`VERSION`) dans `data.js`
 
-### IDs
+### IDs d'objets
 Toujours utiliser `DGHData.genId('prefix')` pour générer des identifiants uniques.
 
 ---
 
 ## Moteur de calcul — Règles strictes
 
-Le fichier `calculs.js` doit rester **pur** (fonctions sans effets de bord) :
+Fonctions pures uniquement dans `calculs.js` :
 ```js
-// ✅ Correct — fonction pure
-function bilanDGH(anneeData) { ... return bilan; }
+// ✅ Correct
+function bilanDGH(anneeData) { return { enveloppe, solde, ... }; }
 
 // ❌ Interdit dans calculs.js
 DGHData.save();
-document.getElementById(...);
+document.getElementById('...');
 ```
 
-### ORS — Comment ajouter un nouveau corps
-Dans `calculs.js`, section `ORS` :
+### Ajouter un corps ORS
+Dans `calculs.js`, objet `ORS` :
 ```js
 'nouveau_corps': { label: 'Libellé', ors: 18, seuil_hsa: 1 }
 ```
 
-### Alertes — Comment ajouter une nouvelle alerte
-Dans `genererAlertes()`, ajouter un bloc :
+### Ajouter une alerte
+Dans `genererAlertes()` :
 ```js
-alertes.push({
-  type: 'mon-type',     // identifiant unique
-  severite: 'error|warning|info',
-  message: 'Message lisible',
-  ref: 'id-de-la-donnee-concernee'
-});
+alertes.push({ type: 'mon-type', severite: 'error|warning|info', message: '...', ref: 'id' });
 ```
 
 ---
 
-## Ajouter un nouveau module (vue)
+## Ajouter un nouveau module
 
-1. **HTML** (`index.html`) : ajouter une `<section class="view" id="view-monmodule">` dans `#viewContainer`
-2. **Navigation** (`index.html`) : ajouter un `<li class="nav-item" data-view="monmodule">` dans `.nav-list`
-3. **Routeur** (`app.js`) : ajouter l'entrée dans `VIEWS` et le rendu dans `navigate()`
-4. **Styles** : utiliser exclusivement les variables et composants existants
-5. **Données** : modifier `defaultAnnee()` dans `data.js` si nécessaire + migration
+1. **HTML** : `<section class="view" id="view-monmodule">` dans `#viewContainer`
+2. **Nav** : `<li class="nav-item" data-view="monmodule">` dans `.nav-list`
+3. **app.js** : entrée dans `VIEWS` + `if (viewId === 'monmodule') _renderMonmodule()` dans `navigate()`
+4. **Styles** : variables CSS existantes uniquement
+5. **Données** : `defaultAnnee()` dans `data.js` si nécessaire + migration
 
 ---
 
 ## Conventions de code
 
 ### Nommage
-- Variables/fonctions : `camelCase`
-- Constantes globales : `MAJUSCULES_AVEC_TIRETS`
-- IDs HTML : `kebab-case` (ex: `kpi-dghtotal`)
-- Classes CSS : `kebab-case` (ex: `.kpi-card`)
+- Variables/fonctions publiques : `camelCase`
+- Fonctions privées : `_camelCase` (préfixe underscore)
+- IDs HTML : `kebab-case`
+- Classes CSS : `kebab-case`
 - Modules JS : `PascalCase` (ex: `DGHData`, `Calculs`, `app`)
 
 ### Commentaires
-- Chaque fonction publique doit avoir un commentaire JSDoc minimal
-- Chaque section d'un fichier doit avoir un séparateur `// ──────`
-- Les règles métier importantes (ORS, seuils) doivent citer leur source réglementaire
+- Chaque section d'un fichier : séparateur `// ── Titre ──────`
+- Fonctions publiques : JSDoc minimal
+- Règles métier (ORS, seuils) : citer la source réglementaire
 
 ### Commits Git
 ```
-feat: nom de la fonctionnalité ajoutée
-fix: description du bug corrigé
-refactor: ce qui a changé sans nouvelle fonctionnalité
+feat: fonctionnalité ajoutée
+fix: bug corrigé
+refactor: restructuration sans nouvelle fonctionnalité
 docs: mise à jour README ou SKILL.md
 style: changement CSS uniquement
 ```
@@ -149,24 +196,27 @@ style: changement CSS uniquement
 
 ## RGPD — Rappels permanents
 
-- ❌ Jamais d'appel API externe avec des données enseignants
-- ❌ Jamais de `console.log` avec des noms d'enseignants en production
-- ✅ Les données nominatives restent en localStorage + fichier JSON local
-- ✅ Le `.gitignore` exclut `data/` sauf `data/exemple.json`
-- ✅ Si on ajoute une fonctionnalité IA (analyse par Claude API), les données doivent être **anonymisées avant envoi**
+- ❌ Jamais d'appel API externe avec des données nominatives enseignants
+- ❌ Jamais de `console.log` avec des noms en production
+- ✅ Données nominatives : localStorage + fichier JSON local uniquement
+- ✅ `.gitignore` exclut `data/` sauf `data/exemple.json`
+- ✅ Toute future fonctionnalité IA : anonymiser les données avant envoi à l'API
 
 ---
 
 ## Checklist avant chaque commit
 
-- [ ] Les variables CSS sont utilisées (pas de couleurs hardcodées)
-- [ ] Les données passent par `DGHData` (pas de `localStorage` direct)
-- [ ] Les calculs restent dans `calculs.js` (pas dans `app.js`)
-- [ ] Le fichier `data/exemple.json` est à jour si le schéma a changé
-- [ ] `CHANGELOG.md` est mis à jour
-- [ ] Aucune donnée réelle n'est committée
+- [ ] Tous les fichiers modifiés ont été **lus en entier** avant modification
+- [ ] `grep -n "onclick" index.html` → vide
+- [ ] Aucune variable déclarée deux fois dans app.js
+- [ ] Aucun `id` JS sans équivalent dans le HTML
+- [ ] Aucune référence à d'anciennes polices ou couleurs hardcodées
+- [ ] Aucun style injecté en JS (tout est dans style.css)
+- [ ] `data/exemple.json` à jour si le schéma a changé
+- [ ] `CHANGELOG.md` mis à jour
+- [ ] Aucune donnée réelle committée
 
 ---
 
-*Ce fichier fait partie intégrante du projet DGH App.*  
-*Le mettre à jour à chaque évolution structurelle du projet.*
+*Ce fichier fait partie intégrante du projet DGH App.*
+*Le mettre à jour à chaque évolution structurelle.*
