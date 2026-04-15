@@ -350,7 +350,7 @@ input::placeholder { color: var(--c-text-dim); }
 .kpi-card {
   background: var(--c-surface); border: 1.5px solid var(--c-border);
   border-radius: var(--r-lg); padding: 1.125rem;
-  position: relative; overflow: hidden;
+  position: relative;
   transition: border-color var(--tf), box-shadow var(--tf), transform var(--tf);
 }
 .kpi-card::before {
@@ -1216,16 +1216,17 @@ input::placeholder { color: var(--c-text-dim); }
    ══════════════════════════════════════════════════════════════════ */
 .kpi-tooltip-card { position: relative; cursor: help; }
 .kpi-tooltip {
-  display: none; position: absolute; z-index: 200;
-  bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  display: none; position: absolute; z-index: 9000;
+  bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
   background: var(--c-surface); border: 1.5px solid var(--c-border);
-  border-radius: var(--r); padding: .6rem .8rem;
-  font-size: .75rem; line-height: 1.55; color: var(--c-text);
-  white-space: nowrap; box-shadow: var(--sh-lg);
-  pointer-events: none;
+  border-radius: var(--r); padding: .65rem .9rem;
+  font-size: .76rem; line-height: 1.6; color: var(--c-text);
+  white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  pointer-events: none; min-width: 180px;
 }
 .kpi-tooltip-card:hover .kpi-tooltip { display: block; }
-.kpi-tooltip strong { display: block; margin-bottom: .3rem; font-size: .78rem; color: var(--c-accent); }
+.kpi-tooltip strong { display: block; margin-bottom: .35rem; font-size: .79rem; color: var(--c-accent); border-bottom: 1px solid var(--c-border); padding-bottom: .3rem; }
+.kpi-grid { overflow: visible; }
 
 @media (max-width: 768px) {
   .dash-hphsa-grid { grid-template-columns: 1fr; }
@@ -1245,3 +1246,16 @@ input::placeholder { color: var(--c-text-dim); }
 .dot-total-hp, .dot-total-hsa { display: flex; align-items: center; gap: .4rem; }
 .dot-total-sum { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 1rem; color: var(--c-text); margin-left: auto; }
 .dot-niveau-recap-card { margin-bottom: 1.25rem; }
+
+/* ── Colonne "Besoin réel" — groupes de cours vs MEN ────────────── */
+.dot-besoin-gc-tag {
+  display: inline-block; font-size: .62rem; font-weight: 700;
+  background: var(--c-accent-light); color: var(--c-accent);
+  border: 1px solid var(--c-accent); border-radius: 3px;
+  padding: 0 .3rem; margin-left: .25rem; vertical-align: middle;
+  cursor: help;
+}
+.dot-besoin-men-hint {
+  font-size: .67rem; color: var(--c-text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}

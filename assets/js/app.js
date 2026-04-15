@@ -393,7 +393,7 @@ const app = (() => {
       }
       const besoinsMap = {}; besoins.forEach(b => { besoinsMap[b.disciplineId] = b; });
       let html = '<table class="dot-table"><thead><tr>'
-        + '<th></th><th>Discipline</th><th class="col-num">Besoin MEN</th>'
+        + '<th></th><th>Discipline</th><th class="col-num">Besoin réel</th>'
         + '<th class="col-num dot-col-hp">H-Poste</th>'
         + '<th class="col-num dot-col-hsa">HSA</th>'
         + '<th class="col-num">Total</th>'
@@ -403,7 +403,7 @@ const app = (() => {
         + '</tr></thead><tbody>';
 
       disciplines.forEach(disc => {
-        const b       = besoinsMap[disc.id] || { besoinTheorique:0, hPoste:0, hsa:0, total:0, ecart:0, groupesCours:[], heuresGroupes:0 };
+        const b       = besoinsMap[disc.id] || { besoinTheorique:0, besoinMEN:0, hPoste:0, hsa:0, total:0, ecart:0, groupesCours:[], heuresGroupes:0, hasGroupes:false };
         const pctBar  = bilan.enveloppe > 0 ? Math.min(100, Math.round((b.total / bilan.enveloppe)*100)) : 0;
         const ecartCls = b.ecart > 0 ? 'dot-ecart-over' : b.ecart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
         const nbGC    = (b.groupesCours||[]).length;
@@ -414,7 +414,7 @@ const app = (() => {
           + '</td>'
           + '<td><span class="disc-color-dot" style="background:' + _esc(disc.couleur) + '"></span><strong class="div-nom">' + _esc(disc.nom) + '</strong>'
           + (nbGC > 0 ? '<span class="gc-count-badge">' + nbGC + ' groupe' + (nbGC>1?'s':'') + '</span>' : '') + '</td>'
-          + '<td class="col-num dot-theorique">' + (b.besoinTheorique > 0 ? b.besoinTheorique + ' h' : '<span class="no-tag">—</span>') + '</td>'
+          + '<td class="col-num dot-theorique">' + (b.hasGroupes ? b.heuresGroupes + ' h <span class="dot-besoin-gc-tag" title="Total groupes (MEN: ' + (b.besoinMEN||0) + ' h)">GC</span>' + (b.besoinMEN > 0 ? '<br><small class="dot-besoin-men-hint">MEN: ' + b.besoinMEN + ' h</small>' : '') : (b.besoinTheorique > 0 ? b.besoinTheorique + ' h' : '<span class="no-tag">—</span>')) + '</td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hp" data-disc-id="' + disc.id + '" data-field="hPoste" value="' + b.hPoste + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hsa" data-disc-id="' + disc.id + '" data-field="hsa" value="' + b.hsa + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + b.total + ' h</strong></td>'

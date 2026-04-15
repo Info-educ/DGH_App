@@ -140,14 +140,19 @@ const Calculs = (() => {
     });
     return disciplines.map(disc => {
       const rep = repartition.find(r => r.disciplineId === disc.id) || {};
-      const besoinTheorique = Math.round((besoinsMap[disc.nom]||0)*2)/2;
+      const besoinMEN     = Math.round((besoinsMap[disc.nom]||0)*2)/2;
       const hPoste = rep.hPoste||0, hsa = rep.hsa||0;
       const total  = Math.round((hPoste+hsa)*2)/2;
       const gcs    = rep.groupesCours || [];
       const heuresGroupes = Math.round(gcs.reduce((s,g)=>s+(g.heures||0),0)*2)/2;
+      // Si des groupes de cours existent, leur total PRÉVAUT sur le besoin MEN théorique
+      // Logique métier : LV2 Espagnol (2.5h) + LV2 Allemand (2.5h) = 5h réel,
+      // indépendamment du besoin théorique MEN par division
+      const besoinTheorique = heuresGroupes > 0 ? heuresGroupes : besoinMEN;
       return {
         disciplineId: disc.id, nom: disc.nom, couleur: disc.couleur,
-        besoinTheorique, hPoste, hsa, total, heuresGroupes,
+        besoinTheorique, besoinMEN, hPoste, hsa, total, heuresGroupes,
+        hasGroupes: heuresGroupes > 0,
         ecart: Math.round((total - besoinTheorique)*2)/2,
         commentaire: rep.commentaire||'', groupesCours: gcs
       };
