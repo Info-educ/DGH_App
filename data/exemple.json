@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "createdAt": "2025-09-01T00:00:00.000Z",
     "updatedAt": "2025-09-01T00:00:00.000Z",
     "appName": "DGH App",
@@ -24,16 +24,21 @@
       "structures": [
         { "id": "div_6e_a", "niveau": "6e", "nom": "6eA", "effectif": 28, "options": [], "dispositif": null },
         { "id": "div_6e_b", "niveau": "6e", "nom": "6eB", "effectif": 27, "options": [], "dispositif": null },
+        { "id": "div_6e_c", "niveau": "6e", "nom": "6eC", "effectif": 26, "options": ["Latin"], "dispositif": null },
         { "id": "div_5e_a", "niveau": "5e", "nom": "5eA", "effectif": 29, "options": ["LV2-Espagnol"], "dispositif": null },
+        { "id": "div_5e_b", "niveau": "5e", "nom": "5eB", "effectif": 28, "options": ["LV2-Allemand"], "dispositif": null },
         { "id": "div_4e_a", "niveau": "4e", "nom": "4eA", "effectif": 28, "options": [], "dispositif": null },
-        { "id": "div_3e_a", "niveau": "3e", "nom": "3eA", "effectif": 27, "options": [], "dispositif": null }
+        { "id": "div_4e_b", "niveau": "4e", "nom": "4eB", "effectif": 27, "options": ["Latin"], "dispositif": null },
+        { "id": "div_3e_a", "niveau": "3e", "nom": "3eA", "effectif": 27, "options": [], "dispositif": null },
+        { "id": "div_3e_b", "niveau": "3e", "nom": "3eB", "effectif": 26, "options": [], "dispositif": null },
+        { "id": "div_ulis", "niveau": "ULIS", "nom": "ULIS", "effectif": 10, "options": [], "dispositif": "ULIS" }
       ],
       "grilles": {},
       "disciplines": [
-        { "id": "disc_fr",   "nom": "Français",          "couleur": "#3b82f6" },
-        { "id": "disc_math", "nom": "Mathématiques",     "couleur": "#22c55e" },
+        { "id": "disc_fr",   "nom": "Français",           "couleur": "#3b82f6" },
+        { "id": "disc_math", "nom": "Mathématiques",      "couleur": "#22c55e" },
         { "id": "disc_hg",   "nom": "Histoire-Géographie","couleur": "#f59e0b" },
-        { "id": "disc_eps",  "nom": "EPS",               "couleur": "#ef4444" }
+        { "id": "disc_eps",  "nom": "EPS",                "couleur": "#ef4444" }
       ],
       "repartition": [
         { "disciplineId": "disc_fr",   "heuresAllouees": 90,  "commentaire": "" },

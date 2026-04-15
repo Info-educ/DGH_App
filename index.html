@@ -79,7 +79,7 @@
     </div>
 
     <div class="sidebar-footer">
-      <span>v1.0.0</span>
+      <span>v1.1.0</span>
       <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -101,7 +101,9 @@
 
     <div class="view-container">
 
-      <!-- DASHBOARD -->
+      <!-- ═══════════════════════════════════════════════════════════
+           DASHBOARD
+           ═══════════════════════════════════════════════════════════ -->
       <section class="view active" id="view-dashboard">
         <div class="view-header">
           <h1 class="view-title">Tableau de bord</h1>
@@ -138,6 +140,11 @@
             <div class="kpi-value" id="kpi-hsa">— h</div>
             <div class="kpi-sub">heures supplémentaires</div>
           </div>
+          <div class="kpi-card" data-color="blue">
+            <div class="kpi-label">Divisions</div>
+            <div class="kpi-value" id="kpi-divisions">—</div>
+            <div class="kpi-sub" id="kpi-effectif">— élèves</div>
+          </div>
         </div>
         <div class="progress-section">
           <div class="progress-header">
@@ -166,20 +173,52 @@
         </div>
       </section>
 
-      <!-- STRUCTURES -->
+      <!-- ═══════════════════════════════════════════════════════════
+           STRUCTURES — Sprint 2
+           ═══════════════════════════════════════════════════════════ -->
       <section class="view" id="view-structures">
         <div class="view-header">
-          <h1 class="view-title">Structures de classes</h1>
-          <p class="view-subtitle">Divisions par niveau, effectifs et dispositifs</p>
+          <div class="view-header-row">
+            <div>
+              <h1 class="view-title">Structures de classes</h1>
+              <p class="view-subtitle">Divisions par niveau, effectifs et dispositifs</p>
+            </div>
+            <button class="btn-primary" id="btnAddDiv">+ Ajouter une division</button>
+          </div>
         </div>
-        <div class="placeholder-view">
-          <div class="placeholder-icon">⊞</div>
-          <p><strong>Module Structures</strong> — Sprint 2</p>
-          <p class="placeholder-sub">Saisie des divisions 6e / 5e / 4e / 3e, options, dispositifs (ULIS, UPE2A, SEGPA)</p>
+
+        <!-- KPI structures -->
+        <div class="struct-kpi-bar">
+          <div class="struct-kpi-item">
+            <span class="struct-kpi-val" id="struct-kpi-divisions">0</span>
+            <span class="struct-kpi-label">divisions</span>
+          </div>
+          <div class="struct-kpi-sep"></div>
+          <div class="struct-kpi-item">
+            <span class="struct-kpi-val" id="struct-kpi-effectif">0</span>
+            <span class="struct-kpi-label">élèves</span>
+          </div>
+          <div class="struct-kpi-sep"></div>
+          <div class="struct-kpi-item struct-kpi-niveaux">
+            <span class="struct-kpi-label">Niveaux :</span>
+            <span class="struct-kpi-val-sm" id="struct-kpi-niveaux">—</span>
+          </div>
+          <div class="struct-kpi-sep struct-kpi-sep-right"></div>
+          <div class="struct-by-niveau" id="struct-by-niveau"></div>
+        </div>
+
+        <!-- Liste des divisions -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <h2>Liste des divisions</h2>
+          </div>
+          <div id="struct-list"></div>
         </div>
       </section>
 
-      <!-- DOTATION -->
+      <!-- ═══════════════════════════════════════════════════════════
+           DOTATION
+           ═══════════════════════════════════════════════════════════ -->
       <section class="view" id="view-dotation">
         <div class="view-header">
           <h1 class="view-title">Dotation DGH</h1>
@@ -192,7 +231,9 @@
         </div>
       </section>
 
-      <!-- ENSEIGNANTS -->
+      <!-- ═══════════════════════════════════════════════════════════
+           ENSEIGNANTS
+           ═══════════════════════════════════════════════════════════ -->
       <section class="view" id="view-enseignants">
         <div class="view-header">
           <h1 class="view-title">Enseignants</h1>
@@ -205,7 +246,9 @@
         </div>
       </section>
 
-      <!-- SIMULATION -->
+      <!-- ═══════════════════════════════════════════════════════════
+           SIMULATION
+           ═══════════════════════════════════════════════════════════ -->
       <section class="view" id="view-simulation">
         <div class="view-header">
           <h1 class="view-title">Simulation</h1>
@@ -218,7 +261,9 @@
         </div>
       </section>
 
-      <!-- ALERTES -->
+      <!-- ═══════════════════════════════════════════════════════════
+           ALERTES
+           ═══════════════════════════════════════════════════════════ -->
       <section class="view" id="view-alertes">
         <div class="view-header">
           <h1 class="view-title">Alertes</h1>
@@ -227,7 +272,9 @@
         <div id="alertes-zone"></div>
       </section>
 
-      <!-- SYNTHÈSE -->
+      <!-- ═══════════════════════════════════════════════════════════
+           SYNTHÈSE
+           ═══════════════════════════════════════════════════════════ -->
       <section class="view" id="view-synthese">
         <div class="view-header">
           <h1 class="view-title">Synthèses</h1>
@@ -240,7 +287,9 @@
         </div>
       </section>
 
-      <!-- HISTORIQUE -->
+      <!-- ═══════════════════════════════════════════════════════════
+           HISTORIQUE
+           ═══════════════════════════════════════════════════════════ -->
       <section class="view" id="view-historique">
         <div class="view-header">
           <h1 class="view-title">Historique</h1>
@@ -259,7 +308,9 @@
   <!-- TOAST -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- MODAL ÉTABLISSEMENT — display:none dans le CSS, jamais besoin de .hidden -->
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL ÉTABLISSEMENT
+       ════════════════════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="modalEtab" role="dialog" aria-modal="true" aria-label="Paramètres établissement">
     <div class="modal">
       <div class="modal-header">
@@ -287,6 +338,88 @@
       <div class="modal-footer">
         <button class="btn-secondary" id="modalCancel">Annuler</button>
         <button class="btn-primary" id="modalSave">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL AJOUT / MODIFICATION DIVISION
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modalDiv" role="dialog" aria-modal="true" aria-label="Division">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalDivTitle">Ajouter une division</h2>
+        <button class="modal-close" id="modalDivClose" aria-label="Fermer">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Champ caché : id de la division en cours d'édition -->
+        <input type="hidden" id="modalDivId" />
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="inputDivNiveau">Niveau</label>
+            <select id="inputDivNiveau">
+              <option value="6e">6e</option>
+              <option value="5e">5e</option>
+              <option value="4e">4e</option>
+              <option value="3e">3e</option>
+              <option value="SEGPA">SEGPA</option>
+              <option value="ULIS">ULIS</option>
+              <option value="UPE2A">UPE2A</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="inputDivNom">Nom de la division <span class="form-required">*</span></label>
+            <input type="text" id="inputDivNom" placeholder="ex. 6eA" maxlength="20" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="inputDivEffectif">Effectif (nombre d'élèves)</label>
+          <input type="number" id="inputDivEffectif" placeholder="28" min="0" max="99" step="1" />
+        </div>
+
+        <div class="form-group">
+          <label for="inputDivOptions">Options (séparées par des virgules)</label>
+          <input type="text" id="inputDivOptions" placeholder="ex. LV2-Espagnol, Latin" />
+          <span class="form-hint">Laissez vide si aucune option</span>
+        </div>
+
+        <div class="form-group">
+          <label for="inputDivDispositif">Dispositif particulier</label>
+          <select id="inputDivDispositif">
+            <option value="">Aucun</option>
+            <option value="ULIS">ULIS</option>
+            <option value="UPE2A">UPE2A</option>
+            <option value="SEGPA">SEGPA</option>
+            <option value="PAP">PAP</option>
+            <option value="PPS">PPS</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="modalDivCancel">Annuler</button>
+        <button class="btn-primary" id="modalDivSave">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL CONFIRMATION SUPPRESSION DIVISION
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="confirmDiv" role="dialog" aria-modal="true" aria-label="Confirmer la suppression">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Supprimer cette division ?</h2>
+        <button class="modal-close" id="confirmDivCancel" aria-label="Fermer">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-msg" id="confirmDivMsg">Confirmer la suppression ?</p>
+        <p class="confirm-sub">Cette action est irréversible.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="confirmDivAnnuler">Annuler</button>
+        <button class="btn-danger" id="confirmDivOk">Supprimer</button>
       </div>
     </div>
   </div>

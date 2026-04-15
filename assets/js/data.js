@@ -1,13 +1,18 @@
 /**
- * DGH App — Couche données v1.0
+ * DGH App — Couche données v1.1.0
  * SEUL fichier qui touche localStorage
  * RGPD : aucune donnée envoyée vers l'extérieur
+ *
+ * v1.1.0 — Sprint 2 : CRUD structures de classes
  */
 
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
+
+  // ── NIVEAUX VALIDES ───────────────────────────────────────────────
+  const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   // ── SCHÉMA ───────────────────────────────────────────────────────
   function _schema() {
@@ -55,15 +60,27 @@ const DGHData = (() => {
   }
 
   function _migrate() {
+    // v1.0.0 → v1.1.0 : garantir la cohérence du tableau structures
     if (!_data._meta) _data._meta = {};
+    if (_data.annees) {
+      Object.values(_data.annees).forEach(ann => {
+        if (!Array.isArray(ann.structures)) ann.structures = [];
+        ann.structures.forEach(div => {
+          if (!Array.isArray(div.options))      div.options    = [];
+          if (div.dispositif === undefined)     div.dispositif = null;
+          if (typeof div.effectif !== 'number') div.effectif   = 0;
+        });
+      });
+    }
     _data._meta.version = VERSION;
   }
 
-  // ── GETTERS ──────────────────────────────────────────────────────
+  // ── GETTERS GÉNÉRAUX ─────────────────────────────────────────────
   function get()             { return _data; }
   function getEtab()         { return _data.etablissement; }
   function getAnneeActive()  { return _data.anneeActive; }
   function getAnnees()       { return Object.keys(_data.annees).sort().reverse(); }
+  function getNiveaux()      { return NIVEAUX; }
 
   function getAnnee(a) {
     const key = a || _data.anneeActive;
@@ -71,7 +88,26 @@ const DGHData = (() => {
     return _data.annees[key];
   }
 
-  // ── SETTERS ──────────────────────────────────────────────────────
+  // ── GETTERS STRUCTURES ───────────────────────────────────────────
+  /** Retourne toutes les divisions triées par niveau puis nom */
+  function getStructures(annee) {
+    return (getAnnee(annee).structures || []).slice().sort(_sortDiv);
+  }
+
+  /** Retourne une division par son id */
+  function getDivision(id, annee) {
+    return (getAnnee(annee).structures || []).find(d => d.id === id) || null;
+  }
+
+  function _sortDiv(a, b) {
+    const ORDER = { '6e':0,'5e':1,'4e':2,'3e':3,'SEGPA':4,'ULIS':5,'UPE2A':6 };
+    const na = ORDER[a.niveau] ?? 99;
+    const nb = ORDER[b.niveau] ?? 99;
+    if (na !== nb) return na - nb;
+    return (a.nom || '').localeCompare(b.nom || '', 'fr');
+  }
+
+  // ── SETTERS GÉNÉRAUX ─────────────────────────────────────────────
   function setEtab(fields) { Object.assign(_data.etablissement, fields); save(); }
 
   function setAnneeActive(a) {
@@ -85,6 +121,60 @@ const DGHData = (() => {
     ann.dotation.enveloppe   = parseFloat(enveloppe) || 0;
     ann.dotation.commentaire = commentaire || '';
     save();
+  }
+
+  // ── CRUD STRUCTURES ──────────────────────────────────────────────
+  /**
+   * Ajoute une division.
+   * @param {{ niveau, nom, effectif, options, dispositif }} fields
+   * @returns {object} La division créée
+   */
+  function addDivision(fields) {
+    const ann = getAnnee();
+    const div = {
+      id:         genId('div'),
+      niveau:     fields.niveau      || '6e',
+      nom:        (fields.nom        || '').trim(),
+      effectif:   parseInt(fields.effectif, 10) || 0,
+      options:    Array.isArray(fields.options) ? fields.options.slice() : [],
+      dispositif: fields.dispositif  || null
+    };
+    ann.structures.push(div);
+    save();
+    return div;
+  }
+
+  /**
+   * Met à jour une division existante.
+   * @param {string} id
+   * @param {object} fields
+   * @returns {boolean}
+   */
+  function updateDivision(id, fields) {
+    const ann = getAnnee();
+    const idx = ann.structures.findIndex(d => d.id === id);
+    if (idx === -1) return false;
+    const div = ann.structures[idx];
+    if (fields.niveau     !== undefined) div.niveau     = fields.niveau;
+    if (fields.nom        !== undefined) div.nom        = (fields.nom || '').trim();
+    if (fields.effectif   !== undefined) div.effectif   = parseInt(fields.effectif, 10) || 0;
+    if (fields.options    !== undefined) div.options    = Array.isArray(fields.options) ? fields.options.slice() : [];
+    if (fields.dispositif !== undefined) div.dispositif = fields.dispositif || null;
+    save();
+    return true;
+  }
+
+  /**
+   * Supprime une division.
+   * @param {string} id
+   * @returns {boolean}
+   */
+  function deleteDivision(id) {
+    const ann = getAnnee();
+    const before = ann.structures.length;
+    ann.structures = ann.structures.filter(d => d.id !== id);
+    if (ann.structures.length < before) { save(); return true; }
+    return false;
   }
 
   // ── SAVE ─────────────────────────────────────────────────────────
@@ -145,6 +235,12 @@ const DGHData = (() => {
     return !_data.etablissement.nom && ann.dotation.enveloppe === 0 && ann.enseignants.length === 0;
   }
 
-  return { init, get, getEtab, getAnnee, getAnnees, getAnneeActive, setEtab, setAnneeActive, setDotation, save, exportJSON, importJSON, genId, isEmpty };
+  return {
+    init, get, getEtab, getAnnee, getAnnees, getAnneeActive, getNiveaux,
+    getStructures, getDivision,
+    setEtab, setAnneeActive, setDotation,
+    addDivision, updateDivision, deleteDivision,
+    save, exportJSON, importJSON, genId, isEmpty
+  };
 
 })();

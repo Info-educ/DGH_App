@@ -543,3 +543,152 @@ input::placeholder { color: var(--c-text-dim); }
   .view-title { font-size: 1.3rem; }
   .btn-etab { max-width: 130px; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   MODULE STRUCTURES — Sprint 2
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── View header avec bouton d'action ───────────────────────────── */
+.view-header-row {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+}
+@media (max-width: 600px) {
+  .view-header-row { flex-direction: column; align-items: flex-start; }
+}
+
+/* ── Barre KPI structures ───────────────────────────────────────── */
+.struct-kpi-bar {
+  background: var(--c-surface); border: 1.5px solid var(--c-border);
+  border-radius: var(--r-lg); padding: .875rem 1.25rem;
+  display: flex; align-items: center; gap: 1.25rem;
+  margin-bottom: 1.25rem; flex-wrap: wrap;
+}
+.struct-kpi-item {
+  display: flex; align-items: baseline; gap: .375rem;
+}
+.struct-kpi-val {
+  font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 1.35rem;
+  color: var(--c-text); letter-spacing: -.03em;
+}
+.struct-kpi-val-sm {
+  font-weight: 600; font-size: .85rem; color: var(--c-accent);
+}
+.struct-kpi-label {
+  font-size: .72rem; font-weight: 500; color: var(--c-text-muted);
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.struct-kpi-niveaux { gap: .5rem; }
+.struct-kpi-sep {
+  width: 1px; height: 28px; background: var(--c-border);
+  flex-shrink: 0;
+}
+.struct-kpi-sep-right { margin-left: auto; }
+.struct-by-niveau {
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+}
+.niveau-row {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .78rem;
+}
+.niveau-count   { color: var(--c-text-muted); }
+.niveau-effectif{ color: var(--c-text-dim); }
+
+/* ── Badges niveaux ─────────────────────────────────────────────── */
+.niveau-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: .68rem; font-weight: 700; letter-spacing: .02em;
+  padding: .15rem .5rem; border-radius: 5px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.niveau-6e    { background: var(--c-blue-bg);   color: var(--c-blue); }
+.niveau-5e    { background: var(--c-indigo-bg); color: var(--c-indigo); }
+.niveau-4e    { background: var(--c-green-bg);  color: var(--c-green); }
+.niveau-3e    { background: var(--c-amber-bg);  color: var(--c-amber); }
+.niveau-segpa { background: var(--c-red-bg);    color: var(--c-red); }
+.niveau-ulis  { background: var(--c-red-bg);    color: var(--c-red); }
+.niveau-upe2a { background: var(--c-red-bg);    color: var(--c-red); }
+
+/* ── Tableau des divisions ──────────────────────────────────────── */
+.struct-table {
+  width: 100%; border-collapse: collapse; font-size: .845rem;
+}
+.struct-table thead th {
+  background: var(--c-surface2); color: var(--c-text-muted);
+  font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em;
+  padding: .625rem 1rem; text-align: left;
+  border-bottom: 1.5px solid var(--c-border);
+}
+.struct-table thead th.col-actions { text-align: right; }
+.struct-table tbody tr {
+  border-bottom: 1px solid var(--c-border);
+  transition: background var(--tf);
+}
+.struct-table tbody tr:last-child { border-bottom: none; }
+.struct-table tbody tr:hover { background: var(--c-surface2); }
+.struct-table td { padding: .75rem 1rem; vertical-align: middle; }
+.struct-table td.col-actions { text-align: right; white-space: nowrap; }
+
+.div-nom      { font-weight: 600; color: var(--c-text); }
+.div-effectif { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--c-text); }
+.div-tags-cell{ display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
+
+.div-tag {
+  display: inline-flex; align-items: center;
+  background: var(--c-surface2); border: 1px solid var(--c-border);
+  color: var(--c-text-muted); font-size: .68rem; font-weight: 500;
+  padding: .1rem .5rem; border-radius: 4px;
+}
+.div-tag-disp {
+  background: var(--c-amber-bg); border-color: var(--c-amber);
+  color: var(--c-amber);
+}
+.no-tag { color: var(--c-text-dim); font-size: .8rem; }
+
+/* ── Boutons icône action ────────────────────────────────────────── */
+.btn-icon-sm {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 6px;
+  font-size: .85rem; font-weight: 600;
+  background: var(--c-surface2); color: var(--c-text-muted);
+  border: 1.5px solid var(--c-border);
+  transition: all var(--tf);
+}
+.btn-icon-sm:hover {
+  background: var(--c-accent-light); color: var(--c-accent);
+  border-color: var(--c-accent);
+}
+.btn-icon-danger:hover {
+  background: var(--c-red-bg); color: var(--c-red);
+  border-color: var(--c-red);
+}
+
+/* ── Empty state structures ─────────────────────────────────────── */
+.struct-empty {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 3.5rem 2rem; text-align: center; gap: .5rem;
+}
+.struct-empty-icon { font-size: 2rem; opacity: .15; color: var(--c-accent); margin-bottom: .75rem; }
+.struct-empty p    { font-size: .875rem; color: var(--c-text-muted); }
+.struct-empty-sub  { font-size: .8rem; color: var(--c-text-dim); }
+
+/* ── Formulaire modal ───────────────────────────────────────────── */
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .875rem; }
+@media (max-width: 480px) { .form-row-2 { grid-template-columns: 1fr; } }
+
+.form-hint    { display: block; font-size: .7rem; color: var(--c-text-dim); margin-top: .25rem; }
+.form-required{ color: var(--c-red); margin-left: .15rem; }
+
+/* ── Modal petite (confirmation) ────────────────────────────────── */
+.modal.modal-sm { max-width: 340px; }
+.confirm-msg    { font-weight: 600; font-size: .9rem; color: var(--c-text); }
+.confirm-sub    { font-size: .8rem; color: var(--c-text-muted); margin-top: .5rem; }
+
+/* ── Bouton danger ───────────────────────────────────────────────── */
+.btn-danger {
+  background: var(--c-red); color: white;
+  font-weight: 600; font-size: .85rem;
+  padding: .575rem 1.125rem; border-radius: var(--r);
+  display: inline-flex; align-items: center; gap: .35rem;
+  transition: background var(--tf), box-shadow var(--tf);
+}
+.btn-danger:hover { background: #a93226; box-shadow: 0 4px 12px rgba(192,57,43,.3); }
