@@ -1,15 +1,10 @@
 /**
- * DGH App — Contrôleur principal v2.6
+ * DGH App — Contrôleur principal v2.7
  * Règle permanente : délégation globale unique _onGlobalClick pour tous les boutons.
  * Jamais de listener direct sur un bouton à rendu conditionnel ou tardif.
  *
- * v2.6 — Corrections audit :
- *   - Syntaxe JS cassée (addEventListener keydown orphelin) → corrigée
- *   - Double listener nav-items (direct + délégation) → supprimé
- *   - isEmpty() ignorait les structures → corrigé
- *   - yearSelect codé en dur dans HTML → entièrement dynamique
- *   - setDotation écrasait le commentaire → préservé
- *   - stopPropagation inutile sur btnEtab → retiré
+ * v2.6 — Corrections audit (voir CHANGELOG)
+ * v2.7 — Sprint 3 : module Dotation DGH, CRUD disciplines, répartition inline
  */
 
 const app = (() => {
@@ -64,6 +59,7 @@ const app = (() => {
     if (viewId === 'dashboard')  _renderDashboard();
     if (viewId === 'alertes')    _renderAlertes();
     if (viewId === 'structures') _renderStructures();
+    if (viewId === 'dotation')   _renderDotation();
   }
 
   // ── DASHBOARD ────────────────────────────────────────────────────
@@ -403,6 +399,192 @@ const app = (() => {
     toast('Année ' + annee.replace('-', '–') + ' réinitialisée', 'info');
   }
 
+  // ── MODULE DOTATION — Sprint 3 ────────────────────────────────────
+  function _renderDotation() {
+    try {
+      const anneeData   = DGHData.getAnnee();
+      const bilan       = Calculs.bilanDotation(anneeData);
+      const disciplines = DGHData.getDisciplines();
+      const repartition = DGHData.getRepartition();
+      const structures  = DGHData.getStructures();
+      const besoins     = Calculs.besoinsParDiscipline(structures, disciplines, repartition);
+
+      // ── KPI bar
+      _set('dot-kpi-enveloppe', bilan.enveloppe || '—');
+      _set('dot-kpi-alloue',    bilan.totalAlloue);
+      _set('dot-kpi-nb',        bilan.nbDisciplines);
+      _set('dot-kpi-pct',       bilan.enveloppe > 0 ? bilan.pctConsomme + ' %' : '—');
+
+      const soldeEl    = document.getElementById('dot-kpi-solde');
+      const soldeLbl   = document.getElementById('dot-kpi-solde-label');
+      if (soldeEl) {
+        soldeEl.textContent = bilan.enveloppe > 0 ? bilan.solde : '—';
+        soldeEl.className   = bilan.depassement ? 'struct-kpi-val dot-solde-neg' : 'struct-kpi-val dot-solde-pos';
+      }
+      if (soldeLbl) soldeLbl.textContent = bilan.depassement ? 'h dépassement' : 'h solde';
+
+      // ── Barre de progression
+      const bar = document.getElementById('dot-progress-bar');
+      const lbl = document.getElementById('dot-progress-label');
+      if (bar) {
+        const pct = bilan.enveloppe > 0 ? Math.min(110, bilan.pctConsomme) : 0;
+        bar.style.width      = pct + '%';
+        bar.style.background = bilan.depassement ? 'var(--c-red)' : pct > 90 ? 'var(--c-amber)' : 'var(--c-accent)';
+      }
+      if (lbl) lbl.textContent = bilan.enveloppe > 0
+        ? bilan.totalAlloue + ' / ' + bilan.enveloppe + ' h' : '0 / 0 h';
+
+      // ── Tableau disciplines
+      const listEl = document.getElementById('dot-list');
+      if (!listEl) return;
+
+      if (disciplines.length === 0) {
+        listEl.innerHTML =
+          '<div class="struct-empty">'
+          + '<div class="struct-empty-icon">◎</div>'
+          + '<p>Aucune discipline saisie pour cette année.</p>'
+          + '<p class="struct-empty-sub">Cliquez sur «\u00a0Ajouter une discipline\u00a0» pour commencer la répartition.</p>'
+          + '</div>';
+        return;
+      }
+
+      // Construire le tableau — on croise besoins (triés par discipline) avec données
+      const besoinsMap = {};
+      besoins.forEach(b => { besoinsMap[b.disciplineId] = b; });
+
+      let html = '<table class="dot-table">'
+        + '<thead><tr>'
+        + '<th>Discipline</th>'
+        + '<th class="col-num">Besoin théorique</th>'
+        + '<th class="col-num">Heures allouées</th>'
+        + '<th class="col-num">Écart</th>'
+        + '<th class="col-bar">Répartition</th>'
+        + '<th class="col-actions">Actions</th>'
+        + '</tr></thead><tbody>';
+
+      disciplines.forEach(disc => {
+        const b       = besoinsMap[disc.id] || { besoinTheorique: 0, heuresAllouees: 0, ecart: 0, commentaire: '' };
+        const pctBar  = bilan.enveloppe > 0 ? Math.min(100, Math.round((b.heuresAllouees / bilan.enveloppe) * 100)) : 0;
+        const ecartCls = b.ecart > 0 ? 'dot-ecart-over' : b.ecart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
+        const ecartSign = b.ecart > 0 ? '+' : '';
+
+        html += '<tr>'
+          + '<td><span class="disc-color-dot" style="background:' + _esc(disc.couleur) + '"></span>'
+          + '<strong class="div-nom">' + _esc(disc.nom) + '</strong></td>'
+          + '<td class="col-num dot-theorique">' + (b.besoinTheorique > 0 ? b.besoinTheorique + ' h' : '<span class="no-tag">—</span>') + '</td>'
+          + '<td class="col-num">'
+          + '  <input type="number" class="dot-input-h" data-disc-id="' + disc.id + '" value="' + b.heuresAllouees + '" min="0" step="0.5" aria-label="Heures allouées ' + _esc(disc.nom) + '" />'
+          + '</td>'
+          + '<td class="col-num"><span class="dot-ecart ' + ecartCls + '">' + (b.besoinTheorique > 0 ? ecartSign + b.ecart + ' h' : '—') + '</span></td>'
+          + '<td class="col-bar"><div class="dot-bar-track"><div class="dot-bar-fill" style="width:' + pctBar + '%;background:' + _esc(disc.couleur) + '"></div></div><span class="dot-bar-pct">' + pctBar + '%</span></td>'
+          + '<td class="col-actions">'
+          + '<button class="btn-icon-sm" data-action="edit-disc" data-id="' + disc.id + '" title="Modifier">✎</button>'
+          + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-disc" data-id="' + disc.id + '" title="Supprimer">✕</button>'
+          + '</td>'
+          + '</tr>';
+      });
+
+      listEl.innerHTML = html + '</tbody></table>';
+
+      // ── Écoute des inputs heures inline (délégation sur le tableau)
+      listEl.querySelectorAll('.dot-input-h').forEach(inp => {
+        inp.addEventListener('change', e => {
+          const id = e.target.dataset.discId;
+          const h  = parseFloat(e.target.value) || 0;
+          if (id) {
+            DGHData.setRepartition(id, { heuresAllouees: h });
+            _renderDotation();
+            _renderDashboard();
+            toast('Heures mises à jour', 'success');
+          }
+        });
+      });
+
+    } catch(err) {
+      console.error('[DGH] Erreur renderDotation:', err);
+    }
+  }
+
+  // ── MODAL DISCIPLINE ──────────────────────────────────────────────
+  function _openModalDisc(id) {
+    const modal = document.getElementById('modalDisc');
+    if (!modal) return;
+    const title  = document.getElementById('modalDiscTitle');
+    const saveId = document.getElementById('modalDiscId');
+
+    if (id) {
+      const disc = DGHData.getDiscipline(id);
+      if (!disc) return;
+      if (title)  title.textContent = 'Modifier la discipline';
+      if (saveId) saveId.value      = id;
+      _setVal('inputDiscNom',     disc.nom);
+      _setVal('inputDiscCouleur', disc.couleur || '#2d6a4f');
+      _updateColorHint(disc.couleur || '#2d6a4f');
+    } else {
+      if (title)  title.textContent = 'Ajouter une discipline';
+      if (saveId) saveId.value      = '';
+      _setVal('inputDiscNom',     '');
+      _setVal('inputDiscCouleur', '#2d6a4f');
+      _updateColorHint('#2d6a4f');
+    }
+    modal.classList.add('modal-open');
+    setTimeout(() => { document.getElementById('inputDiscNom')?.focus(); }, 60);
+  }
+
+  function _updateColorHint(val) {
+    const hint = document.getElementById('colorHint');
+    if (hint) hint.textContent = val;
+  }
+
+  function _closeModalDisc() {
+    const m = document.getElementById('modalDisc');
+    if (m) m.classList.remove('modal-open');
+  }
+
+  function _saveModalDisc() {
+    const id  = (document.getElementById('modalDiscId') || {}).value || '';
+    const nom = ((document.getElementById('inputDiscNom') || {}).value || '').trim();
+    if (!nom) { toast('Le nom de la discipline est requis', 'warning'); return; }
+    const couleur = (document.getElementById('inputDiscCouleur') || {}).value || '#2d6a4f';
+
+    if (id) {
+      DGHData.updateDiscipline(id, { nom, couleur });
+      toast('Discipline mise à jour', 'success');
+    } else {
+      DGHData.addDiscipline({ nom, couleur });
+      toast('Discipline « ' + nom + ' » ajoutée', 'success');
+    }
+    _closeModalDisc();
+    _renderDotation();
+    _renderDashboard();
+  }
+
+  function _confirmDeleteDisc(id) {
+    const disc     = DGHData.getDiscipline(id);
+    if (!disc) return;
+    const confirmEl = document.getElementById('confirmDisc');
+    const msgEl     = document.getElementById('confirmDiscMsg');
+    if (!confirmEl) return;
+    if (msgEl) msgEl.textContent = 'Supprimer «\u00a0' + disc.nom + '\u00a0» ?';
+    confirmEl.dataset.targetId   = id;
+    confirmEl.classList.add('modal-open');
+  }
+
+  function _closeConfirmDisc() {
+    const m = document.getElementById('confirmDisc');
+    if (m) { m.classList.remove('modal-open'); m.dataset.targetId = ''; }
+  }
+
+  function _execDeleteDisc() {
+    const id = document.getElementById('confirmDisc')?.dataset?.targetId;
+    if (!id) return;
+    DGHData.deleteDiscipline(id);
+    _closeConfirmDisc();
+    _renderDotation();
+    _renderDashboard();
+    toast('Discipline supprimée', 'info');
+  }
+
   // ── ALERTES ──────────────────────────────────────────────────────
   function _renderAlertes() {
     try {
@@ -571,20 +753,27 @@ const app = (() => {
     const actionBtn = e.target.closest('[data-action]');
     if (actionBtn) {
       const { action, id } = actionBtn.dataset;
-      if (action === 'edit-div')   { _openModalDiv(id);      return; }
-      if (action === 'delete-div') { _confirmDeleteDiv(id);  return; }
+      if (action === 'edit-div')    { _openModalDiv(id);      return; }
+      if (action === 'delete-div')  { _confirmDeleteDiv(id);  return; }
+      if (action === 'edit-disc')   { _openModalDisc(id);     return; }
+      if (action === 'delete-disc') { _confirmDeleteDisc(id); return; }
     }
 
     // ── Bouton "Ajouter une division" (dans view-structures)
     if (e.target.closest('#btnAddDiv')) { _openModalDiv(null); return; }
 
+    // ── Bouton "Ajouter une discipline" (dans view-dotation)
+    if (e.target.closest('#btnAddDisc')) { _openModalDisc(null); return; }
+
     // ── Bouton "Mon Collège ⚙"
     if (e.target.closest('#btnEtab')) { _openModal(); return; }
 
     // ── Fermeture modals au clic sur l'overlay
-    if (e.target === document.getElementById('modalEtab'))  { _closeModal();       return; }
-    if (e.target === document.getElementById('modalDiv'))   { _closeModalDiv();    return; }
-    if (e.target === document.getElementById('confirmDiv')) { _closeConfirmDiv();  return; }
+    if (e.target === document.getElementById('modalEtab'))  { _closeModal();        return; }
+    if (e.target === document.getElementById('modalDiv'))   { _closeModalDiv();     return; }
+    if (e.target === document.getElementById('confirmDiv')) { _closeConfirmDiv();   return; }
+    if (e.target === document.getElementById('modalDisc'))  { _closeModalDisc();   return; }
+    if (e.target === document.getElementById('confirmDisc')){ _closeConfirmDisc(); return; }
 
     // ── Boutons modal établissement
     if (e.target.closest('#modalClose'))      { _closeModal();         return; }
@@ -602,6 +791,16 @@ const app = (() => {
     if (e.target.closest('#confirmDivCancel'))  { _closeConfirmDiv(); return; }
     if (e.target.closest('#confirmDivAnnuler')) { _closeConfirmDiv(); return; }
     if (e.target.closest('#confirmDivOk'))      { _execDeleteDiv();   return; }
+
+    // ── Boutons modal discipline
+    if (e.target.closest('#modalDiscClose'))  { _closeModalDisc();  return; }
+    if (e.target.closest('#modalDiscCancel')) { _closeModalDisc();  return; }
+    if (e.target.closest('#modalDiscSave'))   { _saveModalDisc();   return; }
+
+    // ── Boutons modal confirmation suppression discipline
+    if (e.target.closest('#confirmDiscCancel'))  { _closeConfirmDisc(); return; }
+    if (e.target.closest('#confirmDiscAnnuler')) { _closeConfirmDisc(); return; }
+    if (e.target.closest('#confirmDiscOk'))      { _execDeleteDisc();   return; }
 
     // ── Boutons modal confirmation réinitialisation année
     if (e.target.closest('#confirmResetCancel'))  { _closeConfirmReset(); return; }
@@ -685,6 +884,13 @@ const app = (() => {
       if (document.getElementById('modalDiv')?.classList.contains('modal-open'))     _closeModalDiv();
       if (document.getElementById('confirmDiv')?.classList.contains('modal-open'))   _closeConfirmDiv();
       if (document.getElementById('confirmReset')?.classList.contains('modal-open')) _closeConfirmReset();
+      if (document.getElementById('modalDisc')?.classList.contains('modal-open'))   _closeModalDisc();
+      if (document.getElementById('confirmDisc')?.classList.contains('modal-open')) _closeConfirmDisc();
+    });
+
+    // ── Color picker — mise à jour du hint en temps réel
+    document.addEventListener('input', e => {
+      if (e.target.id === 'inputDiscCouleur') _updateColorHint(e.target.value);
     });
 
     // ── Ctrl+S / Cmd+S → export

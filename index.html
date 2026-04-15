@@ -78,7 +78,7 @@
     </div>
 
     <div class="sidebar-footer">
-      <span>v1.2.0</span>
+      <span>v1.3.0</span>
       <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -216,18 +216,73 @@
       </section>
 
       <!-- ═══════════════════════════════════════════════════════════
-           DOTATION
+           DOTATION — Sprint 3
            ═══════════════════════════════════════════════════════════ -->
       <section class="view" id="view-dotation">
         <div class="view-header">
-          <h1 class="view-title">Dotation DGH</h1>
-          <p class="view-subtitle">Enveloppe globale et répartition par discipline</p>
+          <div class="view-header-row">
+            <div>
+              <h1 class="view-title">Dotation DGH</h1>
+              <p class="view-subtitle">Enveloppe globale et répartition par discipline</p>
+            </div>
+            <button class="btn-primary" id="btnAddDisc">+ Ajouter une discipline</button>
+          </div>
         </div>
-        <div class="placeholder-view">
-          <div class="placeholder-icon">◎</div>
-          <p><strong>Module Dotation DGH</strong> — Sprint 3</p>
-          <p class="placeholder-sub">Enveloppe DGH → besoins calculés via grilles MEN → affectation par discipline</p>
+
+        <!-- KPI dotation -->
+        <div class="dot-kpi-bar" id="dot-kpi-bar">
+          <div class="struct-kpi-item">
+            <span class="struct-kpi-val" id="dot-kpi-enveloppe" style="font-family:'JetBrains Mono',monospace">—</span>
+            <span class="struct-kpi-label">h enveloppe</span>
+          </div>
+          <div class="struct-kpi-sep"></div>
+          <div class="struct-kpi-item">
+            <span class="struct-kpi-val" id="dot-kpi-alloue" style="font-family:'JetBrains Mono',monospace">—</span>
+            <span class="struct-kpi-label">h allouées</span>
+          </div>
+          <div class="struct-kpi-sep"></div>
+          <div class="struct-kpi-item">
+            <span class="struct-kpi-val" id="dot-kpi-solde" style="font-family:'JetBrains Mono',monospace">—</span>
+            <span class="struct-kpi-label" id="dot-kpi-solde-label">h solde</span>
+          </div>
+          <div class="struct-kpi-sep"></div>
+          <div class="struct-kpi-item">
+            <span class="struct-kpi-val" id="dot-kpi-pct" style="font-family:'JetBrains Mono',monospace">—</span>
+            <span class="struct-kpi-label">% consommé</span>
+          </div>
+          <div class="struct-kpi-sep struct-kpi-sep-right"></div>
+          <div class="struct-kpi-item">
+            <span class="struct-kpi-val" id="dot-kpi-nb" style="font-family:'JetBrains Mono',monospace">0</span>
+            <span class="struct-kpi-label">disciplines</span>
+          </div>
         </div>
+
+        <!-- Barre de progression dotation -->
+        <div class="progress-section" id="dot-progress-section">
+          <div class="progress-header">
+            <span>Consommation de l'enveloppe</span>
+            <span id="dot-progress-label">0 / 0 h</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="dot-progress-bar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Tableau répartition par discipline -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <h2>Répartition par discipline</h2>
+            <span class="dot-legend">
+              <span class="dot-legend-item dot-legend-ok">▪ équilibré</span>
+              <span class="dot-legend-item dot-legend-over">▪ excédent</span>
+              <span class="dot-legend-item dot-legend-under">▪ insuffisant</span>
+            </span>
+          </div>
+          <div id="dot-list"></div>
+        </div>
+
+        <!-- Note grilles MEN -->
+        <p class="dot-footnote">Besoin théorique calculé d'après les grilles horaires MEN (BO spécial n°11 du 26 novembre 2015) × nombre de divisions par niveau.</p>
       </section>
 
       <!-- ═══════════════════════════════════════════════════════════
@@ -478,6 +533,57 @@
       <div class="modal-footer">
         <button class="btn-secondary" id="confirmResetAnnuler">Annuler</button>
         <button class="btn-danger" id="confirmResetOk">Réinitialiser</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL AJOUT / MODIFICATION DISCIPLINE
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modalDisc" role="dialog" aria-modal="true" aria-label="Discipline">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalDiscTitle">Ajouter une discipline</h2>
+        <button class="modal-close" id="modalDiscClose" aria-label="Fermer">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modalDiscId" />
+        <div class="form-group">
+          <label for="inputDiscNom">Nom de la discipline <span class="form-required">*</span></label>
+          <input type="text" id="inputDiscNom" placeholder="ex. Français, Mathématiques, EPS…" maxlength="60" />
+          <span class="form-hint">Utilisez le nom exact de la grille MEN pour activer le calcul du besoin théorique.</span>
+        </div>
+        <div class="form-group">
+          <label for="inputDiscCouleur">Couleur de repérage</label>
+          <div class="color-picker-row">
+            <input type="color" id="inputDiscCouleur" value="#2d6a4f" class="color-input" />
+            <span class="color-hint" id="colorHint">#2d6a4f</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="modalDiscCancel">Annuler</button>
+        <button class="btn-primary" id="modalDiscSave">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL CONFIRMATION SUPPRESSION DISCIPLINE
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="confirmDisc" role="dialog" aria-modal="true" aria-label="Confirmer la suppression">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Supprimer cette discipline ?</h2>
+        <button class="modal-close" id="confirmDiscCancel" aria-label="Fermer">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-msg" id="confirmDiscMsg">Confirmer la suppression ?</p>
+        <p class="confirm-sub">Les heures allouées à cette discipline seront également supprimées. Action irréversible.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="confirmDiscAnnuler">Annuler</button>
+        <button class="btn-danger" id="confirmDiscOk">Supprimer</button>
       </div>
     </div>
   </div>

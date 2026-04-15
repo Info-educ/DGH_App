@@ -761,3 +761,130 @@ input::placeholder { color: var(--c-text-dim); }
   font-size: .75rem; font-weight: 600;
   padding: .15rem .5rem;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   MODULE DOTATION DGH — Sprint 3
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Barre KPI dotation (réutilise .struct-kpi-bar) ────────────── */
+.dot-kpi-bar {
+  background: var(--c-surface); border: 1.5px solid var(--c-border);
+  border-radius: var(--r-lg); padding: .875rem 1.25rem;
+  display: flex; align-items: center; gap: 1.25rem;
+  margin-bottom: 1.25rem; flex-wrap: wrap;
+}
+.dot-solde-pos { color: var(--c-green); }
+.dot-solde-neg { color: var(--c-red); }
+
+/* ── Tableau répartition disciplines ────────────────────────────── */
+.dot-table {
+  width: 100%; border-collapse: collapse; font-size: .845rem;
+}
+.dot-table thead th {
+  background: var(--c-surface2); color: var(--c-text-muted);
+  font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em;
+  padding: .625rem 1rem; text-align: left;
+  border-bottom: 1.5px solid var(--c-border);
+}
+.dot-table thead th.col-num    { text-align: right; }
+.dot-table thead th.col-bar    { min-width: 120px; }
+.dot-table thead th.col-actions{ text-align: right; }
+.dot-table tbody tr {
+  border-bottom: 1px solid var(--c-border);
+  transition: background var(--tf);
+}
+.dot-table tbody tr:last-child { border-bottom: none; }
+.dot-table tbody tr:hover      { background: var(--c-surface2); }
+.dot-table td { padding: .65rem 1rem; vertical-align: middle; }
+.dot-table td.col-num    { text-align: right; }
+.dot-table td.col-actions{ text-align: right; white-space: nowrap; }
+
+/* ── Point couleur discipline ───────────────────────────────────── */
+.disc-color-dot {
+  display: inline-block;
+  width: 10px; height: 10px; border-radius: 50%;
+  margin-right: .45rem; vertical-align: middle; flex-shrink: 0;
+}
+
+/* ── Valeur théorique ───────────────────────────────────────────── */
+.dot-theorique {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--c-text-muted); font-size: .8rem;
+}
+
+/* ── Input heures inline ────────────────────────────────────────── */
+.dot-input-h {
+  width: 80px; text-align: right;
+  font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: .9rem;
+  padding: .3rem .5rem; border-radius: 6px;
+  border: 1.5px solid var(--c-border);
+  background: var(--c-surface); color: var(--c-text);
+  transition: border-color var(--tf), box-shadow var(--tf);
+}
+.dot-input-h:focus {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px rgba(45,106,79,.15);
+  outline: none;
+}
+
+/* ── Écart discipline ───────────────────────────────────────────── */
+.dot-ecart {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: .8rem;
+  padding: .15rem .5rem; border-radius: 5px;
+}
+.dot-ecart-ok    { background: var(--c-green-bg); color: var(--c-green); }
+.dot-ecart-over  { background: var(--c-amber-bg); color: var(--c-amber); }
+.dot-ecart-under { background: var(--c-red-bg);   color: var(--c-red); }
+
+/* ── Mini barre de proportion ───────────────────────────────────── */
+.dot-bar-track {
+  height: 6px; background: var(--c-surface2);
+  border-radius: 99px; overflow: hidden;
+  border: 1px solid var(--c-border);
+  min-width: 80px; display: inline-block; vertical-align: middle;
+  width: 100%;
+}
+.dot-bar-fill {
+  height: 100%; border-radius: 99px;
+  transition: width .4s ease;
+}
+.dot-bar-pct {
+  font-size: .7rem; color: var(--c-text-dim);
+  margin-left: .4rem; font-family: 'JetBrains Mono', monospace;
+  vertical-align: middle;
+}
+.col-bar { display: flex; align-items: center; gap: .25rem; min-width: 130px; }
+
+/* ── Légende ────────────────────────────────────────────────────── */
+.dot-legend {
+  display: flex; gap: .75rem; align-items: center; flex-wrap: wrap;
+}
+.dot-legend-item {
+  font-size: .68rem; font-weight: 600; padding: .15rem .5rem; border-radius: 4px;
+}
+.dot-legend-ok    { background: var(--c-green-bg); color: var(--c-green); }
+.dot-legend-over  { background: var(--c-amber-bg); color: var(--c-amber); }
+.dot-legend-under { background: var(--c-red-bg);   color: var(--c-red); }
+
+/* ── Note de bas de page ────────────────────────────────────────── */
+.dot-footnote {
+  font-size: .7rem; color: var(--c-text-dim);
+  margin-top: .875rem; line-height: 1.6;
+  padding: 0 .25rem;
+}
+
+/* ── Color picker ───────────────────────────────────────────────── */
+.color-picker-row {
+  display: flex; align-items: center; gap: .75rem;
+}
+.color-input {
+  width: 48px; height: 36px; padding: 2px;
+  border-radius: var(--r); border: 1.5px solid var(--c-border);
+  background: var(--c-surface); cursor: pointer;
+  flex-shrink: 0;
+}
+.color-hint {
+  font-family: 'JetBrains Mono', monospace; font-size: .8rem;
+  color: var(--c-text-muted);
+}

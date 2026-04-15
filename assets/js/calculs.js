@@ -1,8 +1,9 @@
 /**
- * DGH App — Moteur de calcul v1.1.0
+ * DGH App — Moteur de calcul v1.2.0
  * Fonctions pures : zéro DOM, zéro localStorage
  *
  * v1.1.0 — Sprint 2 : resumeStructures()
+ * v1.2.0 — Sprint 3 : bilanDotation(), besoinsParDiscipline()
  */
 
 const Calculs = (() => {
@@ -105,6 +106,87 @@ const Calculs = (() => {
     };
   }
 
+  // ── BILAN DOTATION — Sprint 3 ────────────────────────────────────
+  /**
+   * Calcule le bilan global de la dotation de l'année.
+   * Utilisé par le module Dotation DGH et le Dashboard.
+   *
+   * @param {object} anneeData
+   * @returns {{
+   *   enveloppe: number,
+   *   totalAlloue: number,
+   *   solde: number,
+   *   pctConsomme: number,
+   *   nbDisciplines: number,
+   *   depassement: boolean
+   * }}
+   */
+  function bilanDotation(anneeData) {
+    const enveloppe     = anneeData.dotation?.enveloppe || 0;
+    const repartition   = anneeData.repartition || [];
+    const totalAlloue   = Math.round(repartition.reduce((s, r) => s + (r.heuresAllouees || 0), 0) * 2) / 2;
+    const solde         = Math.round((enveloppe - totalAlloue) * 2) / 2;
+    const pctConsomme   = enveloppe > 0 ? Math.round((totalAlloue / enveloppe) * 100) : 0;
+    return {
+      enveloppe,
+      totalAlloue,
+      solde,
+      pctConsomme,
+      nbDisciplines: (anneeData.disciplines || []).length,
+      depassement:   solde < 0
+    };
+  }
+
+  /**
+   * Calcule les besoins théoriques par discipline à partir des structures et des grilles MEN.
+   * Rapproche le besoin théorique des heures allouées.
+   *
+   * Règle : pour chaque division d'un niveau donné et pour chaque discipline
+   *         présente dans la grille MEN, on cumule les heures hebdomadaires × 36 semaines.
+   * Note : on ne multiplie PAS par 36 (la DGH est en heures annuelles globales,
+   *        mais l'usage courant en collège est en heures hebdo × nombre de divisions).
+   *        Le calcul produit des "heures-division" directement comparables aux allouées.
+   *
+   * @param {Array} structures   — divisions (depuis DGHData.getStructures())
+   * @param {Array} disciplines  — disciplines (depuis DGHData.getDisciplines())
+   * @param {Array} repartition  — répartition actuelle (depuis DGHData.getRepartition())
+   * @returns {Array<{
+   *   disciplineId, nom, couleur,
+   *   besoinTheorique: number,   // heures / semaine × nb divisions concernées
+   *   heuresAllouees: number,
+   *   ecart: number,             // alloue - theorique (positif = excédent)
+   *   commentaire: string
+   * }>}
+   */
+  function besoinsParDiscipline(structures, disciplines, repartition) {
+    if (!Array.isArray(disciplines) || disciplines.length === 0) return [];
+
+    // Calcul besoins théoriques MEN par nom de discipline
+    const besoinsMap = {}; // nom discipline → heures/sem cumulées
+    (structures || []).forEach(div => {
+      const grille = GRILLES_MEN[div.niveau];
+      if (!grille) return;
+      Object.entries(grille).forEach(([nomDisc, h]) => {
+        besoinsMap[nomDisc] = (besoinsMap[nomDisc] || 0) + h;
+      });
+    });
+
+    return disciplines.map(disc => {
+      const rep        = repartition.find(r => r.disciplineId === disc.id) || {};
+      const theorique  = Math.round((besoinsMap[disc.nom] || 0) * 2) / 2;
+      const alloue     = rep.heuresAllouees || 0;
+      return {
+        disciplineId:    disc.id,
+        nom:             disc.nom,
+        couleur:         disc.couleur,
+        besoinTheorique: theorique,
+        heuresAllouees:  alloue,
+        ecart:           Math.round((alloue - theorique) * 2) / 2,
+        commentaire:     rep.commentaire || ''
+      };
+    });
+  }
+
   // ── ALERTES ──────────────────────────────────────────────────────
   function genererAlertes(anneeData) {
     const alertes     = [];
@@ -135,6 +217,6 @@ const Calculs = (() => {
     return alertes;
   }
 
-  return { ORS, GRILLES_MEN, getORS, calcHeuresEnseignant, detailEnseignant, bilanDGH, resumeStructures, genererAlertes };
+  return { ORS, GRILLES_MEN, getORS, calcHeuresEnseignant, detailEnseignant, bilanDGH, resumeStructures, bilanDotation, besoinsParDiscipline, genererAlertes };
 
 })();

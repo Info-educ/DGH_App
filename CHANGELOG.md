@@ -5,6 +5,32 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## [1.3.0] — Sprint 3 — Dotation DGH
+
+### Ajouté
+- ◎ **Module Dotation DGH** — vue complète remplaçant le placeholder Sprint 3
+- ➕ Ajout, modification et suppression de disciplines avec modal dédiée
+- 🎨 Couleur de repérage par discipline (color picker natif)
+- 📊 **Saisie inline des heures allouées** — champ numérique directement dans le tableau, sauvegarde à la perte de focus
+- 📐 **Besoin théorique automatique** — calculé par `besoinsParDiscipline()` à partir des grilles MEN (BO spécial n°11 du 26 novembre 2015) × nombre de divisions par niveau
+- ⚡ **Écart alloué / théorique** — badge coloré (vert = équilibré, amber = excédent, rouge = insuffisant)
+- 📊 Barre de proportion par discipline (% de l'enveloppe consommé par discipline)
+- 🔢 Barre KPI : enveloppe, total alloué, solde (vert/rouge selon dépassement), % consommé, nb disciplines
+- 🔴 Barre de progression de l'enveloppe (cohérente avec le Dashboard)
+- 🗑️ Confirmation explicite avant suppression (supprime aussi la ligne de répartition)
+- `bilanDotation()` dans `calculs.js` — bilan global dotation (fonction pure)
+- `besoinsParDiscipline()` dans `calculs.js` — besoins théoriques MEN vs alloués (fonction pure)
+- `addDiscipline()`, `updateDiscipline()`, `deleteDiscipline()` dans `data.js`
+- `getDisciplines()`, `getDiscipline()`, `getRepartition()`, `setRepartition()` dans `data.js`
+- Migration automatique des fichiers JSON existants (v1.2 → v1.3)
+
+### Technique
+- Délégation `_onGlobalClick` étendue : `edit-disc`, `delete-disc`, `btnAddDisc`, modals disc
+- Listeners `change` sur `.dot-input-h` posés après chaque rendu du tableau (dans `_renderDotation`)
+- Aucun `onclick` inline — vérification : `grep -n "onclick" index.html` → vide
+
+---
+
 ## [1.2.0] — Corrections & améliorations structures
 
 ### Ajouté

@@ -1,15 +1,16 @@
 /**
- * DGH App — Couche données v1.2.0
+ * DGH App — Couche données v1.3.0
  * SEUL fichier qui touche localStorage
  * RGPD : aucune donnée envoyée vers l'extérieur
  *
  * v1.2.0 — Corrections structures : CRUD structures de classes
+ * v1.3.0 — Sprint 3 : CRUD disciplines + répartition par discipline
  */
 
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '1.2.0';
+  const VERSION = '1.3.0';
 
   // ── NIVEAUX VALIDES ───────────────────────────────────────────────
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'UPE2A'];
@@ -69,6 +70,13 @@ const DGHData = (() => {
           if (!Array.isArray(div.options))      div.options    = [];
           if (div.dispositif === undefined)     div.dispositif = null;
           if (typeof div.effectif !== 'number') div.effectif   = 0;
+        });
+        // v1.2.0 → v1.3.0 : garantir disciplines et répartition
+        if (!Array.isArray(ann.disciplines))  ann.disciplines  = [];
+        if (!Array.isArray(ann.repartition))  ann.repartition  = [];
+        ann.repartition.forEach(r => {
+          if (r.commentaire === undefined) r.commentaire = '';
+          if (r.heuresAllouees === undefined) r.heuresAllouees = 0;
         });
       });
     }
@@ -175,6 +183,119 @@ const DGHData = (() => {
     ann.structures = ann.structures.filter(d => d.id !== id);
     if (ann.structures.length < before) { save(); return true; }
     return false;
+  }
+
+  // ── CRUD DISCIPLINES ─────────────────────────────────────────────
+  /**
+   * Retourne toutes les disciplines de l'année active, triées par nom.
+   * @param {string} [annee]
+   * @returns {Array}
+   */
+  function getDisciplines(annee) {
+    return (getAnnee(annee).disciplines || []).slice().sort((a, b) =>
+      (a.nom || '').localeCompare(b.nom || '', 'fr')
+    );
+  }
+
+  /**
+   * Retourne une discipline par son id.
+   * @param {string} id
+   * @param {string} [annee]
+   */
+  function getDiscipline(id, annee) {
+    return (getAnnee(annee).disciplines || []).find(d => d.id === id) || null;
+  }
+
+  /**
+   * Ajoute une discipline.
+   * @param {{ nom, couleur }} fields
+   * @returns {object} La discipline créée
+   */
+  function addDiscipline(fields) {
+    const ann  = getAnnee();
+    const disc = {
+      id:      genId('disc'),
+      nom:     (fields.nom     || '').trim(),
+      couleur: fields.couleur  || '#6b6860'
+    };
+    ann.disciplines.push(disc);
+    // Créer une entrée répartition à 0 pour cette discipline
+    ann.repartition.push({ disciplineId: disc.id, heuresAllouees: 0, commentaire: '' });
+    save();
+    return disc;
+  }
+
+  /**
+   * Met à jour une discipline.
+   * @param {string} id
+   * @param {object} fields
+   * @returns {boolean}
+   */
+  function updateDiscipline(id, fields) {
+    const ann = getAnnee();
+    const idx = ann.disciplines.findIndex(d => d.id === id);
+    if (idx === -1) return false;
+    const disc = ann.disciplines[idx];
+    if (fields.nom     !== undefined) disc.nom     = (fields.nom || '').trim();
+    if (fields.couleur !== undefined) disc.couleur = fields.couleur;
+    save();
+    return true;
+  }
+
+  /**
+   * Supprime une discipline et sa ligne de répartition.
+   * @param {string} id
+   * @returns {boolean}
+   */
+  function deleteDiscipline(id) {
+    const ann    = getAnnee();
+    const before = ann.disciplines.length;
+    ann.disciplines = ann.disciplines.filter(d => d.id !== id);
+    ann.repartition = ann.repartition.filter(r => r.disciplineId !== id);
+    if (ann.disciplines.length < before) { save(); return true; }
+    return false;
+  }
+
+  // ── CRUD RÉPARTITION ─────────────────────────────────────────────
+  /**
+   * Retourne la répartition complète (tableau enrichi avec le nom de la discipline).
+   * @param {string} [annee]
+   * @returns {Array<{ disciplineId, nom, couleur, heuresAllouees, commentaire }>}
+   */
+  function getRepartition(annee) {
+    const ann    = getAnnee(annee);
+    const discs  = ann.disciplines || [];
+    const repArr = ann.repartition || [];
+    return repArr.map(r => {
+      const disc = discs.find(d => d.id === r.disciplineId) || {};
+      return {
+        disciplineId:   r.disciplineId,
+        nom:            disc.nom     || '—',
+        couleur:        disc.couleur || '#6b6860',
+        heuresAllouees: r.heuresAllouees || 0,
+        commentaire:    r.commentaire    || ''
+      };
+    });
+  }
+
+  /**
+   * Met à jour les heures allouées et/ou le commentaire d'une ligne de répartition.
+   * @param {string} disciplineId
+   * @param {{ heuresAllouees?, commentaire? }} fields
+   * @returns {boolean}
+   */
+  function setRepartition(disciplineId, fields) {
+    const ann = getAnnee();
+    let ligne = ann.repartition.find(r => r.disciplineId === disciplineId);
+    if (!ligne) {
+      // Créer la ligne si manquante (migration defensive)
+      ligne = { disciplineId, heuresAllouees: 0, commentaire: '' };
+      ann.repartition.push(ligne);
+    }
+    if (fields.heuresAllouees !== undefined) ligne.heuresAllouees = parseFloat(fields.heuresAllouees) || 0;
+    if (fields.commentaire    !== undefined) ligne.commentaire    = fields.commentaire || '';
+    save();
+    return true;
   }
 
   // ── RESET ANNÉE ──────────────────────────────────────────────────
@@ -326,8 +447,10 @@ const DGHData = (() => {
   return {
     init, get, getEtab, getAnnee, getAnnees, getAnneeActive, getNiveaux,
     getStructures, getDivision,
+    getDisciplines, getDiscipline, getRepartition,
     setEtab, setAnneeActive, setDotation,
     addDivision, updateDivision, deleteDivision, resetAnnee, duplicateDivisions,
+    addDiscipline, updateDiscipline, deleteDiscipline, setRepartition,
     save, exportJSON, importJSON, genId, isEmpty
   };
 
