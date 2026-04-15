@@ -721,3 +721,25 @@ input::placeholder { color: var(--c-text-dim); }
   white-space: nowrap; flex-shrink: 0;
   font-size: .8rem; padding: .5rem .875rem;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   v1.2.0 — Duplication divisions + Zone danger reset année
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Bloc duplication dans modal division ───────────────────────── */
+.dup-group { background: var(--c-surface2); border: 1.5px solid var(--c-border); border-radius: var(--r); padding: .75rem 1rem; }
+.dup-row   { display: flex; align-items: center; gap: .75rem; margin-top: .35rem; }
+.dup-input { width: 70px; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: .95rem; text-align: center; }
+.dup-hint  { font-size: .78rem; color: var(--c-text-muted); }
+
+/* ── Zone danger dans modal établissement ───────────────────────── */
+.modal-section-danger { color: var(--c-red); border-color: var(--c-red-bg); }
+.danger-zone {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  background: var(--c-red-bg); border: 1.5px solid var(--c-red);
+  border-radius: var(--r); padding: .875rem 1rem;
+}
+.danger-zone-text { display: flex; flex-direction: column; gap: .2rem; font-size: .82rem; }
+.danger-zone-text strong { color: var(--c-red); font-weight: 700; }
+.danger-zone-text span   { color: var(--c-text-muted); line-height: 1.5; }
+.btn-sm { font-size: .78rem; padding: .4rem .875rem; flex-shrink: 0; }

@@ -1,5 +1,5 @@
 /**
- * DGH App — Contrôleur principal v2.4
+ * DGH App — Contrôleur principal v2.5
  * Corrections v2.4 :
  *   - Bug boutons : UNE SEULE délégation globale, aucun listener direct sur boutons de contenu
  *   - Gestion années : ajout/suppression depuis la modal établissement
@@ -210,6 +210,8 @@ const app = (() => {
         .map(n => '<option value="' + n + '">' + n + '</option>').join('');
     }
 
+    const dupGroup = document.getElementById('dupGroup');
+
     if (id) {
       const div = DGHData.getDivision(id);
       if (!div) return;
@@ -220,6 +222,8 @@ const app = (() => {
       _setVal('inputDivEffectif',   div.effectif);
       _setVal('inputDivOptions',    (div.options || []).join(', '));
       _setVal('inputDivDispositif', div.dispositif || '');
+      // En mode édition : masquer la duplication
+      if (dupGroup) dupGroup.style.display = 'none';
     } else {
       if (title)  title.textContent = 'Ajouter une division';
       if (saveId) saveId.value      = '';
@@ -228,6 +232,9 @@ const app = (() => {
       _setVal('inputDivEffectif',   '');
       _setVal('inputDivOptions',    '');
       _setVal('inputDivDispositif', '');
+      _setVal('inputDivDup',        '0');
+      // En mode ajout : afficher la duplication
+      if (dupGroup) dupGroup.style.display = '';
     }
 
     modal.classList.add('modal-open');
@@ -253,12 +260,22 @@ const app = (() => {
       dispositif: ((document.getElementById('inputDivDispositif') || {}).value || '').trim() || null
     };
 
+    const dupCount = parseInt((document.getElementById('inputDivDup') || {}).value, 10) || 0;
+
     if (id) {
+      // Mode édition — pas de duplication
       DGHData.updateDivision(id, fields);
       toast('Division mise à jour', 'success');
     } else {
-      DGHData.addDivision(fields);
-      toast('Division ajoutée', 'success');
+      // Mode ajout : créer la division principale
+      const created = DGHData.addDivision(fields);
+      // Puis les copies si demandées
+      if (dupCount > 0) {
+        const copies = DGHData.duplicateDivisions(created.id, dupCount);
+        toast(nom + ' + ' + copies.length + ' copie(s) créée(s)', 'success');
+      } else {
+        toast('Division « ' + nom + ' » ajoutée', 'success');
+      }
     }
 
     _closeModalDiv();
@@ -292,7 +309,30 @@ const app = (() => {
     toast('Division supprimée', 'info');
   }
 
-  // ── ALERTES ──────────────────────────────────────────────────────
+  // ── RÉINITIALISATION ANNÉE ────────────────────────────────────────
+  function _openConfirmReset() {
+    const annee     = DGHData.getAnneeActive();
+    const confirmEl = document.getElementById('confirmReset');
+    const msgEl     = document.getElementById('confirmResetMsg');
+    if (!confirmEl) return;
+    if (msgEl) msgEl.textContent = 'Réinitialiser toutes les données de l\'année ' + annee.replace('-', '–') + ' ?';
+    confirmEl.classList.add('modal-open');
+  }
+
+  function _closeConfirmReset() {
+    const m = document.getElementById('confirmReset');
+    if (m) m.classList.remove('modal-open');
+  }
+
+  function _execResetAnnee() {
+    const annee = DGHData.getAnneeActive();
+    DGHData.resetAnnee();
+    _closeConfirmReset();
+    _closeModal();
+    _renderAll();
+    _renderDashboard();
+    toast('Année ' + annee.replace('-', '–') + ' réinitialisée', 'info');
+  }
   function _renderAlertes() {
     try {
       const alertes = Calculs.genererAlertes(DGHData.getAnnee());
@@ -470,20 +510,26 @@ const app = (() => {
     if (e.target === document.getElementById('confirmDiv')) { _closeConfirmDiv();  return; }
 
     // ── Boutons modal établissement
-    if (e.target.closest('#modalClose'))  { _closeModal();   return; }
-    if (e.target.closest('#modalCancel')) { _closeModal();   return; }
-    if (e.target.closest('#modalSave'))   { _saveModal();    return; }
-    if (e.target.closest('#btnAddYear'))  { _addModalYear(); return; }
+    if (e.target.closest('#modalClose'))      { _closeModal();         return; }
+    if (e.target.closest('#modalCancel'))     { _closeModal();         return; }
+    if (e.target.closest('#modalSave'))       { _saveModal();          return; }
+    if (e.target.closest('#btnAddYear'))      { _addModalYear();       return; }
+    if (e.target.closest('#btnResetAnnee'))   { _openConfirmReset();   return; }
 
     // ── Boutons modal division
     if (e.target.closest('#modalDivClose'))  { _closeModalDiv();  return; }
     if (e.target.closest('#modalDivCancel')) { _closeModalDiv();  return; }
     if (e.target.closest('#modalDivSave'))   { _saveModalDiv();   return; }
 
-    // ── Boutons modal confirmation
+    // ── Boutons modal confirmation suppression division
     if (e.target.closest('#confirmDivCancel'))  { _closeConfirmDiv(); return; }
     if (e.target.closest('#confirmDivAnnuler')) { _closeConfirmDiv(); return; }
     if (e.target.closest('#confirmDivOk'))      { _execDeleteDiv();   return; }
+
+    // ── Boutons modal confirmation réinitialisation année
+    if (e.target.closest('#confirmResetCancel'))  { _closeConfirmReset(); return; }
+    if (e.target.closest('#confirmResetAnnuler')) { _closeConfirmReset(); return; }
+    if (e.target.closest('#confirmResetOk'))      { _execResetAnnee();   return; }
 
     // ── Sidebar mobile : fermer au clic extérieur
     if (window.innerWidth <= 768) {
@@ -555,9 +601,10 @@ const app = (() => {
     // ── Échap : fermer la modal ouverte
     document.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
-      if (document.getElementById('modalEtab')?.classList.contains('modal-open'))  _closeModal();
-      if (document.getElementById('modalDiv')?.classList.contains('modal-open'))   _closeModalDiv();
-      if (document.getElementById('confirmDiv')?.classList.contains('modal-open')) _closeConfirmDiv();
+      if (document.getElementById('modalEtab')?.classList.contains('modal-open'))    _closeModal();
+      if (document.getElementById('modalDiv')?.classList.contains('modal-open'))     _closeModalDiv();
+      if (document.getElementById('confirmDiv')?.classList.contains('modal-open'))   _closeConfirmDiv();
+      if (document.getElementById('confirmReset')?.classList.contains('modal-open')) _closeConfirmReset();
     });
 
     // ── Ctrl+S / Cmd+S → export

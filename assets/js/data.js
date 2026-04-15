@@ -1,15 +1,15 @@
 /**
- * DGH App — Couche données v1.1.0
+ * DGH App — Couche données v1.2.0
  * SEUL fichier qui touche localStorage
  * RGPD : aucune donnée envoyée vers l'extérieur
  *
- * v1.1.0 — Sprint 2 : CRUD structures de classes
+ * v1.2.0 — Corrections structures : CRUD structures de classes
  */
 
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
 
   // ── NIVEAUX VALIDES ───────────────────────────────────────────────
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
@@ -177,6 +177,91 @@ const DGHData = (() => {
     return false;
   }
 
+  // ── RESET ANNÉE ──────────────────────────────────────────────────
+  /**
+   * Réinitialise toutes les données d'une année (structures, dotation,
+   * enseignants, etc.) tout en conservant l'année dans la liste.
+   * @param {string} [annee] — année cible, défaut = année active
+   */
+  function resetAnnee(annee) {
+    const key = annee || _data.anneeActive;
+    _data.annees[key] = _annee(key);
+    save();
+  }
+
+  // ── DUPLICATION DE DIVISIONS ──────────────────────────────────────
+  /**
+   * Duplique une division existante N fois en incrémentant son suffixe.
+   * Exemples : 6eA → 6eB, 6eC …  |  6e1 → 6e2, 6e3 …
+   * Les copies héritent du même niveau, effectif et options.
+   * @param {string} id    — id de la division source
+   * @param {number} count — nombre de copies à créer
+   * @returns {object[]}   — tableau des divisions créées
+   */
+  function duplicateDivisions(id, count) {
+    const source = getDivision(id);
+    if (!source || count < 1) return [];
+    const created = [];
+    let currentNom = source.nom;
+    for (let i = 0; i < count; i++) {
+      const nextNom = _nextDivName(currentNom);
+      const div = addDivision({
+        niveau:     source.niveau,
+        nom:        nextNom,
+        effectif:   source.effectif,
+        options:    source.options.slice(),
+        dispositif: source.dispositif
+      });
+      created.push(div);
+      currentNom = nextNom;
+    }
+    return created;
+  }
+
+  /**
+   * Calcule le prochain nom de division par incrément du suffixe.
+   * Lettre finale : A→B, Z→AA. Chiffre final : 1→2, 9→10.
+   * @param {string} nom
+   * @returns {string}
+   */
+  function _nextDivName(nom) {
+    if (!nom) return nom;
+    // Suffixe chiffre(s)
+    const numMatch = nom.match(/^(.*?)(\d+)$/);
+    if (numMatch) {
+      const prefix = numMatch[1];
+      const n      = parseInt(numMatch[2], 10) + 1;
+      // Conserver le padding éventuel (01→02)
+      const padded = numMatch[2].length > 1 ? String(n).padStart(numMatch[2].length, '0') : String(n);
+      return prefix + padded;
+    }
+    // Suffixe lettre(s) majuscule(s)
+    const letMatch = nom.match(/^(.*?)([A-Z]+)$/);
+    if (letMatch) {
+      return letMatch[1] + _nextLetters(letMatch[2]);
+    }
+    // Suffixe lettre(s) minuscule(s)
+    const letLow = nom.match(/^(.*?)([a-z]+)$/);
+    if (letLow) {
+      return letLow[1] + _nextLetters(letLow[2].toUpperCase()).toLowerCase();
+    }
+    // Pas de suffixe reconnu : ajouter "2"
+    return nom + '2';
+  }
+
+  /** Incrémente une chaîne alphabétique : A→B, Z→AA, AZ→BA */
+  function _nextLetters(s) {
+    const chars = s.split('');
+    let i = chars.length - 1;
+    while (i >= 0) {
+      const code = chars[i].charCodeAt(0);
+      if (code < 90) { chars[i] = String.fromCharCode(code + 1); return chars.join(''); }
+      chars[i] = 'A';
+      i--;
+    }
+    return 'A' + chars.join('');
+  }
+
   // ── SAVE ─────────────────────────────────────────────────────────
   function save() {
     if (!_data) return;
@@ -239,7 +324,7 @@ const DGHData = (() => {
     init, get, getEtab, getAnnee, getAnnees, getAnneeActive, getNiveaux,
     getStructures, getDivision,
     setEtab, setAnneeActive, setDotation,
-    addDivision, updateDivision, deleteDivision,
+    addDivision, updateDivision, deleteDivision, resetAnnee, duplicateDivisions,
     save, exportJSON, importJSON, genId, isEmpty
   };
 

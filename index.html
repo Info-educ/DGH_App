@@ -79,7 +79,7 @@
     </div>
 
     <div class="sidebar-footer">
-      <span>v1.1.0</span>
+      <span>v1.2.0</span>
       <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -356,6 +356,16 @@
           <span class="form-hint">Dotation reçue de la DSDEN pour l'année sélectionnée ci-dessus.</span>
         </div>
 
+        <!-- Bloc danger : réinitialiser une année -->
+        <div class="modal-section-title modal-section-sep modal-section-danger">Zone de danger</div>
+        <div class="danger-zone">
+          <div class="danger-zone-text">
+            <strong>Réinitialiser l'année active</strong>
+            <span>Efface toutes les structures, la dotation et les enseignants de l'année sélectionnée. Irréversible.</span>
+          </div>
+          <button class="btn-danger btn-sm" id="btnResetAnnee">Réinitialiser</button>
+        </div>
+
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" id="modalCancel">Annuler</button>
@@ -407,6 +417,16 @@
           <span class="form-hint">Laissez vide si aucune option</span>
         </div>
 
+        <!-- Duplication rapide — visible uniquement en mode AJOUT -->
+        <div class="form-group dup-group" id="dupGroup">
+          <label for="inputDivDup">Créer aussi les divisions suivantes</label>
+          <div class="dup-row">
+            <input type="number" id="inputDivDup" min="0" max="9" step="1" value="0" class="dup-input" />
+            <span class="dup-hint" id="dupHint">copies supplémentaires (0 = aucune)</span>
+          </div>
+          <span class="form-hint">Ex. : saisissez 6eA + 2 copies → crée automatiquement 6eB et 6eC</span>
+        </div>
+
         <div class="form-group">
           <label for="inputDivDispositif">Dispositif particulier</label>
           <select id="inputDivDispositif">
@@ -414,9 +434,8 @@
             <option value="ULIS">ULIS</option>
             <option value="UPE2A">UPE2A</option>
             <option value="SEGPA">SEGPA</option>
-            <option value="PAP">PAP</option>
-            <option value="PPS">PPS</option>
           </select>
+          <span class="form-hint">PAP et PPS sont des mesures individuelles, pas des attributs de division.</span>
         </div>
       </div>
       <div class="modal-footer">
@@ -442,6 +461,26 @@
       <div class="modal-footer">
         <button class="btn-secondary" id="confirmDivAnnuler">Annuler</button>
         <button class="btn-danger" id="confirmDivOk">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL CONFIRMATION RÉINITIALISATION ANNÉE
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="confirmReset" role="dialog" aria-modal="true" aria-label="Confirmer la réinitialisation">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Réinitialiser cette année ?</h2>
+        <button class="modal-close" id="confirmResetCancel" aria-label="Fermer">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-msg" id="confirmResetMsg">Confirmer la réinitialisation ?</p>
+        <p class="confirm-sub">Toutes les structures, la dotation et les enseignants de cette année seront effacés. Cette action est irréversible.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="confirmResetAnnuler">Annuler</button>
+        <button class="btn-danger" id="confirmResetOk">Réinitialiser</button>
       </div>
     </div>
   </div>
