@@ -1,21 +1,24 @@
 /**
- * DGH App — Couche données v3.0.0
+ * DGH App — Couche données v2.0.0
  * SEUL fichier qui touche localStorage
+ * RGPD : aucune donnée envoyée vers l'extérieur
  *
- * v3.0.0 — Sprint 5 :
- *   - Enveloppe scindée : hPosteEnveloppe + hsaEnveloppe
- *   - groupesCours intégrés dans chaque ligne de répartition
- *   - groupes → heuresPedaComp avec catégorie
- *   - Sélection par classes (pas seulement niveaux)
- *   - Migration depuis v2
+ * v2.0.0 — Sprint 4 :
+ *   - Suppression d'une année complète
+ *   - HP (heures-poste) + HSA distincts dans la répartition
+ *   - Saisie matricielle des structures (grille rapide par niveau)
+ *   - Module Groupes & activités
+ *   - Disciplines MEN pré-chargées
  */
 
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '3.0.0';
-  const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
+  const VERSION = '2.0.0';
 
+  const NIVEAUX = ['6e', '5e', '4e', '3e', 'UPE2A'];
+
+  // Disciplines MEN standard — BO spécial n°11 du 26 novembre 2015
   const DISCIPLINES_MEN = [
     { nom: 'Français',                couleur: '#3b82f6' },
     { nom: 'Mathématiques',           couleur: '#22c55e' },
@@ -36,14 +39,12 @@ const DGHData = (() => {
     { nom: 'Grec',                    couleur: '#b45309' },
   ];
 
-  const CATEGORIES_HPC = [
-    { value: 'option',         label: 'Option (Latin, Grec, LV3…)' },
-    { value: 'labo',           label: 'Labo / Travaux pratiques' },
-    { value: 'dispositif',     label: 'Dispositif (Savoir nager, Devoirs faits…)' },
-    { value: 'vie-classe',     label: 'Vie de classe / HVC' },
-    { value: 'arts',           label: 'Arts & culture (Chorale, Orchestre, Théâtre…)' },
-    { value: 'sport',          label: 'Sport / AS / UNSS' },
-    { value: 'accompagnement', label: 'Accompagnement (AP dédoublé, Tutorat…)' },
+  const TYPES_GROUPE = [
+    { value: 'option-langue',  label: 'Option de langue (LV2, LV3, Latin, Grec…)' },
+    { value: 'groupe-besoin',  label: 'Groupe de besoin / dédoublement' },
+    { value: 'activite',       label: 'Activité (Chorale, UNSS, Atelier…)' },
+    { value: 'labo',           label: 'Heure de laboratoire / travaux pratiques' },
+    { value: 'ap',             label: 'Accompagnement personnalisé (AP)' },
     { value: 'autre',          label: 'Autre' },
   ];
 
@@ -60,12 +61,12 @@ const DGHData = (() => {
     return {
       annee,
       createdAt: new Date().toISOString(),
-      dotation: { hPosteEnveloppe: 0, hsaEnveloppe: 0, commentaire: '' },
+      dotation: { enveloppe: 0, commentaire: '' },
       structures: [],
       grilles: {},
       disciplines: [],
-      repartition: [],   // [{ disciplineId, hPoste, hsa, commentaire, groupesCours[] }]
-      heuresPedaComp: [],
+      repartition: [],
+      groupes: [],
       enseignants: [],
       simulation: { active: false, nom: '', dotation: null, repartition: [], enseignants: [] },
       alertes: []
@@ -94,51 +95,26 @@ const DGHData = (() => {
           if (div.dispositif === undefined)     div.dispositif = null;
           if (typeof div.effectif !== 'number') div.effectif   = 0;
         });
-        if (!ann.dotation) ann.dotation = { hPosteEnveloppe: 0, hsaEnveloppe: 0, commentaire: '' };
-        if (ann.dotation.enveloppe !== undefined) {
-          if (ann.dotation.hPosteEnveloppe === undefined) ann.dotation.hPosteEnveloppe = ann.dotation.enveloppe || 0;
-          if (ann.dotation.hsaEnveloppe    === undefined) ann.dotation.hsaEnveloppe    = 0;
-          delete ann.dotation.enveloppe;
-        }
-        if (ann.dotation.hPosteEnveloppe === undefined) ann.dotation.hPosteEnveloppe = 0;
-        if (ann.dotation.hsaEnveloppe    === undefined) ann.dotation.hsaEnveloppe    = 0;
         if (!Array.isArray(ann.disciplines)) ann.disciplines = [];
         if (!Array.isArray(ann.repartition)) ann.repartition = [];
         ann.repartition.forEach(r => {
           if (r.commentaire === undefined) r.commentaire = '';
+          // Migration HP/HSA : ancien heuresAllouees → hPoste
           if (r.hPoste === undefined) { r.hPoste = r.heuresAllouees || 0; delete r.heuresAllouees; }
           if (r.hsa    === undefined) r.hsa = 0;
-          if (!Array.isArray(r.groupesCours)) r.groupesCours = [];
-          r.groupesCours.forEach(gc => {
-            if (!Array.isArray(gc.classesIds)) gc.classesIds = [];
-            if (typeof gc.heures !== 'number') gc.heures = 0;
-            if (!gc.commentaire) gc.commentaire = '';
-          });
         });
-        if (!Array.isArray(ann.heuresPedaComp)) {
-          const anciens = Array.isArray(ann.groupes) ? ann.groupes : [];
-          ann.heuresPedaComp = anciens.map(g => ({
-            id: g.id || genId('hpc'), nom: g.nom || '',
-            categorie: _migType(g.type), disciplineId: g.disciplineId || null,
-            classesIds: [], heures: g.heures || 0, effectif: g.effectif || 0, commentaire: g.commentaire || ''
-          }));
-          delete ann.groupes;
-        }
-        ann.heuresPedaComp.forEach(h => {
-          if (!h.categorie) h.categorie = 'autre';
-          if (!Array.isArray(h.classesIds)) h.classesIds = [];
-          if (typeof h.heures   !== 'number') h.heures   = 0;
-          if (typeof h.effectif !== 'number') h.effectif = 0;
-          if (!h.commentaire) h.commentaire = '';
+        if (!Array.isArray(ann.groupes)) ann.groupes = [];
+        ann.groupes.forEach(g => {
+          if (!g.type)                 g.type         = 'autre';
+          if (!g.disciplineId)         g.disciplineId = null;
+          if (!Array.isArray(g.niveaux)) g.niveaux    = [];
+          if (typeof g.heures   !== 'number') g.heures   = 0;
+          if (typeof g.effectif !== 'number') g.effectif = 0;
+          if (!g.commentaire) g.commentaire = '';
         });
       });
     }
     _data._meta.version = VERSION;
-    save();
-  }
-
-  function _migType(t) {
-    return { 'option-langue':'option','groupe-besoin':'accompagnement','activite':'arts','labo':'labo','ap':'accompagnement' }[t] || 'autre';
   }
 
   // ── GETTERS ──────────────────────────────────────────────────────
@@ -147,7 +123,7 @@ const DGHData = (() => {
   function getAnneeActive()    { return _data.anneeActive; }
   function getAnnees()         { return Object.keys(_data.annees).sort().reverse(); }
   function getNiveaux()        { return NIVEAUX; }
-  function getCategoriesHPC()  { return CATEGORIES_HPC.slice(); }
+  function getTypeGroupes()    { return TYPES_GROUPE; }
   function getDisciplinesMEN() { return DISCIPLINES_MEN.slice(); }
 
   function getAnnee(a) {
@@ -156,7 +132,7 @@ const DGHData = (() => {
     return _data.annees[key];
   }
 
-  function getStructures(annee)   { return (getAnnee(annee).structures || []).slice().sort(_sortDiv); }
+  function getStructures(annee) { return (getAnnee(annee).structures || []).slice().sort(_sortDiv); }
   function getDivision(id, annee) { return (getAnnee(annee).structures || []).find(d => d.id === id) || null; }
 
   function _sortDiv(a, b) {
@@ -174,41 +150,17 @@ const DGHData = (() => {
   function getRepartition(annee) {
     const ann = getAnnee(annee);
     return (ann.repartition||[]).map(r => {
-      const disc   = (ann.disciplines||[]).find(d=>d.id===r.disciplineId)||{};
+      const disc = (ann.disciplines||[]).find(d=>d.id===r.disciplineId)||{};
       const hPoste = r.hPoste||0, hsa = r.hsa||0;
-      const gcs    = (r.groupesCours||[]).map(gc => _enrichGC(gc, ann));
-      const heuresGroupes = Math.round(gcs.reduce((s,g)=>s+g.heures,0)*2)/2;
-      return {
-        disciplineId: r.disciplineId, nom: disc.nom||'—', couleur: disc.couleur||'#6b6860',
-        hPoste, hsa, total: Math.round((hPoste+hsa)*2)/2,
-        commentaire: r.commentaire||'', groupesCours: gcs, heuresGroupes
-      };
+      return { disciplineId: r.disciplineId, nom: disc.nom||'—', couleur: disc.couleur||'#6b6860',
+               hPoste, hsa, total: Math.round((hPoste+hsa)*2)/2, commentaire: r.commentaire||'' };
     });
   }
 
-  function _enrichGC(gc, ann) {
-    const classes = (gc.classesIds||[]).map(id=>(ann.structures||[]).find(d=>d.id===id)).filter(Boolean);
-    return {
-      id: gc.id, nom: gc.nom||'', classesIds: gc.classesIds||[],
-      classesNoms: classes.map(d=>d.nom),
-      heures: gc.heures||0,
-      effectif: classes.reduce((s,d)=>s+(d.effectif||0),0),
-      commentaire: gc.commentaire||''
-    };
+  function getGroupes(annee) {
+    return (getAnnee(annee).groupes||[]).slice().sort((a,b)=>(a.nom||'').localeCompare(b.nom||'','fr'));
   }
-
-  function getGroupeCours(disciplineId, gcId, annee) {
-    const ann  = getAnnee(annee);
-    const rep  = (ann.repartition||[]).find(r=>r.disciplineId===disciplineId);
-    if (!rep) return null;
-    return (rep.groupesCours||[]).find(g=>g.id===gcId)||null;
-  }
-
-  function getHeuresPedaComp(annee) {
-    return (getAnnee(annee).heuresPedaComp||[]).slice()
-      .sort((a,b)=>(a.nom||'').localeCompare(b.nom||'','fr'));
-  }
-  function getHPC(id, annee) { return (getAnnee(annee).heuresPedaComp||[]).find(h=>h.id===id)||null; }
+  function getGroupe(id, annee) { return (getAnnee(annee).groupes||[]).find(g=>g.id===id)||null; }
 
   // ── SETTERS ──────────────────────────────────────────────────────
   function setEtab(fields) { Object.assign(_data.etablissement, fields); save(); }
@@ -218,11 +170,10 @@ const DGHData = (() => {
     _data.anneeActive = a; save();
   }
 
-  function setDotation(hPosteEnveloppe, hsaEnveloppe, commentaire) {
+  function setDotation(enveloppe, commentaire) {
     const ann = getAnnee();
-    ann.dotation.hPosteEnveloppe = parseFloat(hPosteEnveloppe)||0;
-    ann.dotation.hsaEnveloppe    = parseFloat(hsaEnveloppe)||0;
-    if (commentaire !== undefined) ann.dotation.commentaire = commentaire||'';
+    ann.dotation.enveloppe   = parseFloat(enveloppe)||0;
+    ann.dotation.commentaire = commentaire||'';
     save();
   }
 
@@ -238,8 +189,7 @@ const DGHData = (() => {
 
   function updateDivision(id, fields) {
     const ann = getAnnee(); const idx = ann.structures.findIndex(d=>d.id===id);
-    if (idx===-1) return false;
-    const div = ann.structures[idx];
+    if (idx===-1) return false; const div = ann.structures[idx];
     if (fields.niveau!==undefined)     div.niveau     = fields.niveau;
     if (fields.nom!==undefined)        div.nom        = (fields.nom||'').trim();
     if (fields.effectif!==undefined)   div.effectif   = parseInt(fields.effectif,10)||0;
@@ -251,13 +201,14 @@ const DGHData = (() => {
   function deleteDivision(id) {
     const ann = getAnnee(); const before = ann.structures.length;
     ann.structures = ann.structures.filter(d=>d.id!==id);
-    ann.repartition.forEach(r => {
-      (r.groupesCours||[]).forEach(gc => { gc.classesIds = (gc.classesIds||[]).filter(c=>c!==id); });
-    });
-    (ann.heuresPedaComp||[]).forEach(h => { h.classesIds = (h.classesIds||[]).filter(c=>c!==id); });
     if (ann.structures.length<before){save();return true;} return false;
   }
 
+  /**
+   * Saisie matricielle — génère les divisions à partir d'une grille par niveau.
+   * @param {Array<{niveau,nbDivisions,effectifMoyen}>} matrice
+   * @param {boolean} remplacer — si true, supprime et recrée
+   */
   function appliquerMatrice(matrice, remplacer) {
     matrice.forEach(ligne => {
       if (!ligne.niveau || !(ligne.nbDivisions > 0)) return;
@@ -270,7 +221,7 @@ const DGHData = (() => {
       let dernierNom = existantes.length > 0 ? existantes[existantes.length-1].nom : null;
       for (let i = 0; i < aCreer; i++) {
         const nom = dernierNom ? _nextDivName(dernierNom) : ligne.niveau + 'A';
-        addDivision({ niveau: ligne.niveau, nom, effectif });
+        addDivision({ niveau: ligne.niveau, nom, effectif, options: [], dispositif: null });
         dernierNom = nom;
       }
     });
@@ -279,17 +230,16 @@ const DGHData = (() => {
 
   // ── CRUD DISCIPLINES ─────────────────────────────────────────────
   function addDiscipline(fields) {
-    const ann  = getAnnee();
+    const ann = getAnnee();
     const disc = { id: genId('disc'), nom: (fields.nom||'').trim(), couleur: fields.couleur||'#6b6860' };
     ann.disciplines.push(disc);
-    ann.repartition.push({ disciplineId: disc.id, hPoste: 0, hsa: 0, commentaire: '', groupesCours: [] });
+    ann.repartition.push({ disciplineId: disc.id, hPoste: 0, hsa: 0, commentaire: '' });
     save(); return disc;
   }
 
   function updateDiscipline(id, fields) {
     const ann = getAnnee(); const idx = ann.disciplines.findIndex(d=>d.id===id);
-    if (idx===-1) return false;
-    const disc = ann.disciplines[idx];
+    if (idx===-1) return false; const disc = ann.disciplines[idx];
     if (fields.nom!==undefined)     disc.nom     = (fields.nom||'').trim();
     if (fields.couleur!==undefined) disc.couleur = fields.couleur;
     save(); return true;
@@ -299,7 +249,6 @@ const DGHData = (() => {
     const ann = getAnnee(); const before = ann.disciplines.length;
     ann.disciplines = ann.disciplines.filter(d=>d.id!==id);
     ann.repartition = ann.repartition.filter(r=>r.disciplineId!==id);
-    (ann.heuresPedaComp||[]).forEach(h => { if(h.disciplineId===id) h.disciplineId=null; });
     if (ann.disciplines.length<before){save();return true;} return false;
   }
 
@@ -314,115 +263,95 @@ const DGHData = (() => {
   function setRepartition(disciplineId, fields) {
     const ann = getAnnee();
     let ligne = ann.repartition.find(r=>r.disciplineId===disciplineId);
-    if (!ligne) { ligne={disciplineId,hPoste:0,hsa:0,commentaire:'',groupesCours:[]}; ann.repartition.push(ligne); }
-    if (!Array.isArray(ligne.groupesCours)) ligne.groupesCours = [];
+    if (!ligne) { ligne={disciplineId,hPoste:0,hsa:0,commentaire:''}; ann.repartition.push(ligne); }
     if (fields.hPoste!==undefined)      ligne.hPoste      = parseFloat(fields.hPoste)||0;
     if (fields.hsa!==undefined)         ligne.hsa         = parseFloat(fields.hsa)||0;
     if (fields.commentaire!==undefined) ligne.commentaire = fields.commentaire||'';
     save(); return true;
   }
 
-  // ── CRUD GROUPES DE COURS ─────────────────────────────────────────
-  function addGroupeCours(disciplineId, fields) {
-    const ann  = getAnnee();
-    let ligne  = ann.repartition.find(r=>r.disciplineId===disciplineId);
-    if (!ligne) { ligne={disciplineId,hPoste:0,hsa:0,commentaire:'',groupesCours:[]}; ann.repartition.push(ligne); }
-    if (!Array.isArray(ligne.groupesCours)) ligne.groupesCours = [];
-    const gc = { id: genId('gc'), nom: (fields.nom||'').trim(),
-                 classesIds: Array.isArray(fields.classesIds)?fields.classesIds.slice():[],
-                 heures: parseFloat(fields.heures)||0, commentaire: fields.commentaire||'' };
-    ligne.groupesCours.push(gc); save(); return gc;
-  }
-
-  function updateGroupeCours(disciplineId, gcId, fields) {
-    const ann   = getAnnee();
-    const ligne = ann.repartition.find(r=>r.disciplineId===disciplineId); if(!ligne) return false;
-    const gc    = (ligne.groupesCours||[]).find(g=>g.id===gcId); if(!gc) return false;
-    if (fields.nom!==undefined)         gc.nom         = (fields.nom||'').trim();
-    if (fields.classesIds!==undefined)  gc.classesIds  = Array.isArray(fields.classesIds)?fields.classesIds.slice():[];
-    if (fields.heures!==undefined)      gc.heures      = parseFloat(fields.heures)||0;
-    if (fields.commentaire!==undefined) gc.commentaire = fields.commentaire||'';
-    save(); return true;
-  }
-
-  function deleteGroupeCours(disciplineId, gcId) {
-    const ann   = getAnnee();
-    const ligne = ann.repartition.find(r=>r.disciplineId===disciplineId); if(!ligne) return false;
-    const before = (ligne.groupesCours||[]).length;
-    ligne.groupesCours = (ligne.groupesCours||[]).filter(g=>g.id!==gcId);
-    if (ligne.groupesCours.length<before){save();return true;} return false;
-  }
-
-  // ── CRUD HEURES PÉDAGOGIQUES COMPLÉMENTAIRES ──────────────────────
-  function addHPC(fields) {
+  // ── CRUD GROUPES ─────────────────────────────────────────────────
+  function addGroupe(fields) {
     const ann = getAnnee();
-    const h = { id: genId('hpc'), nom: (fields.nom||'').trim(), categorie: fields.categorie||'autre',
+    const g = { id: genId('grp'), nom: (fields.nom||'').trim(), type: fields.type||'autre',
                 disciplineId: fields.disciplineId||null,
-                classesIds: Array.isArray(fields.classesIds)?fields.classesIds.slice():[],
+                niveaux: Array.isArray(fields.niveaux)?fields.niveaux.slice():[],
                 heures: parseFloat(fields.heures)||0, effectif: parseInt(fields.effectif,10)||0,
                 commentaire: fields.commentaire||'' };
-    ann.heuresPedaComp.push(h); save(); return h;
+    ann.groupes.push(g); save(); return g;
   }
 
-  function updateHPC(id, fields) {
-    const ann = getAnnee(); const idx = ann.heuresPedaComp.findIndex(h=>h.id===id);
-    if (idx===-1) return false;
-    const h = ann.heuresPedaComp[idx];
-    if (fields.nom!==undefined)          h.nom          = (fields.nom||'').trim();
-    if (fields.categorie!==undefined)    h.categorie    = fields.categorie;
-    if (fields.disciplineId!==undefined) h.disciplineId = fields.disciplineId||null;
-    if (fields.classesIds!==undefined)   h.classesIds   = Array.isArray(fields.classesIds)?fields.classesIds.slice():[];
-    if (fields.heures!==undefined)       h.heures       = parseFloat(fields.heures)||0;
-    if (fields.effectif!==undefined)     h.effectif     = parseInt(fields.effectif,10)||0;
-    if (fields.commentaire!==undefined)  h.commentaire  = fields.commentaire||'';
+  function updateGroupe(id, fields) {
+    const ann = getAnnee(); const idx = ann.groupes.findIndex(g=>g.id===id);
+    if (idx===-1) return false; const g = ann.groupes[idx];
+    if (fields.nom!==undefined)          g.nom          = (fields.nom||'').trim();
+    if (fields.type!==undefined)         g.type         = fields.type;
+    if (fields.disciplineId!==undefined) g.disciplineId = fields.disciplineId||null;
+    if (fields.niveaux!==undefined)      g.niveaux      = Array.isArray(fields.niveaux)?fields.niveaux.slice():[];
+    if (fields.heures!==undefined)       g.heures       = parseFloat(fields.heures)||0;
+    if (fields.effectif!==undefined)     g.effectif     = parseInt(fields.effectif,10)||0;
+    if (fields.commentaire!==undefined)  g.commentaire  = fields.commentaire||'';
     save(); return true;
   }
 
-  function deleteHPC(id) {
-    const ann = getAnnee(); const before = ann.heuresPedaComp.length;
-    ann.heuresPedaComp = ann.heuresPedaComp.filter(h=>h.id!==id);
-    if (ann.heuresPedaComp.length<before){save();return true;} return false;
+  function deleteGroupe(id) {
+    const ann = getAnnee(); const before = ann.groupes.length;
+    ann.groupes = ann.groupes.filter(g=>g.id!==id);
+    if (ann.groupes.length<before){save();return true;} return false;
   }
 
   // ── ANNÉES ───────────────────────────────────────────────────────
-  function resetAnnee(annee) { const key=annee||_data.anneeActive; _data.annees[key]=_annee(key); save(); }
-
-  function deleteAnnee(annee) {
-    if (Object.keys(_data.annees).length<=1) return {ok:false,message:'Impossible de supprimer la seule année existante.'};
-    if (annee===_data.anneeActive) return {ok:false,message:'Basculez d\'abord vers une autre année avant de supprimer celle-ci.'};
-    delete _data.annees[annee]; save(); return {ok:true};
+  function resetAnnee(annee) {
+    const key = annee||_data.anneeActive;
+    _data.annees[key] = _annee(key); save();
   }
 
+  function deleteAnnee(annee) {
+    if (Object.keys(_data.annees).length <= 1)
+      return { ok:false, message:'Impossible de supprimer la seule année existante.' };
+    if (annee === _data.anneeActive)
+      return { ok:false, message:'Basculez d\'abord vers une autre année avant de supprimer celle-ci.' };
+    delete _data.annees[annee]; save(); return { ok:true };
+  }
+
+  // ── DUPLICATION ──────────────────────────────────────────────────
   function duplicateDivisions(id, count) {
-    const source=getDivision(id); if(!source||count<1) return [];
+    const source = getDivision(id); if (!source||count<1) return [];
     const created=[]; let cur=source.nom;
     for(let i=0;i<count;i++){const n=_nextDivName(cur);created.push(addDivision({niveau:source.niveau,nom:n,effectif:source.effectif,options:source.options.slice(),dispositif:source.dispositif}));cur=n;}
     return created;
   }
 
   function _nextDivName(nom) {
-    if(!nom) return nom;
+    if (!nom) return nom;
     const nm=nom.match(/^(.*?)(\d+)$/); if(nm){const n=parseInt(nm[2],10)+1;const p=nm[2].length>1?String(n).padStart(nm[2].length,'0'):String(n);return nm[1]+p;}
     const lm=nom.match(/^(.*?)([A-Z]+)$/); if(lm) return lm[1]+_nextLetters(lm[2]);
     const ll=nom.match(/^(.*?)([a-z]+)$/); if(ll) return ll[1]+_nextLetters(ll[2].toUpperCase()).toLowerCase();
     return nom+'2';
   }
-  function _nextLetters(s){const c=s.split('');let i=c.length-1;while(i>=0){const code=c[i].charCodeAt(0);if(code<90){c[i]=String.fromCharCode(code+1);return c.join('');}c[i]='A';i--;}return 'A'+c.join('');}
 
+  function _nextLetters(s) {
+    const c=s.split(''); let i=c.length-1;
+    while(i>=0){const code=c[i].charCodeAt(0);if(code<90){c[i]=String.fromCharCode(code+1);return c.join('');}c[i]='A';i--;}
+    return 'A'+c.join('');
+  }
+
+  // ── SAVE / EXPORT / IMPORT ────────────────────────────────────────
   function save() {
-    if(!_data) return;
-    _data._meta.updatedAt=new Date().toISOString();
-    try{localStorage.setItem(KEY,JSON.stringify(_data));}
-    catch(e){document.dispatchEvent(new CustomEvent('dgh:storage-error',{detail:e}));}
+    if (!_data) return;
+    _data._meta.updatedAt = new Date().toISOString();
+    try { localStorage.setItem(KEY, JSON.stringify(_data)); }
+    catch(e) { document.dispatchEvent(new CustomEvent('dgh:storage-error',{detail:e})); }
   }
 
   function exportJSON() {
     const blob=new Blob([JSON.stringify(_data,null,2)],{type:'application/json'});
-    const url=URL.createObjectURL(blob);const a=document.createElement('a');
+    const url=URL.createObjectURL(blob); const a=document.createElement('a');
     const date=new Date().toISOString().split('T')[0];
     const nom=(_data.etablissement.nom||'dgh').replace(/\s+/g,'_').toLowerCase();
-    a.href=url;a.download=nom+'_'+_data.anneeActive+'_'+date+'.json';
-    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);return a.download;
+    a.href=url; a.download=nom+'_'+_data.anneeActive+'_'+date+'.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url); return a.download;
   }
 
   function importJSON(file) {
@@ -432,10 +361,10 @@ const DGHData = (() => {
       r.onload=e=>{try{const d=JSON.parse(e.target.result);
         if(!d.annees||!d.etablissement) throw new Error('Format invalide');
         localStorage.setItem(KEY+'-backup',JSON.stringify(_data));
-        _data=d;_migrate();save();
+        _data=d; _migrate(); save();
         resolve({etablissement:_data.etablissement.nom||'?',annees:Object.keys(_data.annees)});
       }catch(err){reject(err);}};
-      r.onerror=()=>reject(new Error('Erreur de lecture'));r.readAsText(file);
+      r.onerror=()=>reject(new Error('Erreur de lecture')); r.readAsText(file);
     });
   }
 
@@ -443,21 +372,21 @@ const DGHData = (() => {
 
   function isEmpty() {
     const ann=getAnnee();
-    return !_data.etablissement.nom && ann.dotation.hPosteEnveloppe===0 && ann.structures.length===0;
+    return !_data.etablissement.nom && ann.dotation.enveloppe===0 && ann.enseignants.length===0 && ann.structures.length===0;
   }
 
   return {
-    init,get,getEtab,getAnnee,getAnnees,getAnneeActive,getNiveaux,
-    getCategoriesHPC,getDisciplinesMEN,
-    getStructures,getDivision,
-    getDisciplines,getDiscipline,getRepartition,getGroupeCours,
-    getHeuresPedaComp,getHPC,
-    setEtab,setAnneeActive,setDotation,
-    addDivision,updateDivision,deleteDivision,duplicateDivisions,appliquerMatrice,
-    addDiscipline,updateDiscipline,deleteDiscipline,setRepartition,initDisciplinesMEN,
-    addGroupeCours,updateGroupeCours,deleteGroupeCours,
-    addHPC,updateHPC,deleteHPC,
-    resetAnnee,deleteAnnee,
-    save,exportJSON,importJSON,genId,isEmpty
+    init, get, getEtab, getAnnee, getAnnees, getAnneeActive, getNiveaux,
+    getTypeGroupes, getDisciplinesMEN,
+    getStructures, getDivision,
+    getDisciplines, getDiscipline, getRepartition,
+    getGroupes, getGroupe,
+    setEtab, setAnneeActive, setDotation,
+    addDivision, updateDivision, deleteDivision, duplicateDivisions, appliquerMatrice,
+    addDiscipline, updateDiscipline, deleteDiscipline, setRepartition, initDisciplinesMEN,
+    addGroupe, updateGroupe, deleteGroupe,
+    resetAnnee, deleteAnnee,
+    save, exportJSON, importJSON, genId, isEmpty
   };
+
 })();

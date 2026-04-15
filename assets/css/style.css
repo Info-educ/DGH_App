@@ -1022,3 +1022,135 @@ input::placeholder { color: var(--c-text-dim); }
 .disc-resume-nom { flex:0 0 160px; font-weight:500; color:var(--c-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .disc-resume-h   { flex:0 0 52px; text-align:right; font-weight:600; color:var(--c-text); font-size:.8rem; }
 @media(max-width:600px) { .disc-resume-nom { flex:1; } }
+
+/* ══════════════════════════════════════════════════════════════════
+   SPRINT 5 — Enveloppe HP/HSA saisie dans Dotation
+   ══════════════════════════════════════════════════════════════════ */
+.dot-envelope-card { margin-bottom: 1rem; }
+.dot-envelope-grid {
+  display: flex; align-items: flex-start; gap: 1rem;
+  flex-wrap: wrap;
+}
+.dot-env-field { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 120px; }
+.dot-env-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--c-text-muted); }
+.dot-env-input-row { display: flex; align-items: center; gap: .4rem; }
+.dot-env-input { width: 100%; padding: .5rem .75rem; border-radius: var(--r); border: 1.5px solid var(--c-border); background: var(--c-surface); color: var(--c-text); font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 600; transition: border-color var(--tf); }
+.dot-env-input:focus { outline: none; border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(45,106,79,.12); }
+.dot-env-hp:focus  { border-color: var(--c-accent); }
+.dot-env-hsa:focus { border-color: var(--c-indigo); box-shadow: 0 0 0 3px rgba(67,56,202,.12); }
+.dot-env-unit { font-size: .85rem; color: var(--c-text-muted); font-weight: 600; }
+.dot-env-hint { font-size: .68rem; color: var(--c-text-dim); }
+.dot-env-plus, .dot-env-equals { font-size: 1.5rem; color: var(--c-text-dim); align-self: center; padding-top: 1.2rem; flex: 0; }
+.dot-env-total { flex: 1.2; }
+.dot-env-total-val { font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 800; color: var(--c-accent); padding: .35rem 0; }
+.dot-env-total-preview { margin-top: .5rem; font-size: .83rem; color: var(--c-text-muted); background: var(--c-surface2); border-radius: var(--r); padding: .4rem .75rem; }
+
+/* Tableau résumé par niveau dans Dotation */
+.dot-niveau-tbl .dot-niveau-total td { border-top: 2px solid var(--c-border); background: var(--c-surface2); }
+.dot-men-note { font-size: .68rem; color: var(--c-text-dim); }
+
+/* Bouton avancé division */
+.btn-advanced-toggle { background: none; border: none; color: var(--c-text-muted); font-size: .78rem; cursor: pointer; padding: .2rem 0; text-decoration: underline dotted; }
+.btn-advanced-toggle:hover { color: var(--c-accent); }
+
+/* ══════════════════════════════════════════════════════════════════
+   SPRINT 5 — Groupes de cours (sous-lignes discipline)
+   ══════════════════════════════════════════════════════════════════ */
+.gc-subrow { background: var(--c-surface2); }
+.gc-subrow td { font-size: .82rem; padding: .35rem .75rem; border-bottom: 1px dashed var(--c-border); }
+.gc-total-row td { background: color-mix(in srgb, var(--c-accent) 6%, transparent); font-size: .8rem; }
+.gc-indent { padding-left: 1.5rem !important; }
+.gc-arrow { color: var(--c-text-dim); margin-right: .4rem; font-family: monospace; }
+.gc-nom { font-weight: 600; color: var(--c-text); margin-right: .5rem; }
+.gc-classes { font-size: .72rem; color: var(--c-text-muted); background: var(--c-surface3); border-radius: 4px; padding: .1rem .4rem; margin-right: .4rem; }
+.gc-comment { font-size: .7rem; color: var(--c-text-dim); font-style: italic; }
+.gc-heures-cell { font-size: .83rem; }
+.gc-effectif { font-size: .75rem; color: var(--c-text-muted); font-family: 'JetBrains Mono', monospace; }
+.gc-count-badge { display: inline-flex; align-items: center; margin-left: .5rem; background: var(--c-accent-light); color: var(--c-accent); font-size: .65rem; font-weight: 700; padding: .1rem .45rem; border-radius: 99px; }
+.btn-icon-gc { color: var(--c-accent) !important; border-color: var(--c-accent-light) !important; }
+.btn-icon-gc:hover { background: var(--c-accent-light) !important; }
+
+/* ══════════════════════════════════════════════════════════════════
+   SPRINT 5 — Sélection classes (checkboxes par niveau)
+   ══════════════════════════════════════════════════════════════════ */
+.classes-check { display: flex; flex-direction: column; gap: .5rem; margin-top: .35rem; max-height: 220px; overflow-y: auto; padding: .25rem; border: 1px solid var(--c-border); border-radius: var(--r); background: var(--c-surface2); }
+.classes-niveau-group { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+.classes-niveau-label { flex: 0 0 auto; }
+.gc-effectif-display { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 700; color: var(--c-text-muted); padding: .4rem 0; }
+.gc-disc-context { border-radius: var(--r); font-size: .8rem; font-weight: 500; }
+
+/* ══════════════════════════════════════════════════════════════════
+   SPRINT 5 — Modal dotation dans établissement
+   ══════════════════════════════════════════════════════════════════ */
+.dot-env-total-preview strong { color: var(--c-accent); font-family: 'JetBrains Mono', monospace; }
+
+/* ══════════════════════════════════════════════════════════════════
+   SPRINT 5 — Enveloppe HP/HSA inline
+   ══════════════════════════════════════════════════════════════════ */
+.dot-envelope-card { margin-bottom: 1rem; }
+.dot-envelope-grid {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+}
+.dot-env-block { flex: 1; min-width: 140px; }
+.dot-env-label { display:block; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--c-text-muted); margin-bottom:.35rem; }
+.dot-env-input-row { display:flex; align-items:center; gap:.35rem; }
+.dot-env-input {
+  width:100%; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.15rem;
+  padding:.45rem .6rem; border-radius:var(--r); border:2px solid var(--c-border);
+  background:var(--c-surface); color:var(--c-text); transition:border-color var(--tf);
+}
+.dot-env-input:focus { outline:none; }
+.dot-env-hp .dot-env-input:focus  { border-color:var(--c-accent); box-shadow:0 0 0 3px rgba(45,106,79,.12); }
+.dot-env-hsa .dot-env-input:focus { border-color:var(--c-indigo); box-shadow:0 0 0 3px rgba(67,56,202,.12); }
+.dot-env-unit { font-size:.9rem; font-weight:600; color:var(--c-text-muted); }
+.dot-env-hint { font-size:.68rem; color:var(--c-text-dim); display:block; margin-top:.2rem; }
+.dot-env-plus, .dot-env-equals { font-size:1.5rem; font-weight:300; color:var(--c-text-dim); flex:0 0 auto; }
+.dot-env-total { flex:0 0 auto; min-width:120px; }
+.dot-env-total-val { font-family:'JetBrains Mono',monospace; font-size:1.4rem; font-weight:800; color:var(--c-accent); }
+.dot-env-total-hint { font-size:.8rem; color:var(--c-text-muted); margin-top:.4rem; font-family:'JetBrains Mono',monospace; }
+
+/* ══════════════════════════════════════════════════════════════════
+   SPRINT 5 — Tableau structures par niveau
+   ══════════════════════════════════════════════════════════════════ */
+.struct-niveau-table { width:100%; border-collapse:collapse; }
+.struct-niveau-table th { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--c-text-muted); padding:.5rem .75rem; border-bottom:1.5px solid var(--c-border); text-align:left; }
+.struct-niveau-table th:not(:first-child) { text-align:right; }
+.struct-niveau-table td { padding:.55rem .75rem; border-bottom:1px solid var(--c-border); font-size:.85rem; }
+.struct-niveau-table td:not(:first-child) { text-align:right; }
+.struct-niveau-table tr:last-child td { border-bottom:none; }
+.struct-total-row td { font-weight:700; background:var(--c-surface2); border-top:2px solid var(--c-border2) !important; }
+
+/* ══════════════════════════════════════════════════════════════════
+   SPRINT 5 — Groupes de cours (sous-lignes Dotation)
+   ══════════════════════════════════════════════════════════════════ */
+.col-toggle { width:32px; text-align:center; }
+.btn-toggle-gc { background:none; border:none; cursor:pointer; font-size:.8rem; color:var(--c-text-muted); padding:.15rem .3rem; border-radius:4px; transition:color var(--tf); }
+.btn-toggle-gc:hover { color:var(--c-accent); }
+.btn-add-gc { background:var(--c-accent-light) !important; color:var(--c-accent) !important; font-weight:700; font-size:.85rem; }
+.btn-add-gc:hover { background:var(--c-accent) !important; color:#fff !important; }
+.gc-count-badge { display:inline-flex; align-items:center; font-size:.62rem; font-weight:700; background:var(--c-indigo-bg); color:var(--c-indigo); border-radius:99px; padding:.05rem .45rem; margin-left:.4rem; }
+.gc-subrows-row > td { padding:0 !important; background:var(--c-surface2); }
+.gc-subrows { padding:.5rem .75rem .5rem 2.5rem; display:flex; flex-direction:column; gap:.3rem; border-bottom:1px solid var(--c-border); }
+.gc-subrow { display:flex; align-items:center; gap:.75rem; font-size:.82rem; background:var(--c-surface); border:1px solid var(--c-border); border-radius:var(--r); padding:.4rem .75rem; }
+.gc-arrow { color:var(--c-text-dim); font-size:.9rem; flex:0 0 auto; }
+.gc-nom   { flex:1; }
+.gc-classes { flex:2; color:var(--c-text-muted); font-size:.78rem; }
+.gc-effectif { flex:0 0 auto; font-size:.75rem; color:var(--c-text-dim); }
+.gc-heures   { flex:0 0 auto; color:var(--c-accent); }
+.gc-actions  { flex:0 0 auto; display:flex; gap:.25rem; }
+.gc-total-row { display:flex; justify-content:flex-end; align-items:center; gap:.5rem; font-size:.78rem; color:var(--c-text-muted); padding:.3rem .5rem 0; }
+.gc-empty { font-size:.8rem; color:var(--c-text-dim); font-style:italic; padding:.35rem 0; }
+
+/* Classes checkboxes (modal GC et HPC) */
+.classes-check { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.3rem; max-height:200px; overflow-y:auto; padding:.25rem 0; }
+.gc-effectif-auto { font-size:.78rem; color:var(--c-accent); font-weight:600; margin-top:.35rem; min-height:1.2em; }
+
+/* Options avancées (dispositif division) */
+.details-avancees { border:1px solid var(--c-border); border-radius:var(--r); overflow:hidden; margin-top:.5rem; }
+.details-avancees summary { padding:.5rem .75rem; cursor:pointer; font-size:.82rem; font-weight:600; color:var(--c-text-muted); list-style:none; user-select:none; }
+.details-avancees summary::-webkit-details-marker { display:none; }
+.details-avancees[open] summary { border-bottom:1px solid var(--c-border); color:var(--c-text); }
+.details-body { padding:.75rem; }
+
+/* Modal dot total hint */
+.dot-env-total-hint { font-size:.8rem; color:var(--c-accent); font-weight:600; font-family:'JetBrains Mono',monospace; margin-top:.3rem; }
