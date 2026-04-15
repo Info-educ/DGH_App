@@ -12,7 +12,7 @@ const DGHData = (() => {
   const VERSION = '1.2.0';
 
   // ── NIVEAUX VALIDES ───────────────────────────────────────────────
-  const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
+  const NIVEAUX = ['6e', '5e', '4e', '3e', 'UPE2A'];
 
   // ── SCHÉMA ───────────────────────────────────────────────────────
   function _schema() {
