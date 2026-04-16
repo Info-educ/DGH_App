@@ -124,6 +124,7 @@ const DGHData = (() => {
           }));
           delete ann.groupes;
         }
+        if (!ann.grilles || typeof ann.grilles !== 'object') ann.grilles = {};
         ann.heuresPedaComp.forEach(h => {
           if (!h.categorie) h.categorie = 'autre';
           if (!Array.isArray(h.classesIds)) h.classesIds = [];
@@ -312,6 +313,22 @@ const DGHData = (() => {
     return nb;
   }
 
+  // ── GRILLES HORAIRES (overrides utilisateur) ─────────────────────
+  function getGrilles(annee) { return getAnnee(annee).grilles || {}; }
+
+  function setGrille(discNom, niveau, heures) {
+    const ann = getAnnee();
+    if (!ann.grilles) ann.grilles = {};
+    if (!ann.grilles[discNom]) ann.grilles[discNom] = {};
+    if (heures === null || heures === undefined) {
+      delete ann.grilles[discNom][niveau];
+      if (Object.keys(ann.grilles[discNom]).length === 0) delete ann.grilles[discNom];
+    } else {
+      ann.grilles[discNom][niveau] = parseFloat(heures) || 0;
+    }
+    save();
+  }
+
   function setRepartition(disciplineId, fields) {
     const ann = getAnnee();
     let ligne = ann.repartition.find(r=>r.disciplineId===disciplineId);
@@ -458,6 +475,7 @@ const DGHData = (() => {
     setEtab,setAnneeActive,setDotation,
     addDivision,updateDivision,deleteDivision,duplicateDivisions,appliquerMatrice,
     addDiscipline,updateDiscipline,deleteDiscipline,setRepartition,initDisciplinesMEN,
+    getGrilles,setGrille,
     addGroupeCours,updateGroupeCours,deleteGroupeCours,
     addHPC,updateHPC,deleteHPC,
     resetAnnee,deleteAnnee,

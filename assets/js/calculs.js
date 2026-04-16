@@ -131,16 +131,42 @@ const Calculs = (() => {
              totalHSAHPC: Math.round(totalHSAHPC*2)/2 };
   }
 
-  function besoinsParDiscipline(structures, disciplines, repartition) {
+  function besoinsParDiscipline(structures, disciplines, repartition, grilles) {
     if (!Array.isArray(disciplines) || disciplines.length === 0) return [];
+    // grilles = overrides utilisateur { [discNom]: { '6e': h, '5e': h, ... } }
+    const grillesOverride = grilles || {};
+    // Compter les divisions par niveau (pour multiplier h/div par nb divisions)
+    const nbDivParNiveau = {};
+    (structures||[]).forEach(div => { nbDivParNiveau[div.niveau] = (nbDivParNiveau[div.niveau]||0) + 1; });
     const besoinsMap = {};
-    (structures||[]).forEach(div => {
-      const grille = GRILLES_MEN[div.niveau]; if (!grille) return;
-      Object.entries(grille).forEach(([nom,h]) => { besoinsMap[nom] = (besoinsMap[nom]||0) + h; });
+    // Pour chaque discipline, calculer le besoin en tenant compte des overrides
+    disciplines.forEach(disc => {
+      let total = 0;
+      ['6e','5e','4e','3e'].forEach(niv => {
+        if (!nbDivParNiveau[niv]) return; // niveau absent des structures
+        const hMEN = (GRILLES_MEN[niv]||{})[disc.nom] || 0;
+        const hOverride = grillesOverride[disc.nom] && grillesOverride[disc.nom][niv] !== undefined
+          ? grillesOverride[disc.nom][niv]
+          : hMEN;
+        total += hOverride * nbDivParNiveau[niv];
+      });
+      besoinsMap[disc.nom] = Math.round(total * 2) / 2;
+    });
+    // Aussi calculer les grilles par niveau pour chaque discipline (pour affichage)
+    const grillesParDisc = {};
+    disciplines.forEach(disc => {
+      grillesParDisc[disc.nom] = {};
+      ['6e','5e','4e','3e'].forEach(niv => {
+        const hMEN = (GRILLES_MEN[niv]||{})[disc.nom];
+        const hOv  = grillesOverride[disc.nom] && grillesOverride[disc.nom][niv] !== undefined
+          ? grillesOverride[disc.nom][niv] : null;
+        grillesParDisc[disc.nom][niv] = { men: hMEN, valeur: hOv !== null ? hOv : hMEN, modifie: hOv !== null };
+      });
     });
     return disciplines.map(disc => {
       const rep = repartition.find(r => r.disciplineId === disc.id) || {};
       const besoinMEN     = Math.round((besoinsMap[disc.nom]||0)*2)/2;
+      const grilleLignes  = grillesParDisc[disc.nom] || {};
       const hPoste = rep.hPoste||0, hsa = rep.hsa||0;
       const total  = Math.round((hPoste+hsa)*2)/2;
       const gcs    = rep.groupesCours || [];
@@ -165,7 +191,8 @@ const Calculs = (() => {
         heuresGroupesReel,
         hasGroupes,
         ecart: Math.round((total - besoinTheorique)*2)/2,
-        commentaire: rep.commentaire||'', groupesCours: gcs
+        commentaire: rep.commentaire||'', groupesCours: gcs,
+        grilleLignes  // { '6e': { men, valeur, modifie }, ... }
       };
     });
   }

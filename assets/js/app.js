@@ -168,7 +168,8 @@ const app = (() => {
         const disciplines = DGHData.getDisciplines();
         const repartition = DGHData.getRepartition();
         const structures  = DGHData.getStructures();
-        const besoins     = Calculs.besoinsParDiscipline(structures, disciplines, repartition);
+        const grilles     = DGHData.getGrilles();
+        const besoins     = Calculs.besoinsParDiscipline(structures, disciplines, repartition, grilles);
         if (disciplines.length === 0) {
           discListEl.innerHTML = '<p style="color:var(--c-text-muted);font-size:.83rem;padding:.5rem 0">Aucune discipline — initialisez les <button class="btn-link" data-navigate="dotation">disciplines MEN dans Dotation</button>.</p>';
         } else {
@@ -378,7 +379,8 @@ const app = (() => {
       const disciplines = DGHData.getDisciplines();
       const repartition = DGHData.getRepartition();
       const structures  = DGHData.getStructures();
-      const besoins     = Calculs.besoinsParDiscipline(structures, disciplines, repartition);
+      const grilles     = DGHData.getGrilles();
+      const besoins     = Calculs.besoinsParDiscipline(structures, disciplines, repartition, grilles);
 
       // Enveloppe inline
       const inpHP  = document.getElementById('inputEnvHP');
@@ -454,7 +456,28 @@ const app = (() => {
           + '</td></tr>';
 
         // Sous-lignes groupes de cours (masquées par défaut)
+        // Niveaux présents dans les structures
+        const niveauxPresents = ['6e','5e','4e','3e'].filter(niv => structures.some(s => s.niveau === niv));
         html += '<tr class="gc-subrows-row" id="gc-sub-' + disc.id + '" style="display:none"><td colspan="9"><div class="gc-subrows">';
+        // Grille horaire par niveau (inputs editables)
+        if (niveauxPresents.length > 0) {
+          html += '<div class="gc-grille-row">';
+          html += '<span class="gc-grille-label">Horaire MEN (h/div/sem)</span>';
+          niveauxPresents.forEach(niv => {
+            const g = b.grilleLignes && b.grilleLignes[niv] ? b.grilleLignes[niv] : { men: null, valeur: '', modifie: false };
+            const placeholder = g.men !== null && g.men !== undefined ? g.men : '';
+            const val = g.valeur !== null && g.valeur !== undefined ? g.valeur : '';
+            const cls = g.modifie ? ' grille-input-modifie' : '';
+            const nbDiv = structures.filter(s => s.niveau === niv).length;
+            const total = val !== '' ? '= ' + Math.round(parseFloat(val)*nbDiv*2)/2 + 'h' : '';
+            html += '<div class="gc-grille-niv">'
+              + '<span class="gc-grille-niv-label">' + niv + '</span>'
+              + '<input type="number" class="grille-input' + cls + '" data-disc-nom="' + _esc(disc.nom) + '" data-niveau="' + niv + '" data-men="' + placeholder + '" value="' + val + '" placeholder="' + placeholder + '" min="0" step="0.5" title="MEN : ' + placeholder + ' h — modifiable" />'
+              + '<span class="gc-grille-total">' + total + '</span>'
+              + '</div>';
+          });
+          html += '</div>';
+        }
         if (b.groupesCours.length === 0) {
           html += '<div class="gc-empty">Aucun groupe de cours — cliquez sur + pour en ajouter (ex. LV2 Espagnol, LV2 Allemand…)</div>';
         } else {
@@ -543,6 +566,27 @@ const app = (() => {
           const field = e.target.dataset.field;
           const val   = parseFloat(e.target.value) || 0;
           if (id && field) { DGHData.setRepartition(id, { [field]: val }); _renderDotation(); _renderDashboard(); }
+        });
+      });
+
+      // Inputs grille horaire par niveau (inline dans sous-ligne)
+      listEl.querySelectorAll('.grille-input').forEach(inp => {
+        inp.addEventListener('change', e => {
+          const discNom = e.target.dataset.discNom;
+          const niv     = e.target.dataset.niveau;
+          const men     = parseFloat(e.target.dataset.men);
+          const val     = e.target.value !== '' ? parseFloat(e.target.value) : null;
+          // Si identique à MEN ou vide -> supprimer l'override (retour MEN)
+          if (val === null || val === men) DGHData.setGrille(discNom, niv, null);
+          else DGHData.setGrille(discNom, niv, val);
+          _renderDotation(); _renderDashboard();
+        });
+        // Double-clic -> réinitialiser à MEN
+        inp.addEventListener('dblclick', e => {
+          const discNom = e.target.dataset.discNom;
+          const niv     = e.target.dataset.niveau;
+          DGHData.setGrille(discNom, niv, null);
+          _renderDotation(); _renderDashboard();
         });
       });
 

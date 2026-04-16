@@ -1271,3 +1271,42 @@ input::placeholder { color: var(--c-text-dim); }
 
 /* ── Tooltip sur lignes disciplines dashboard ───────────────────── */
 .disc-resume-tooltip-row { cursor: help; }
+
+/* ══════════════════════════════════════════════════════════════════
+   DOTATION — Grille horaire par niveau (sous chaque discipline)
+   ══════════════════════════════════════════════════════════════════ */
+.gc-grille-row {
+  display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+  padding: .5rem .75rem .35rem .75rem;
+  background: var(--c-surface2); border-radius: var(--r);
+  margin-bottom: .4rem; border-left: 3px solid var(--c-border2);
+}
+.gc-grille-label {
+  font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--c-text-dim); min-width: 120px;
+  flex-shrink: 0;
+}
+.gc-grille-niv {
+  display: flex; align-items: center; gap: .3rem;
+}
+.gc-grille-niv-label {
+  font-size: .72rem; font-weight: 700; color: var(--c-text-muted);
+  min-width: 22px;
+}
+.grille-input {
+  width: 52px; padding: .2rem .35rem; font-size: .82rem; font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  border: 1.5px solid var(--c-border); border-radius: var(--r);
+  background: var(--c-surface); color: var(--c-text);
+  text-align: center;
+  transition: border-color var(--tf);
+}
+.grille-input:focus { border-color: var(--c-accent); outline: none; }
+.grille-input-modifie {
+  border-color: var(--c-amber); background: var(--c-amber-bg);
+  color: var(--c-amber);
+}
+.gc-grille-total {
+  font-size: .68rem; color: var(--c-text-dim);
+  font-family: 'JetBrains Mono', monospace; min-width: 40px;
+}
