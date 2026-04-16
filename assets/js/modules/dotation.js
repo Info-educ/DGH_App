@@ -209,13 +209,11 @@ const DGHDotation = (() => {
     const ecart = b.ecart;
     const sign  = ecart >= 0 ? '+' : '';
     if (ecart === 0) return '<span class="dot-ecart dot-ecart-ok">+0 h</span>';
-    const cibleHP = Math.max(0, Math.round((b.besoinTheorique - b.hsa) * 2) / 2);
-    const tipText = 'Cliquer pour ajuster les HP à 0 d\u2019\u00e9cart\u00a0: besoin ' + b.besoinTheorique + '\u00a0h \u2212 HSA ' + b.hsa + '\u00a0h = ' + cibleHP + '\u00a0h HP';
+    const tipText = 'Cliquer : HP \u2192 ' + b.besoinTheorique + '\u00a0h · HSA \u2192 0\u00a0h (\u00e9cart = 0)';
     return '<button class="dot-ecart ' + ecartCls + ' dot-ecart-btn"'
       + ' data-action="ecart-zero"'
       + ' data-disc-id="' + _esc(discId) + '"'
       + ' data-besoin="' + b.besoinTheorique + '"'
-      + ' data-hsa="' + b.hsa + '"'
       + ' title="' + _esc(tipText) + '">'
       + sign + ecart + '\u00a0h \u2731'
       + '</button>';
@@ -341,12 +339,12 @@ const DGHDotation = (() => {
   }
 
   // ── ÉCART ZÉRO ────────────────────────────────────────────────────
-  function ecartZero(discId, besoin, hsa) {
+  // Clic sur le bouton écart : HP = besoin théorique, HSA remises à 0
+  function ecartZero(discId, besoin) {
     if (!discId || besoin <= 0) return;
-    const nouvelleHP = Math.max(0, Math.round((besoin - hsa) * 2) / 2);
-    DGHData.setRepartition(discId, { hPoste: nouvelleHP });
+    DGHData.setRepartition(discId, { hPoste: besoin, hsa: 0 });
     renderDotation(); DGHDashboard.renderDashboard();
-    app.toast('HP ajustées à ' + nouvelleHP + '\u00a0h \u2014 écart = 0', 'success', 3000);
+    app.toast('HP \u2192 ' + besoin + '\u00a0h · HSA \u2192 0\u00a0h — écart = 0', 'success', 3000);
   }
 
   // ── MODAL GROUPE DE COURS ─────────────────────────────────────────

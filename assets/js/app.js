@@ -117,7 +117,7 @@ const app = (() => {
       if (action==='edit-hpc')        { DGHHPC.openModalHPC(id);                                                                    return; }
       if (action==='delete-hpc')      { DGHHPC.confirmDeleteHPC(id);                                                                return; }
       if (action==='toggle-hpc-type') { DGHHPC.toggleHPCType(id);                                                                  return; }
-      if (action==='ecart-zero')      { DGHDotation.ecartZero(actionBtn.dataset.discId, parseFloat(actionBtn.dataset.besoin)||0, parseFloat(actionBtn.dataset.hsa)||0); return; }
+      if (action==='ecart-zero')      { DGHDotation.ecartZero(actionBtn.dataset.discId, parseFloat(actionBtn.dataset.besoin)||0); return; }
     }
 
     // btn-toggle-gc (généré dynamiquement) — délégué ici
