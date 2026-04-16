@@ -43,7 +43,7 @@
       <input type="file" id="fileImport" accept=".json" style="display:none" />
     </div>
     <div class="sidebar-footer">
-      <span>v3.1.6</span>
+      <span>v3.2.1</span>
       <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -90,7 +90,7 @@
           </div>
         </div>
         <!-- Encart HP/HSA consommé / disponible -->
-        <div class="dash-hphsa-grid" id="dashHpHsaGrid" style="display:none">
+        <div class="dash-hphsa-grid is-hidden" id="dashHpHsaGrid">
           <div class="dash-hphsa-block dash-hphsa-hp">
             <div class="dash-hphsa-title">Heures-Poste (HP)</div>
             <div class="dash-hphsa-row"><span class="dash-hphsa-label">Enveloppe</span><span class="dash-hphsa-val" id="dash-hp-env">— h</span></div>
@@ -116,7 +116,7 @@
             <button class="btn-secondary" id="btnImportEmpty">Importer des données</button>
           </div>
         </div>
-        <div class="section-card" id="disciplineResume" style="display:none">
+        <div class="section-card is-hidden" id="disciplineResume">
           <div class="dash-resume-grid">
             <div class="dash-resume-col">
               <div class="dash-resume-col-header">
@@ -151,7 +151,7 @@
           </div>
         </div>
         <!-- Tableau récap par niveau -->
-        <div class="section-card" id="structNiveauCard" style="display:none">
+        <div class="section-card is-hidden" id="structNiveauCard">
           <div class="section-card-header"><h2>Résumé par niveau</h2></div>
           <table class="struct-niveau-table" id="structNiveauTable">
             <thead><tr><th>Niveau</th><th>Divisions</th><th>Effectif</th><th>H/div (MEN)</th><th>Total théorique</th></tr></thead>
@@ -249,7 +249,7 @@
           </div>
           <div id="dot-list"></div>
           <!-- Total général dotation -->
-          <div class="dot-total-bar" id="dotTotalBar" style="display:none">
+          <div class="dot-total-bar is-hidden" id="dotTotalBar">
             <span class="dot-total-label">Total alloué (Dotation)</span>
             <span class="dot-total-hp"><span class="dot-col-badge dot-col-hp">HP</span> <strong id="dot-total-hp-val">0 h</strong></span>
             <span class="dot-total-hsa"><span class="dot-col-badge dot-col-hsa">HSA</span> <strong id="dot-total-hsa-val">0 h</strong></span>
@@ -345,7 +345,7 @@
         </div>
 
         <!-- Onglet 2 : Années scolaires -->
-        <div class="modal-tab-panel" id="tab-annees" style="display:none">
+        <div class="modal-tab-panel is-hidden" id="tab-annees">
           <div class="form-group">
             <label for="modalYearSelect">Année active</label>
             <select id="modalYearSelect"></select>
@@ -360,7 +360,7 @@
         </div>
 
         <!-- Onglet 3 : Zone de danger -->
-        <div class="modal-tab-panel" id="tab-danger" style="display:none">
+        <div class="modal-tab-panel is-hidden" id="tab-danger">
           <div class="danger-zone">
             <div class="danger-zone-text"><strong>Réinitialiser l'année active</strong><span>Efface structures, dotation et enseignants. Irréversible.</span></div>
             <button class="btn-danger btn-sm" id="btnResetAnnee">Réinitialiser</button>
@@ -555,6 +555,11 @@
 
   <script src="assets/js/data.js"></script>
   <script src="assets/js/calculs.js"></script>
+  <script src="assets/js/modules/dashboard.js"></script>
+  <script src="assets/js/modules/structures.js"></script>
+  <script src="assets/js/modules/dotation.js"></script>
+  <script src="assets/js/modules/hpc.js"></script>
+  <script src="assets/js/modules/etab.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

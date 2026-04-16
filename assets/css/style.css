@@ -1057,6 +1057,7 @@ input::placeholder { color: var(--c-text-dim); }
 }
 .dot-ecart-btn:hover { opacity: .75; background: var(--c-surface2); }
 
+
 /* ══════════════════════════════════════════════════════════════════
    SPRINT 5 — Enveloppe HP/HSA saisie dans Dotation
    ══════════════════════════════════════════════════════════════════ */
@@ -1384,3 +1385,23 @@ td.col-grille {
   display: flex; flex-direction: column; align-items: center; gap: .1rem;
 }
 .grille-tfoot-cell strong { font-family: 'JetBrains Mono', monospace; font-size: .85rem; }
+
+/* ══════════════════════════════════════════════════════════════════
+   UTILITAIRES — Classes CSS fonctionnelles
+   (remplacent les style.display et style.color injectés en JS)
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Masquage — remplace style.display = 'none' / '' */
+.is-hidden { display: none !important; }
+
+/* Badge alertes sidebar masqué par défaut */
+.badge-hidden { display: none; }
+
+/* Soldes HP/HSA — couleurs sémantiques (dashboard encart HP/HSA) */
+.solde-danger  { color: var(--c-red)         !important; }
+.solde-neutre  { color: var(--c-text-muted)  !important; }
+.solde-positif { color: var(--c-accent)      !important; }
+.solde-hsa     { color: var(--c-indigo)      !important; }
+
+/* Solde KPI dashboard (dépassement) */
+.kpi-solde-danger { color: var(--c-red) !important; }

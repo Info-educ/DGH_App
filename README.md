@@ -172,11 +172,17 @@ Chaque HPC est déclarée en **HP** ou **HSA** (bascule au clic dans le tableau)
 dgh-app/
 ├── index.html              # SPA — toutes les vues (sections HTML)
 ├── assets/
-│   ├── css/style.css       # Design system complet (light + dark)
+│   ├── css/style.css       # Design system complet (light + dark + utilitaires)
 │   └── js/
 │       ├── data.js         # Couche données (localStorage + import/export + migrations)
 │       ├── calculs.js      # Moteur de calcul pur (ORS, DGH, besoins MEN, suggestions)
-│       └── app.js          # Contrôleur UI (navigation, rendu, délégation événements)
+│       ├── modules/
+│       │   ├── dashboard.js   # DGHDashboard — tableau de bord
+│       │   ├── structures.js  # DGHStructures — divisions et saisie matricielle
+│       │   ├── dotation.js    # DGHDotation — disciplines, groupes de cours, enveloppe
+│       │   ├── hpc.js         # DGHHPC — heures pédagogiques complémentaires
+│       │   └── etab.js        # DGHEtab — établissement, années, alertes
+│       └── app.js             # Noyau : init, navigation, délégations globales, toast
 ├── data/
 │   └── exemple.json        # Données fictives anonymisées
 ├── SKILL.md                # Instructions de développement pour Claude
@@ -186,6 +192,8 @@ dgh-app/
 
 **Stack : HTML5 + CSS3 + JS Vanilla**  
 Zéro dépendance, zéro build, zéro framework. Maintenable en autonomie sur plusieurs années.
+
+Chaque module JS est un **IIFE** (Immediately Invoked Function Expression) exposant une API publique via `return {}`. La délégation d'événements est centralisée dans `app.js` — aucun `addEventListener` direct sur les éléments générés dynamiquement.
 
 ---
 
