@@ -116,7 +116,7 @@
             <button class="btn-secondary" id="btnImportEmpty">Importer des données</button>
           </div>
         </div>
-        <div class="section-card" id="disciplineResume" style="display:none">
+        <div class="section-card" id="disciplineResume" class="is-hidden">
           <div class="dash-resume-grid">
             <div class="dash-resume-col">
               <div class="dash-resume-col-header">
@@ -151,7 +151,7 @@
           </div>
         </div>
         <!-- Tableau récap par niveau -->
-        <div class="section-card" id="structNiveauCard" style="display:none">
+        <div class="section-card" id="structNiveauCard" class="is-hidden">
           <div class="section-card-header"><h2>Résumé par niveau</h2></div>
           <table class="struct-niveau-table" id="structNiveauTable">
             <thead><tr><th>Niveau</th><th>Divisions</th><th>Effectif</th><th>H/div (MEN)</th><th>Total théorique</th></tr></thead>
@@ -249,7 +249,7 @@
           </div>
           <div id="dot-list"></div>
           <!-- Total général dotation -->
-          <div class="dot-total-bar" id="dotTotalBar" style="display:none">
+          <div class="dot-total-bar" id="dotTotalBar" class="is-hidden">
             <span class="dot-total-label">Total alloué (Dotation)</span>
             <span class="dot-total-hp"><span class="dot-col-badge dot-col-hp">HP</span> <strong id="dot-total-hp-val">0 h</strong></span>
             <span class="dot-total-hsa"><span class="dot-col-badge dot-col-hsa">HSA</span> <strong id="dot-total-hsa-val">0 h</strong></span>
@@ -345,7 +345,7 @@
         </div>
 
         <!-- Onglet 2 : Années scolaires -->
-        <div class="modal-tab-panel" id="tab-annees" style="display:none">
+        <div class="modal-tab-panel" id="tab-annees" class="is-hidden">
           <div class="form-group">
             <label for="modalYearSelect">Année active</label>
             <select id="modalYearSelect"></select>
@@ -360,7 +360,7 @@
         </div>
 
         <!-- Onglet 3 : Zone de danger -->
-        <div class="modal-tab-panel" id="tab-danger" style="display:none">
+        <div class="modal-tab-panel" id="tab-danger" class="is-hidden">
           <div class="danger-zone">
             <div class="danger-zone-text"><strong>Réinitialiser l'année active</strong><span>Efface structures, dotation et enseignants. Irréversible.</span></div>
             <button class="btn-danger btn-sm" id="btnResetAnnee">Réinitialiser</button>

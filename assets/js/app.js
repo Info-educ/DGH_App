@@ -311,33 +311,31 @@ const app = (() => {
     }
     const kpiTip=document.getElementById('kpiFloatTip');
     if (kpiTip) {
-      kpiTip.classList.add('is-hidden');
       document.querySelectorAll('.kpi-tooltip-card').forEach(card => {
         const src=card.querySelector('.kpi-tooltip');
         card.addEventListener('mouseenter', () => {
           if (!src||!src.innerHTML) return;
-          kpiTip.innerHTML=src.innerHTML; kpiTip.classList.remove('is-hidden');
+          kpiTip.innerHTML=src.innerHTML; kpiTip.style.display='block';
           _positionTip(kpiTip, card.getBoundingClientRect());
         });
-        card.addEventListener('mouseleave', () => kpiTip.classList.add('is-hidden'));
-        card.addEventListener('mousemove',  () => { if (!kpiTip.classList.contains('is-hidden')) _positionTip(kpiTip, card.getBoundingClientRect()); });
+        card.addEventListener('mouseleave', () => { kpiTip.style.display='none'; });
+        card.addEventListener('mousemove',  () => { if (kpiTip.style.display==='block') _positionTip(kpiTip, card.getBoundingClientRect()); });
       });
     }
     const discTip=document.getElementById('discFloatTip');
     if (discTip) {
-      discTip.classList.add('is-hidden');
       document.addEventListener('mouseover', e => {
         const wrap=e.target.closest('.disc-tip-wrap');
-        if (!wrap) { discTip.classList.add('is-hidden'); return; }
+        if (!wrap) { discTip.style.display='none'; return; }
         const src=wrap.querySelector('.disc-tip');
         if (!src||!src.innerHTML) return;
-        discTip.innerHTML=src.innerHTML; discTip.classList.remove('is-hidden');
+        discTip.innerHTML=src.innerHTML; discTip.style.display='block';
         _positionTip(discTip, wrap.getBoundingClientRect());
       });
       document.addEventListener('mouseout', e => {
         const wrap=e.target.closest('.disc-tip-wrap');
         if (!wrap) return;
-        if (!e.relatedTarget||!e.relatedTarget.closest('.disc-tip-wrap')) discTip.classList.add('is-hidden');
+        if (!e.relatedTarget||!e.relatedTarget.closest('.disc-tip-wrap')) discTip.style.display='none';
       });
     }
   }
