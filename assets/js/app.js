@@ -323,7 +323,52 @@ const app = (() => {
           + '<td class="col-actions"><button class="btn-icon-sm" data-action="edit-div" data-id="' + div.id + '" title="Modifier">✎</button>'
           + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-div" data-id="' + div.id + '" title="Supprimer">✕</button></td></tr>';
       });
-      listEl.innerHTML = html + '</tbody></table>';
+      // ── tfoot : totaux de chaque colonne ─────────────────────────────
+      let tfoot = '<tfoot class="dot-tfoot"><tr class="struct-total-row dot-total-row">'
+        + '<td></td><td><strong>Total</strong></td>';
+
+      // Colonnes niveaux : total des heures × divisions pour chaque niveau
+      niveauxCols.forEach(niv => {
+        const nb = nbDivParNiv[niv] || 0;
+        let totNiv = 0;
+        besoins.forEach(b => {
+          const gl = b.grilleLignes && b.grilleLignes[niv];
+          const hParDiv = gl && (gl.valeur !== null && gl.valeur !== undefined && gl.valeur !== '') ? parseFloat(gl.valeur) : (gl && gl.men ? parseFloat(gl.men) : 0);
+          totNiv += (hParDiv || 0) * nb;
+        });
+        tfoot += '<td class="col-num col-grille"><strong style="font-family:\'JetBrains Mono\',monospace">'
+          + Math.round(totNiv * 2) / 2 + ' h</strong></td>';
+      });
+
+      // Besoin réel total
+      const totBesoin = besoins.reduce((s, b) => s + (b.besoinTheorique || 0), 0);
+      tfoot += '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">'
+        + Math.round(totBesoin * 2) / 2 + ' h</strong></td>';
+
+      // HP total
+      const totHP2  = besoins.reduce((s, b) => s + (b.hPoste || 0), 0);
+      tfoot += '<td class="col-num dot-col-hp"><strong style="font-family:\'JetBrains Mono\',monospace">'
+        + Math.round(totHP2 * 2) / 2 + ' h</strong></td>';
+
+      // HSA total
+      const totHSA2 = besoins.reduce((s, b) => s + (b.hsa || 0), 0);
+      tfoot += '<td class="col-num dot-col-hsa"><strong style="font-family:\'JetBrains Mono\',monospace">'
+        + Math.round(totHSA2 * 2) / 2 + ' h</strong></td>';
+
+      // Total HP+HSA
+      const totAll2 = Math.round((totHP2 + totHSA2) * 2) / 2;
+      tfoot += '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace;color:var(--c-accent)">'
+        + totAll2 + ' h</strong></td>';
+
+      // Écart global
+      const ecartTot = Math.round((totAll2 - Math.round(totBesoin * 2) / 2) * 2) / 2;
+      const ecClsTot = ecartTot > 0 ? 'dot-ecart-over' : ecartTot < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
+      tfoot += '<td class="col-num"><span class="dot-ecart ' + ecClsTot + '"><strong>'
+        + (ecartTot >= 0 ? '+' : '') + ecartTot + ' h</strong></span></td>';
+
+      tfoot += '<td class="col-bar"></td><td class="col-actions"></td></tr></tfoot>';
+
+      listEl.innerHTML = html + tfoot + '</tbody></table>';
     } catch(e) { console.error('[DGH] renderStructures:', e); }
   }
 
@@ -549,50 +594,6 @@ const app = (() => {
         _set('dot-total-sum-val', Math.round((totHP+totHSA)*2)/2 + ' h');
       } else if (totalBar) { totalBar.style.display = 'none'; }
 
-      // Tableau Besoins MEN par niveau
-      const resume = Calculs.resumeStructures(structures);
-      const niveauRecap = document.getElementById('dotNiveauRecap');
-      const niveauBody  = document.getElementById('dotNiveauBody');
-      const niveauFoot  = document.getElementById('dotNiveauFoot');
-      if (niveauRecap) niveauRecap.style.display = resume.parNiveau.length > 0 ? '' : 'none';
-      if (niveauBody && resume.parNiveau.length > 0) {
-        // Pour chaque niveau, sommer HP et HSA des disciplines présentes dans la grille MEN
-        const GRILLES = Calculs.GRILLES_MEN;
-        niveauBody.innerHTML = resume.parNiveau.map(n => {
-          const discsDuNiveau = Object.keys(GRILLES[n.niveau] || {});
-          const hpNiv  = besoins.filter(b => discsDuNiveau.includes(b.nom)).reduce((s,b) => s + (b.hPoste||0), 0);
-          const hsaNiv = besoins.filter(b => discsDuNiveau.includes(b.nom)).reduce((s,b) => s + (b.hsa||0), 0);
-          const totalNiv = Math.round((hpNiv + hsaNiv)*2)/2;
-          const ecartNiv = Math.round((totalNiv - n.hTheoriqueTotal)*2)/2;
-          const ecCls   = ecartNiv > 0 ? 'dot-ecart-over' : ecartNiv < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
-          return '<tr>'
-            + '<td><span class="niveau-badge niveau-' + n.niveau.toLowerCase().replace(/[^a-z0-9]/g,'') + '">' + n.niveau + '</span></td>'
-            + '<td class="col-num">' + n.nbDivisions + '</td>'
-            + '<td class="col-num">' + (n.hTheoriqueDiv > 0 ? n.hTheoriqueDiv + ' h' : '—') + '</td>'
-            + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + (n.hTheoriqueTotal > 0 ? n.hTheoriqueTotal + ' h' : '—') + '</strong></td>'
-            + '<td class="col-num dot-col-hp">' + Math.round(hpNiv*2)/2  + ' h</td>'
-            + '<td class="col-num dot-col-hsa">' + Math.round(hsaNiv*2)/2 + ' h</td>'
-            + '<td class="col-num"><span class="dot-ecart ' + ecCls + '">' + (n.hTheoriqueTotal > 0 ? (ecartNiv >= 0 ? '+' : '') + ecartNiv + ' h' : '—') + '</span></td>'
-            + '</tr>';
-        }).join('');
-        if (niveauFoot) {
-          const totalMEN = resume.hTheoriqueTotal;
-          const totHP2   = besoins.reduce((s,b) => s + (b.hPoste||0), 0);
-          const totHSA2  = besoins.reduce((s,b) => s + (b.hsa||0), 0);
-          const totAll2  = Math.round((totHP2+totHSA2)*2)/2;
-          const ecTot    = Math.round((totAll2 - totalMEN)*2)/2;
-          const ecCls2   = ecTot > 0 ? 'dot-ecart-over' : ecTot < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
-          niveauFoot.innerHTML = '<tr class="struct-total-row">'
-            + '<td><strong>Total</strong></td>'
-            + '<td class="col-num"><strong>' + resume.nbDivisions + '</strong></td>'
-            + '<td class="col-num">—</td>'
-            + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace;color:var(--c-accent)">' + totalMEN + ' h</strong></td>'
-            + '<td class="col-num dot-col-hp"><strong>' + Math.round(totHP2*2)/2  + ' h</strong></td>'
-            + '<td class="col-num dot-col-hsa"><strong>' + Math.round(totHSA2*2)/2 + ' h</strong></td>'
-            + '<td class="col-num"><span class="dot-ecart ' + ecCls2 + '"><strong>' + (ecTot >= 0 ? '+' : '') + ecTot + ' h</strong></span></td>'
-            + '</tr>';
-        }
-      }
 
       // Inputs HP+HSA inline
       listEl.querySelectorAll('.dot-input-h').forEach(inp => {

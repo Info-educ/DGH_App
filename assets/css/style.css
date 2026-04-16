@@ -1345,3 +1345,10 @@ td.col-grille {
   color: var(--c-text-dim); font-family: 'JetBrains Mono', monospace;
   line-height: 1;
 }
+
+/* ── Tfoot totaux tableau répartition par discipline ─────────────── */
+.dot-tfoot { border-top: 2px solid var(--c-border2); }
+.dot-total-row td {
+  background: var(--c-surface2);
+  padding-top: .6rem; padding-bottom: .6rem;
+}
