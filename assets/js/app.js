@@ -540,16 +540,22 @@ const app = (() => {
       let tfootHtml = '<tfoot class="dot-tfoot"><tr class="dot-total-row"><td></td><td><strong>Total</strong></td>';
       niveauxCols.forEach(niv => {
         const nb = nbDivParNiv[niv] || 0;
-        let totNiv = 0;
+        // Sommer h/div par discipline pour ce niveau, puis multiplier par nb divisions
+        let hParDivTotal = 0;
         besoins.forEach(b => {
           const gl = b.grilleLignes && b.grilleLignes[niv];
           const hParDiv = (gl && gl.valeur !== null && gl.valeur !== undefined && gl.valeur !== '')
             ? parseFloat(gl.valeur)
             : (gl && gl.men !== null && gl.men !== undefined ? parseFloat(gl.men) : 0);
-          totNiv += (hParDiv || 0) * nb;
+          hParDivTotal += hParDiv || 0;
         });
-        tfootHtml += '<td class="col-num col-grille"><strong style="font-family:\'JetBrains Mono\',monospace">'
-          + Math.round(totNiv * 2) / 2 + ' h</strong></td>';
+        const hParDivTotalR = Math.round(hParDivTotal * 2) / 2;
+        const hTotalNiv    = Math.round(hParDivTotal * nb * 2) / 2;
+        // Afficher : h/div en grand + total (h x nb div) en petit
+        tfootHtml += '<td class="col-num col-grille">'
+          + '<strong style="font-family:\'JetBrains Mono\',monospace">' + hParDivTotalR + '\u00a0h</strong>'
+          + '<span class="grille-col-total">' + hTotalNiv + 'h \u00d7' + nb + '</span>'
+          + '</td>';
       });
       const tfBesoin = Math.round(besoins.reduce((s,b) => s + (b.besoinTheorique||0), 0) * 2) / 2;
       tfootHtml += '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + tfBesoin + ' h</strong></td>';
