@@ -143,3 +143,30 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ### [2.0.0] — Sprint 7
 - ◷ Module Historique (comparaisons pluriannuelles)
+
+## v3.2.0 — Refactorisation structurelle (2026-04-16)
+
+### Architecture
+- Éclatement de app.js (~1 390 lignes) en 5 modules IIFE séparés :
+  - `assets/js/modules/dashboard.js` (DGHDashboard) — 241 lignes
+  - `assets/js/modules/structures.js` (DGHStructures) — 247 lignes
+  - `assets/js/modules/dotation.js` (DGHDotation) — 468 lignes
+  - `assets/js/modules/hpc.js` (DGHHPC) — 185 lignes
+  - `assets/js/modules/etab.js` (DGHEtab) — 190 lignes
+  - `assets/js/app.js` noyau réduit — 360 lignes
+- Chargement ordonné dans `index.html` : data → calculs → modules → app
+
+### Corrections fragilités
+- **`addEventListener` sur éléments dynamiques supprimés** : `.dot-input-h`, `.grille-input`, `.btn-toggle-gc`, inputs enveloppe, checkboxes classes → tous délégués via `document.addEventListener('change'|'dblclick'|'blur')` dans `_onGlobalChange/_onGlobalDblClick/_onGlobalBlur`
+- **Garde `_bound` supprimée** : remplacée par délégation propre sur `document`
+- **`bilanDGH()` supprimée** de `calculs.js` — doublon de `bilanDotation()`, jamais appelée
+- **Doublons CSS supprimés** : bloc `dot-table / dot-kpi-bar / disc-color-dot` dupliqué (lignes ~898–964) supprimé
+- **Classes utilitaires CSS ajoutées** : `.is-hidden`, `.badge-hidden`, `.solde-danger`, `.solde-neutre`, `.solde-positif`, `.solde-hsa`, `.kpi-solde-danger` — remplacent les injections `.style.color` et `.style.display` sémantiques
+- **Version sidebar** mise à jour : v3.2.0
+
+### Conformité SKILL.md
+- Zéro `onclick` inline dans `index.html`
+- Zéro `localStorage` dans `modules/` et `calculs.js`
+- `localStorage` dans `app.js` limité au thème UI (exception documentée)
+- Zéro appel de fonction privée entre modules (tout passe par l'API publique `return{}`)
+- Zéro style injecté en JS sauf valeurs calculées dynamiquement (width%, marginLeft%)

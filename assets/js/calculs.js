@@ -53,28 +53,6 @@ const Calculs = (() => {
              statut: ecart > 0 ? 'hsa' : ecart < 0 ? 'sous-service' : 'equilibre' };
   }
 
-  function bilanDGH(anneeData) {
-    const dot        = anneeData.dotation || {};
-    const hPosteEnv  = dot.hPosteEnveloppe || 0;
-    const hsaEnv     = dot.hsaEnveloppe    || 0;
-    const enveloppe  = Math.round((hPosteEnv + hsaEnv) * 2) / 2;
-    const repartition = anneeData.repartition || [];
-    const enseignants = anneeData.enseignants || [];
-    const heuresAllouees = repartition.reduce((s,r) => s + (r.hPoste||0) + (r.hsa||0), 0);
-    const solde = enveloppe - heuresAllouees;
-    const pctConsomme = enveloppe > 0 ? Math.round((heuresAllouees / enveloppe) * 100) : 0;
-    let totalHSA = 0, nbTZR = 0;
-    enseignants.forEach(ens => {
-      totalHSA += detailEnseignant(ens).hsa;
-      if (ens.statut === 'tzr' || ens.statut === 'complement') nbTZR++;
-    });
-    return { enveloppe, hPosteEnv, hsaEnv,
-             heuresAllouees: Math.round(heuresAllouees*2)/2,
-             solde: Math.round(solde*2)/2, pctConsomme,
-             totalHSA: Math.round(totalHSA*2)/2,
-             nbEnseignants: enseignants.length, nbTZR };
-  }
-
   function resumeStructures(structures) {
     if (!Array.isArray(structures) || structures.length === 0)
       return { nbDivisions:0, effectifTotal:0, parNiveau:[], niveauxPresents:[], hTheoriqueTotal:0 };
@@ -268,7 +246,7 @@ const Calculs = (() => {
   return {
     ORS, GRILLES_MEN, H_THEORIQUES_NIV,
     getORS, calcHeuresEnseignant, detailEnseignant,
-    bilanDGH, resumeStructures, bilanDotation, besoinsParDiscipline,
+    resumeStructures, bilanDotation, besoinsParDiscipline,
     suggererRepartition, bilanHPC, genererAlertes
   };
 

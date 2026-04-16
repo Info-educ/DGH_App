@@ -1,11 +1,19 @@
 /**
- * DGH App — Contrôleur principal v4.0
- * Sprint 5 :
- *   - Enveloppe HP/HSA séparée (saisie inline + modal établissement)
- *   - Structures : tableau récap par niveau avec h théoriques, dispositif masqué
- *   - Dotation : groupes de cours dépliables par discipline, sélection par classes
- *   - Suggestion auto HP depuis besoin théorique
- *   - Onglet HPC (Heures Pédagogiques Complémentaires) avec sélection classes
+ * DGH App — Contrôleur principal v3.2.0
+ * Noyau : init, navigation, délégation événements globaux, utilitaires.
+ *
+ * ARCHITECTURE :
+ *   data.js      → couche données (seul fichier qui touche localStorage)
+ *   calculs.js   → fonctions pures (zéro DOM, zéro localStorage)
+ *   modules/dashboard.js  → DGHDashboard
+ *   modules/structures.js → DGHStructures
+ *   modules/dotation.js   → DGHDotation
+ *   modules/hpc.js        → DGHHPC
+ *   modules/etab.js       → DGHEtab
+ *   app.js       → ce fichier (chargé en DERNIER)
+ *
+ * NOTE localStorage : le thème UI est une préférence interface, pas une donnée
+ * métier. Il est géré ici directement — exception documentée au SKILL.md.
  */
 
 const app = (() => {
@@ -26,7 +34,7 @@ const app = (() => {
     _applyTheme(localStorage.getItem('dgh-theme') || 'light');
     DGHData.init();
     _bindEvents();
-    _renderAll();
+    renderAll();
     navigate('dashboard');
   }
 
@@ -48,1082 +56,48 @@ const app = (() => {
     if (navEl)  navEl.classList.add('active');
     const bc = document.getElementById('breadcrumb');
     if (bc) bc.textContent = VIEWS[viewId];
-    if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
-    if (viewId === 'dashboard')  _renderDashboard();
-    if (viewId === 'alertes')    _renderAlertes();
-    if (viewId === 'structures') _renderStructures();
-    if (viewId === 'dotation')   _renderDotation();
-    if (viewId === 'hpc')        _renderHPC();
-  }
-
-  // ── DASHBOARD ────────────────────────────────────────────────────
-  function _renderDashboard() {
-    try {
-      const data    = DGHData.getAnnee();
-      const bilan   = Calculs.bilanDotation(data);
-      const alertes = Calculs.genererAlertes(data);
-      const resume  = Calculs.resumeStructures(DGHData.getStructures());
-
-      _set('dashYear', DGHData.getAnneeActive().replace('-', '–'));
-      _set('kpi-dghtotal',  bilan.enveloppe  ? bilan.enveloppe + ' h'   : '— h');
-      _set('kpi-hposte',    bilan.hPosteEnv  ? bilan.hPosteEnv + ' h'   : '— h');
-      _set('kpi-hsa-total', bilan.hsaEnv     ? bilan.hsaEnv + ' h'      : '— h');
-      _set('kpi-hposte-sub', bilan.hPosteEnv ? 'enveloppe HP'           : 'dotation structurelle');
-      _set('kpi-hsa-sub',   bilan.hsaEnv     ? 'enveloppe HSA'          : 'heures sup payées');
-      _set('kpi-alertes',   alertes.filter(a => a.severite !== 'info').length || '—');
-      _set('kpi-divisions', resume.nbDivisions || '—');
-      _set('kpi-effectif',  resume.effectifTotal ? resume.effectifTotal + ' élèves' : '— élèves');
-
-      const soldeEl  = document.getElementById('kpi-solde');
-      const soldeSub = document.getElementById('kpi-solde-sub');
-      if (soldeEl) { soldeEl.textContent = bilan.enveloppe ? bilan.solde + ' h' : '— h'; soldeEl.style.color = bilan.depassement ? 'var(--c-red)' : ''; }
-      if (soldeSub) soldeSub.textContent = bilan.depassement ? 'dépassement !' : 'heures restantes';
-
-      // Badge alertes
-      const nb    = alertes.filter(a => a.severite === 'error' || a.severite === 'warning').length;
-      const badge = document.getElementById('badge-alertes');
-      if (badge) { badge.textContent = nb || ''; badge.style.display = nb ? '' : 'none'; }
-
-      // Stats topbar
-      const stats = document.getElementById('topbarStats');
-      if (stats) {
-        stats.innerHTML = bilan.enveloppe > 0
-          ? '<div class="topbar-stat"><span>HP</span><span class="topbar-stat-val">' + bilan.hPosteEnv + 'h</span></div>'
-          + '<div class="topbar-stat"><span>HSA</span><span class="topbar-stat-val">' + bilan.hsaEnv + 'h</span></div>'
-          + '<div class="topbar-stat"><span>Solde</span><span class="topbar-stat-val">' + bilan.solde + 'h</span></div>'
-          : '';
-      }
-
-      // Barre progression duale
-      const barHP  = document.getElementById('progressBarHP');
-      const barHSA = document.getElementById('progressBarHSA');
-      const lbl    = document.getElementById('progress-label');
-      if (bilan.enveloppe > 0) {
-        const pctHP  = Math.min(100, Math.round((bilan.totalHP  / bilan.enveloppe) * 100));
-        const pctHSA = Math.min(100 - pctHP, Math.round((bilan.totalHSA / bilan.enveloppe) * 100));
-        if (barHP)  barHP.style.width = pctHP + '%';
-        if (barHSA) { barHSA.style.width = pctHSA + '%'; barHSA.style.marginLeft = pctHP + '%'; }
-      }
-      if (lbl) lbl.textContent = bilan.enveloppe > 0 ? bilan.totalAlloue + ' / ' + bilan.enveloppe + ' h' : '0 / 0 h';
-      _set('prog-leg-hp',  bilan.totalHP  + ' h');
-      _set('prog-leg-hsa', bilan.totalHSA + ' h');
-
-      // Encart HP/HSA consommé/disponible
-      const hpHsaGrid = document.getElementById('dashHpHsaGrid');
-      if (hpHsaGrid) {
-        if (bilan.enveloppe > 0) {
-          hpHsaGrid.style.display = '';
-          const hpFree  = Math.round((bilan.hPosteEnv - bilan.totalHP) * 2) / 2;
-          const hsaFree = Math.round((bilan.hsaEnv    - bilan.totalHSA) * 2) / 2;
-          const pctHP   = bilan.hPosteEnv > 0 ? Math.min(100, Math.round((bilan.totalHP  / bilan.hPosteEnv)  * 100)) : 0;
-          const pctHSA  = bilan.hsaEnv    > 0 ? Math.min(100, Math.round((bilan.totalHSA / bilan.hsaEnv)    * 100)) : 0;
-          _set('dash-hp-env',   bilan.hPosteEnv + ' h');
-          _set('dash-hp-used',  bilan.totalHP   + ' h');
-          _set('dash-hp-free',  hpFree + ' h');
-          _set('dash-hsa-env',  bilan.hsaEnv    + ' h');
-          _set('dash-hsa-used', bilan.totalHSA  + ' h');
-          _set('dash-hsa-free', hsaFree + ' h');
-          const barDHP  = document.getElementById('dash-bar-hp');
-          const barDHSA = document.getElementById('dash-bar-hsa');
-          if (barDHP)  barDHP.style.width  = pctHP  + '%';
-          if (barDHSA) barDHSA.style.width = pctHSA + '%';
-          // Couleur solde HP/HSA
-          const freeHP  = document.getElementById('dash-hp-free');
-          const freeHSA = document.getElementById('dash-hsa-free');
-          if (freeHP)  freeHP.style.color  = hpFree  < 0 ? 'var(--c-red)' : hpFree  === 0 ? 'var(--c-text-muted)' : 'var(--c-accent)';
-          if (freeHSA) freeHSA.style.color = hsaFree < 0 ? 'var(--c-red)' : hsaFree === 0 ? 'var(--c-text-muted)' : 'var(--c-indigo)';
-        } else {
-          hpHsaGrid.style.display = 'none';
-        }
-      }
-
-      // Tooltips KPI au survol
-      const tooltipDGH = document.getElementById('kpi-tooltip-dghtotal');
-      if (tooltipDGH && bilan.enveloppe > 0) {
-        tooltipDGH.innerHTML = '<strong>Enveloppe DSDEN</strong><br>HP : ' + bilan.hPosteEnv + ' h<br>HSA : ' + bilan.hsaEnv + ' h<br>Total : ' + bilan.enveloppe + ' h';
-      }
-      const tooltipHP = document.getElementById('kpi-tooltip-hposte');
-      if (tooltipHP && bilan.hPosteEnv > 0) {
-        tooltipHP.innerHTML = '<strong>H-Poste</strong><br>Enveloppe : ' + bilan.hPosteEnv + ' h<br>Allouées : ' + bilan.totalHP + ' h<br>Dont Dotation : ' + (bilan.totalHPDisc||0) + ' h<br>Dont HPC : ' + (bilan.totalHPHPC||0) + ' h<br>Disponibles : ' + Math.round((bilan.hPosteEnv - bilan.totalHP)*2)/2 + ' h';
-      }
-      const tooltipHSA = document.getElementById('kpi-tooltip-hsa');
-      if (tooltipHSA && bilan.hsaEnv > 0) {
-        tooltipHSA.innerHTML = '<strong>HSA</strong><br>Enveloppe : ' + bilan.hsaEnv + ' h<br>Allouées : ' + bilan.totalHSA + ' h<br>Dont Dotation : ' + (bilan.totalHSADisc||0) + ' h<br>Dont HPC : ' + (bilan.totalHSAHPC||0) + ' h<br>Disponibles : ' + Math.round((bilan.hsaEnv - bilan.totalHSA)*2)/2 + ' h';
-      }
-      const tooltipSolde = document.getElementById('kpi-tooltip-solde');
-      if (tooltipSolde && bilan.enveloppe > 0) {
-        tooltipSolde.innerHTML = '<strong>Solde global</strong><br>Enveloppe : ' + bilan.enveloppe + ' h<br>Consommées : ' + bilan.totalAlloue + ' h<br>Solde : ' + bilan.solde + ' h (' + bilan.pctConsomme + '% consommé)';
-      }
-
-      // Empty state
-      const isEmpty  = DGHData.isEmpty();
-      const emptyEl  = document.getElementById('emptyState');
-      const resumeEl = document.getElementById('disciplineResume');
-      if (emptyEl)  emptyEl.style.display  = isEmpty ? '' : 'none';
-      if (resumeEl) resumeEl.style.display = isEmpty ? 'none' : '';
-
-      // Résumé disciplines
-      const discListEl = document.getElementById('disciplineList');
-      if (discListEl && !isEmpty) {
-        const disciplines = DGHData.getDisciplines();
-        const repartition = DGHData.getRepartition();
-        const structures  = DGHData.getStructures();
-        const grilles     = DGHData.getGrilles();
-        const besoins     = Calculs.besoinsParDiscipline(structures, disciplines, repartition, grilles);
-        if (disciplines.length === 0) {
-          discListEl.innerHTML = '<p style="color:var(--c-text-muted);font-size:.83rem;padding:.5rem 0">Aucune discipline — initialisez les <button class="btn-link" data-navigate="dotation">disciplines MEN dans Dotation</button>.</p>';
-        } else {
-          // Nb divisions par niveau pour calcul h/niveau
-          const nbDivParNiv = {};
-          structures.forEach(s => { nbDivParNiv[s.niveau] = (nbDivParNiv[s.niveau]||0) + 1; });
-          const niveauxDispo = ['6e','5e','4e','3e'].filter(niv => nbDivParNiv[niv]);
-
-          let html = '<div class="disc-resume-grid">';
-          besoins.forEach(b => {
-            const pct = bilan.enveloppe > 0 ? Math.min(100, Math.round((b.total / bilan.enveloppe) * 100)) : 0;
-            const ecartCls = b.ecart > 0 ? 'dot-ecart-over' : b.ecart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
-
-            // Tooltip HTML riche : heures par niveau + HP/HSA/ecart
-            let tipHtml = '<strong>' + _esc(b.nom) + '</strong>';
-            if (niveauxDispo.length > 0) {
-              niveauxDispo.forEach(niv => {
-                const gl = b.grilleLignes && b.grilleLignes[niv];
-                const hParDiv = gl ? gl.valeur : null;
-                const nb = nbDivParNiv[niv] || 0;
-                if (hParDiv !== null && hParDiv !== undefined && hParDiv !== '') {
-                  const hTot = Math.round(parseFloat(hParDiv) * nb * 2) / 2;
-                  const modifie = gl && gl.modifie ? ' \u270e' : '';
-                  tipHtml += '<div class="disc-tip-row"><span class="disc-tip-niv">' + niv + '</span><span class="disc-tip-val">' + hTot + '\u00a0h</span><small>(' + hParDiv + 'h \u00d7 ' + nb + ' div' + modifie + ')</small></div>';
-                } else {
-                  tipHtml += '<div class="disc-tip-row disc-tip-absent"><span class="disc-tip-niv">' + niv + '</span><span>\u2014</span><small>non pr\u00e9vu</small></div>';
-                }
-              });
-            }
-            tipHtml += '<hr class="disc-tip-sep">';
-            tipHtml += '<div class="disc-tip-row"><span class="disc-tip-hp">HP</span><span>' + b.hPoste + '\u00a0h</span></div>';
-            tipHtml += '<div class="disc-tip-row"><span class="disc-tip-hsa">HSA</span><span>' + b.hsa + '\u00a0h</span></div>';
-            if (b.besoinTheorique > 0) {
-              const ecartSign = b.ecart >= 0 ? '+' : '';
-              const ecartCss  = b.ecart > 0 ? 'dot-ecart-over' : b.ecart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
-              tipHtml += '<div class="disc-tip-row">Besoin<span>' + b.besoinTheorique + '\u00a0h</span></div>';
-              tipHtml += '<div class="disc-tip-row"><span class="dot-ecart ' + ecartCss + '">' + (b.ecart >= 0 ? '+' : '') + b.ecart + '\u00a0h</span><small>\u00e9cart</small></div>';
-            }
-
-            html += '<div class="disc-resume-row disc-tip-wrap">'
-              + '<span class="disc-color-dot" style="background:' + _esc(b.couleur) + '"></span>'
-              + '<span class="disc-resume-nom">' + _esc(b.nom) + '</span>'
-              + '<span class="disc-resume-h">' + b.total + ' h</span>'
-              + (b.besoinTheorique > 0 ? '<span class="dot-ecart ' + ecartCls + '" style="font-size:.68rem">' + (b.ecart >= 0 ? '+' : '') + b.ecart + '</span>' : '<span></span>')
-              + '<div class="dot-bar-track" style="flex:1;min-width:40px"><div class="dot-bar-fill" style="width:' + pct + '%;background:' + _esc(b.couleur) + '"></div></div>'
-              + '<div class="disc-tip">' + tipHtml + '</div>'
-              + '</div>';
-          });
-          html += '</div>';
-          discListEl.innerHTML = html;
-        }
-      }
-
-      // Résumé HPC dans le dashboard
-      const hpcListEl = document.getElementById('dashHPCList');
-      if (hpcListEl) {
-        const hpcs       = DGHData.getHeuresPedaComp ? DGHData.getHeuresPedaComp() : (data.heuresPedaComp||[]);
-        const disciplines = DGHData.getDisciplines ? DGHData.getDisciplines() : (data.disciplines||[]);
-        if (hpcs.length === 0) {
-          hpcListEl.innerHTML = '<p class="dash-hpc-empty">Aucune heure complémentaire saisie.<br><button class="btn-link" data-navigate="hpc">Ajouter des heures complémentaires →</button></p>';
-        } else {
-          const LABELS = {}; (DGHData.getCategoriesHPC ? DGHData.getCategoriesHPC() : []).forEach(c => { LABELS[c.value] = c.label; });
-          const discMap = {}; disciplines.forEach(d => { discMap[d.id] = d; });
-          let hpcHtml = '<div class="disc-resume-grid">';
-          hpcs.forEach(h => {
-            const isHSA    = (h.typeHeure||'hp') === 'hsa';
-            const catLabel = (LABELS[h.categorie]||h.categorie||'autre').split('(')[0].trim();
-            const discNom  = h.disciplineId && discMap[h.disciplineId] ? discMap[h.disciplineId].nom : null;
-            hpcHtml += '<div class="disc-resume-row">'
-              + '<span class="disc-color-dot" style="background:' + (isHSA ? 'var(--c-indigo)' : 'var(--c-accent)') + '"></span>'
-              + '<span class="disc-resume-nom">' + _esc(h.nom||'—') + (discNom ? '<small style="color:var(--c-text-dim);margin-left:.3em">(' + _esc(discNom) + ')</small>' : '') + '</span>'
-              + '<span class="disc-resume-h">' + (h.heures||0) + ' h</span>'
-              + '<span class="grp-type-badge" style="font-size:.65rem;padding:1px 5px">' + _esc(catLabel) + '</span>'
-              + '</div>';
-          });
-          // Ligne total HPC
-          const bilanHPC = Calculs.bilanHPC(hpcs, disciplines);
-          hpcHtml += '<div class="disc-resume-row" style="border-top:1px solid var(--c-border);margin-top:.25rem;padding-top:.35rem">'
-            + '<span></span>'
-            + '<span class="disc-resume-nom" style="color:var(--c-text-muted);font-size:.78rem">Total (' + hpcs.length + ' entrée' + (hpcs.length>1?'s':'') + ')</span>'
-            + '<span class="disc-resume-h" style="font-weight:700">' + bilanHPC.totalHeures + ' h</span>'
-            + '<span></span>'
-            + '</div>';
-          hpcHtml += '</div>';
-          hpcListEl.innerHTML = hpcHtml;
-        }
-      }
-
-    } catch(e) { console.error('[DGH] renderDashboard:', e); }
-    _updateBtnEtab();
-  }
-
-  function _updateBtnEtab() {
-    const btn = document.getElementById('btnEtab'); if (!btn) return;
-    try { const etab = DGHData.getEtab()||{}; btn.textContent = (etab.nom&&etab.nom.trim()) ? etab.nom.trim()+' ⚙' : 'Mon Collège ⚙'; }
-    catch(e) { btn.textContent = 'Mon Collège ⚙'; }
-  }
-
-  // ── STRUCTURES ───────────────────────────────────────────────────
-  function _renderStructures() {
-    try {
-      const structures = DGHData.getStructures();
-      const resume     = Calculs.resumeStructures(structures);
-
-      _set('struct-kpi-divisions', resume.nbDivisions);
-      _set('struct-kpi-effectif',  resume.effectifTotal);
-      const niveauxEl = document.getElementById('struct-kpi-niveaux');
-      if (niveauxEl) niveauxEl.textContent = resume.niveauxPresents.join(', ') || '—';
-
-      const byNiveauEl = document.getElementById('struct-by-niveau');
-      if (byNiveauEl) {
-        byNiveauEl.innerHTML = resume.parNiveau.map(n =>
-          '<div class="niveau-row"><span class="niveau-badge niveau-' + n.niveau.toLowerCase().replace(/[^a-z0-9]/g,'') + '">' + n.niveau + '</span>'
-          + '<span class="niveau-count">' + n.nbDivisions + ' div.</span>'
-          + '<span class="niveau-effectif">' + n.effectif + ' élèves</span></div>'
-        ).join('');
-      }
-
-      // Tableau récap par niveau
-      const niveauCard = document.getElementById('structNiveauCard');
-      const niveauBody = document.getElementById('structNiveauBody');
-      const niveauFoot = document.getElementById('structNiveauFoot');
-      if (niveauCard) niveauCard.style.display = resume.parNiveau.length > 0 ? '' : 'none';
-      if (niveauBody) {
-        niveauBody.innerHTML = resume.parNiveau.map(n =>
-          '<tr>'
-          + '<td><span class="niveau-badge niveau-' + n.niveau.toLowerCase().replace(/[^a-z0-9]/g,'') + '">' + n.niveau + '</span></td>'
-          + '<td class="col-num">' + n.nbDivisions + '</td>'
-          + '<td class="col-num">' + n.effectif + '</td>'
-          + '<td class="col-num" style="font-family:\'JetBrains Mono\',monospace">' + (n.hTheoriqueDiv > 0 ? n.hTheoriqueDiv + ' h' : '—') + '</td>'
-          + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + (n.hTheoriqueTotal > 0 ? n.hTheoriqueTotal + ' h' : '—') + '</strong></td>'
-          + '</tr>'
-        ).join('');
-      }
-      if (niveauFoot && resume.parNiveau.length > 0) {
-        niveauFoot.innerHTML = '<tr class="struct-total-row">'
-          + '<td><strong>Total</strong></td>'
-          + '<td class="col-num"><strong>' + resume.nbDivisions + '</strong></td>'
-          + '<td class="col-num"><strong>' + resume.effectifTotal + '</strong></td>'
-          + '<td class="col-num">—</td>'
-          + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace;color:var(--c-accent)">' + resume.hTheoriqueTotal + ' h</strong></td>'
-          + '</tr>';
-      }
-
-      // Liste divisions
-      const listEl = document.getElementById('struct-list'); if (!listEl) return;
-      if (structures.length === 0) {
-        listEl.innerHTML = '<div class="struct-empty"><div class="struct-empty-icon">⊞</div>'
-          + '<p>Aucune division saisie.</p>'
-          + '<p class="struct-empty-sub">Utilisez «\u00a0Saisie rapide\u00a0» pour créer toutes vos divisions en une fois.</p></div>';
-        return;
-      }
-      // Calculer quelles classes ont des groupes/HPC - avec noms reels
-      const annData   = DGHData.getAnnee();
-      const repartit  = annData.repartition || [];
-      const hpcList   = annData.heuresPedaComp || [];
-      // Map : divisionId -> liste de noms (groupes de cours + HPC)
-      const classeNomsMap = {};
-      repartit.forEach(r => {
-        (r.groupesCours||[]).forEach(gc => {
-          (gc.classesIds||[]).forEach(id => {
-            if (!classeNomsMap[id]) classeNomsMap[id] = [];
-            if (gc.nom) classeNomsMap[id].push(gc.nom);
-          });
-        });
-      });
-      hpcList.forEach(h => {
-        (h.classesIds||[]).forEach(id => {
-          if (!classeNomsMap[id]) classeNomsMap[id] = [];
-          if (h.nom) classeNomsMap[id].push(h.nom);
-        });
-      });
-
-      let html = '<table class="struct-table"><thead><tr><th>Division</th><th>Niveau</th><th>Effectif</th><th>Dispositif / Groupes</th><th class="col-actions">Actions</th></tr></thead><tbody>';
-      structures.forEach(div => {
-        const tags = [];
-        if (div.dispositif) tags.push('<span class="div-tag div-tag-disp">' + _esc(div.dispositif) + '</span>');
-        (classeNomsMap[div.id]||[]).forEach(nom => {
-          tags.push('<span class="div-tag div-tag-struct">' + _esc(nom) + '</span>');
-        });
-        const dispTag = tags.length > 0 ? tags.join(' ') : '<span class="no-tag">—</span>';
-        html += '<tr>'
-          + '<td><strong class="div-nom">' + _esc(div.nom||'—') + '</strong></td>'
-          + '<td><span class="niveau-badge niveau-' + div.niveau.toLowerCase().replace(/[^a-z0-9]/g,'') + '">' + _esc(div.niveau) + '</span></td>'
-          + '<td><span class="div-effectif">' + (div.effectif||0) + '</span></td>'
-          + '<td>' + dispTag + '</td>'
-          + '<td class="col-actions"><button class="btn-icon-sm" data-action="edit-div" data-id="' + div.id + '" title="Modifier">✎</button>'
-          + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-div" data-id="' + div.id + '" title="Supprimer">✕</button></td></tr>';
-      });
-      listEl.innerHTML = html + '</tbody></table>';
-    } catch(e) { console.error('[DGH] renderStructures:', e); }
-  }
-
-  // ── MODAL SAISIE MATRICIELLE ──────────────────────────────────────
-  function _openModalMatrice() {
-    const modal = document.getElementById('modalMatrice'); if (!modal) return;
-    const body  = document.getElementById('matriceBody');  if (!body)  return;
-    const niveaux    = ['6e', '5e', '4e', '3e'];
-    const structures = DGHData.getStructures();
-    body.innerHTML = niveaux.map(niv => {
-      const ex  = structures.filter(d => d.niveau === niv);
-      const eff = ex.length > 0 ? Math.round(ex.reduce((s,d)=>s+(d.effectif||0),0)/ex.length) : '';
-      return '<tr>'
-        + '<td><span class="niveau-badge niveau-' + niv.toLowerCase() + '">' + niv + '</span></td>'
-        + '<td><input type="number" class="matrice-input" data-niveau="' + niv + '" data-field="nb" value="' + ex.length + '" min="0" max="20" step="1" /></td>'
-        + '<td><input type="number" class="matrice-input" data-niveau="' + niv + '" data-field="eff" value="' + eff + '" min="0" max="99" step="1" placeholder="28" /></td>'
-        + '</tr>';
-    }).join('');
-    document.getElementById('matriceRemplacer').checked = false;
-    modal.classList.add('modal-open');
-    modal.querySelector('.matrice-input').focus();
-  }
-  function _closeModalMatrice() { const m=document.getElementById('modalMatrice'); if(m) m.classList.remove('modal-open'); }
-  function _saveModalMatrice() {
-    const niveaux = ['6e','5e','4e','3e'];
-    const matrice = niveaux.map(niv => ({
-      niveau: niv,
-      nbDivisions: parseInt(document.querySelector('[data-niveau="'+niv+'"][data-field="nb"]')?.value,10)||0,
-      effectifMoyen: parseInt(document.querySelector('[data-niveau="'+niv+'"][data-field="eff"]')?.value,10)||0
-    })).filter(l => l.nbDivisions > 0);
-    if (matrice.length === 0) { toast('Indiquez au moins un niveau', 'warning'); return; }
-    const remplacer = document.getElementById('matriceRemplacer')?.checked || false;
-    DGHData.appliquerMatrice(matrice, remplacer);
-    _closeModalMatrice(); _renderStructures(); _renderDashboard();
-    toast(matrice.reduce((s,l)=>s+l.nbDivisions,0) + ' division(s) générée(s)', 'success');
-  }
-
-  // ── MODAL DIVISION ────────────────────────────────────────────────
-  function _openModalDiv(id) {
-    const modal = document.getElementById('modalDiv'); if (!modal) return;
-    const dupGroup = document.getElementById('dupGroup');
-    if (id) {
-      const div = DGHData.getDivision(id); if (!div) return;
-      _set('modalDivTitle','Modifier la division'); _setVal('modalDivId',id);
-      _setVal('inputDivNiveau',div.niveau); _setVal('inputDivNom',div.nom);
-      _setVal('inputDivEffectif',div.effectif); _setVal('inputDivDispositif',div.dispositif||'');
-      if (dupGroup) dupGroup.style.display='none';
-    } else {
-      _set('modalDivTitle','Ajouter une division'); _setVal('modalDivId','');
-      _setVal('inputDivNiveau','6e'); _setVal('inputDivNom','');
-      _setVal('inputDivEffectif',''); _setVal('inputDivDispositif',''); _setVal('inputDivDup','0');
-      if (dupGroup) dupGroup.style.display='';
-    }
-    modal.classList.add('modal-open');
-    setTimeout(()=>document.getElementById('inputDivNom')?.focus(),60);
-  }
-  function _closeModalDiv() { const m=document.getElementById('modalDiv'); if(m) m.classList.remove('modal-open'); const p=document.getElementById('dupPreview'); if(p) p.innerHTML=''; }
-  function _saveModalDiv() {
-    const id  = document.getElementById('modalDivId')?.value||'';
-    const nom = (document.getElementById('inputDivNom')?.value||'').trim();
-    if (!nom) { toast('Le nom est requis','warning'); return; }
-    const fields = { niveau:document.getElementById('inputDivNiveau')?.value||'6e', nom, effectif:parseInt(document.getElementById('inputDivEffectif')?.value,10)||0, options:[], dispositif:document.getElementById('inputDivDispositif')?.value||null };
-    const dup = parseInt(document.getElementById('inputDivDup')?.value,10)||0;
-    if (id) { DGHData.updateDivision(id,fields); toast('Division mise à jour','success'); }
-    else { const created=DGHData.addDivision(fields); if(dup>0){const c=DGHData.duplicateDivisions(created.id,dup);toast(nom+' + '+c.length+' copie(s)','success');}else toast('Division «\u00a0'+nom+'\u00a0» ajoutée','success'); }
-    _closeModalDiv(); _renderStructures(); _renderDashboard();
-  }
-  function _confirmDeleteDiv(id) { const div=DGHData.getDivision(id); if(!div) return; const m=document.getElementById('confirmDiv'); if(!m) return; _set('confirmDivMsg','Supprimer «\u00a0'+div.nom+'\u00a0» (niveau '+div.niveau+') ?'); m.dataset.targetId=id; m.classList.add('modal-open'); }
-  function _closeConfirmDiv() { const m=document.getElementById('confirmDiv'); if(m){m.classList.remove('modal-open');m.dataset.targetId='';} }
-  function _execDeleteDiv() { const id=document.getElementById('confirmDiv')?.dataset?.targetId; if(!id) return; DGHData.deleteDivision(id); _closeConfirmDiv(); _renderStructures(); _renderDashboard(); toast('Division supprimée','info'); }
-
-  // ── RENDU CELLULE ÉCART ───────────────────────────────────────────
-  // Bouton cliquable si écart non nul, span statique si écart = 0 ou besoin inconnu
-  function _renderEcartCell(b, discId, ecartCls) {
-    if (!b || b.besoinTheorique <= 0) return '<span class="dot-ecart dot-ecart-ok">\u2014</span>';
-    const ecart = b.ecart;
-    const sign  = ecart >= 0 ? '+' : '';
-    if (ecart === 0) return '<span class="dot-ecart dot-ecart-ok">+0 h</span>';
-    // Écart non nul → bouton cliquable
-    const cibleHP  = Math.max(0, Math.round((b.besoinTheorique - b.hsa) * 2) / 2);
-    const tipText  = 'Cliquer pour ajuster les HP à 0 d\u2019\u00e9cart\u00a0: besoin ' + b.besoinTheorique + '\u00a0h \u2212 HSA ' + b.hsa + '\u00a0h = ' + cibleHP + '\u00a0h HP';
-    return '<button class="dot-ecart ' + ecartCls + ' dot-ecart-btn"'
-      + ' data-action="ecart-zero"'
-      + ' data-disc-id="' + _esc(discId) + '"'
-      + ' data-besoin="' + b.besoinTheorique + '"'
-      + ' data-hsa="' + b.hsa + '"'
-      + ' title="' + _esc(tipText) + '">'
-      + sign + ecart + '\u00a0h \u2731'
-      + '</button>';
-  }
-
-  // ── DOTATION ─────────────────────────────────────────────────────
-  function _renderDotation() {
-    try {
-      const anneeData   = DGHData.getAnnee();
-      const bilan       = Calculs.bilanDotation(anneeData);
-      const disciplines = DGHData.getDisciplines();
-      const repartition = DGHData.getRepartition();
-      const structures  = DGHData.getStructures();
-      const grilles     = DGHData.getGrilles();
-      const besoins     = Calculs.besoinsParDiscipline(structures, disciplines, repartition, grilles);
-
-      // Enveloppe inline
-      const inpHP  = document.getElementById('inputEnvHP');
-      const inpHSA = document.getElementById('inputEnvHSA');
-      if (inpHP  && document.activeElement !== inpHP)  inpHP.value  = bilan.hPosteEnv  || '';
-      if (inpHSA && document.activeElement !== inpHSA) inpHSA.value = bilan.hsaEnv     || '';
-      _set('dot-env-total', bilan.enveloppe > 0 ? bilan.enveloppe + ' h' : '— h');
-
-      // KPI bar
-      _set('dot-kpi-hposte', bilan.totalHP  || 0);
-      _set('dot-kpi-hsa',    bilan.totalHSA || 0);
-      _set('dot-kpi-nb',     bilan.nbDisciplines);
-      const soldeEl  = document.getElementById('dot-kpi-solde');
-      const soldeLbl = document.getElementById('dot-kpi-solde-label');
-      if (soldeEl) { soldeEl.textContent = bilan.enveloppe > 0 ? bilan.solde : '—'; soldeEl.className = bilan.depassement ? 'struct-kpi-val dot-solde-neg' : 'struct-kpi-val dot-solde-pos'; }
-      if (soldeLbl) soldeLbl.textContent = bilan.depassement ? 'h dépassement' : 'h solde';
-
-      // Barre duale
-      const pctHP  = bilan.enveloppe > 0 ? Math.min(100, Math.round((bilan.totalHP  / bilan.enveloppe)*100)) : 0;
-      const pctHSA = bilan.enveloppe > 0 ? Math.min(100-pctHP, Math.round((bilan.totalHSA / bilan.enveloppe)*100)) : 0;
-      const barHP  = document.getElementById('dot-bar-hp');
-      const barHSA = document.getElementById('dot-bar-hsa');
-      if (barHP)  barHP.style.width = pctHP + '%';
-      if (barHSA) { barHSA.style.width = pctHSA + '%'; barHSA.style.marginLeft = pctHP + '%'; }
-      _set('dot-progress-label', bilan.enveloppe > 0 ? bilan.totalAlloue+' / '+bilan.enveloppe+' h' : '0 / 0 h');
-      _set('dot-leg-hp',  bilan.totalHP  + ' h');
-      _set('dot-leg-hsa', bilan.totalHSA + ' h');
-
-      // Tableau disciplines avec groupes de cours dépliables
-      const listEl = document.getElementById('dot-list'); if (!listEl) return;
-      if (disciplines.length === 0) {
-        listEl.innerHTML = '<div class="struct-empty"><div class="struct-empty-icon">◎</div>'
-          + '<p>Aucune discipline saisie.</p>'
-          + '<p class="struct-empty-sub">Cliquez sur «\u00a0★ Disciplines MEN\u00a0» pour initialiser les 17 disciplines standard en un clic.</p></div>';
-        return;
-      }
-      const besoinsMap = {}; besoins.forEach(b => { besoinsMap[b.disciplineId] = b; });
-
-      // Niveaux présents dans les structures (uniquement ceux-là en colonnes)
-      const niveauxCols = ['6e','5e','4e','3e'].filter(niv => structures.some(s => s.niveau === niv));
-      const nbDivParNiv = {};
-      structures.forEach(s => { nbDivParNiv[s.niveau] = (nbDivParNiv[s.niveau]||0) + 1; });
-      // Nombre total de colonnes du tableau (pour colspan des sous-lignes)
-      // toggle | disc | [niveaux...] | besoin | HP | HSA | total | ecart | bar | actions
-      const nbCols = 2 + niveauxCols.length + 6;
-
-      // En-têtes : colonnes niveaux entre Discipline et Besoin réel
-      let colsHead = niveauxCols.map(niv =>
-        '<th class="col-num col-grille" title="' + niv + ' — h/div/semaine MEN (modifiable)">' + niv + '</th>'
-      ).join('');
-
-      let html = '<table class="dot-table dot-table-grille"><thead><tr>'
-        + '<th></th><th>Discipline</th>'
-        + colsHead
-        + '<th class="col-num">Besoin r\u00e9el</th>'
-        + '<th class="col-num dot-col-hp">H-Poste</th>'
-        + '<th class="col-num dot-col-hsa">HSA</th>'
-        + '<th class="col-num">Total</th>'
-        + '<th class="col-num">\u00c9cart</th>'
-        + '<th class="col-bar">Part</th>'
-        + '<th class="col-actions">Actions</th>'
-        + '</tr></thead><tbody>';
-
-      disciplines.forEach(disc => {
-        const b       = besoinsMap[disc.id] || { besoinTheorique:0, besoinMEN:0, hPoste:0, hsa:0, total:0, ecart:0, groupesCours:[], heuresGroupes:0, hasGroupes:false, grilleLignes:{} };
-        const pctBar  = bilan.enveloppe > 0 ? Math.min(100, Math.round((b.total / bilan.enveloppe)*100)) : 0;
-        const ecartCls = b.ecart > 0 ? 'dot-ecart-over' : b.ecart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
-        const nbGC    = (b.groupesCours||[]).length;
-
-        // Cellules colonnes niveau
-        let colsCells = niveauxCols.map(niv => {
-          const gl  = b.grilleLignes && b.grilleLignes[niv] ? b.grilleLignes[niv] : { men: null, valeur: '', modifie: false };
-          const placeholder = (gl.men !== null && gl.men !== undefined) ? gl.men : '';
-          const val = (gl.valeur !== null && gl.valeur !== undefined && gl.valeur !== '') ? gl.valeur : '';
-          const cls = gl.modifie ? ' grille-input-modifie' : '';
-          const nb  = nbDivParNiv[niv] || 0;
-          const hTot = val !== '' ? Math.round(parseFloat(val)*nb*2)/2 : (placeholder !== '' ? Math.round(parseFloat(placeholder)*nb*2)/2 : null);
-          const tip = 'MEN\u00a0: ' + (placeholder||'\u2014') + '\u00a0h \u00d7 ' + nb + ' div = ' + (hTot !== null ? hTot + '\u00a0h' : '\u2014');
-          return '<td class="col-num col-grille">'
-            + '<input type="number" class="grille-input' + cls + '" data-disc-nom="' + _esc(disc.nom) + '" data-niveau="' + niv + '" data-men="' + placeholder + '" value="' + val + '" placeholder="' + placeholder + '" min="0" step="0.5" title="' + tip + '" />'
-            + (hTot !== null ? '<span class="grille-col-total">' + hTot + 'h</span>' : '')
-            + '</td>';
-        }).join('');
-
-        html += '<tr class="dot-disc-row">'
-          + '<td class="col-toggle">'
-          + '<button class="btn-toggle-gc" data-disc-id="' + disc.id + '" title="Groupes de cours">\u25b6</button>'
-          + '</td>'
-          + '<td><span class="disc-color-dot" style="background:' + _esc(disc.couleur) + '"></span><strong class="div-nom">' + _esc(disc.nom) + '</strong>'
-          + (nbGC > 0 ? '<span class="gc-count-badge">' + nbGC + ' groupe' + (nbGC>1?'s':'') + '</span>' : '') + '</td>'
-          + colsCells
-          + '<td class="col-num dot-theorique">' + (b.hasGroupes
-            ? (b.heuresGroupesReel||b.heuresGroupes) + ' h <span class="dot-besoin-gc-tag" title="' + (b.groupesCours||[]).map(gc=>(gc.nom||'?')+'\u00a0: '+(gc.heures||0)+'h\u00d7'+(gc.classesIds&&gc.classesIds.length>0?gc.classesIds.length:1)).join(' | ') + '">GC</span>'
-            + (b.besoinMEN > 0 ? '<br><small class="dot-besoin-men-hint">MEN\u00a0: ' + b.besoinMEN + ' h</small>' : '')
-            : (b.besoinTheorique > 0 ? b.besoinTheorique + ' h' : '<span class="no-tag">\u2014</span>')) + '</td>'
-          + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hp" data-disc-id="' + disc.id + '" data-field="hPoste" value="' + b.hPoste + '" min="0" step="0.5" /></td>'
-          + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hsa" data-disc-id="' + disc.id + '" data-field="hsa" value="' + b.hsa + '" min="0" step="0.5" /></td>'
-          + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + b.total + ' h</strong></td>'
-          + '<td class="col-num dot-ecart-cell">' + _renderEcartCell(b, disc.id, ecartCls) + '</td>'
-          + '<td class="col-bar"><div class="dot-bar-track"><div class="dot-bar-fill" style="width:' + pctBar + '%;background:' + _esc(disc.couleur) + '"></div></div><span class="dot-bar-pct">' + pctBar + '%</span></td>'
-          + '<td class="col-actions">'
-          + '<button class="btn-icon-sm btn-add-gc" data-action="add-gc" data-disc-id="' + disc.id + '" title="Ajouter un groupe de cours">+</button>'
-          + '<button class="btn-icon-sm" data-action="edit-disc" data-id="' + disc.id + '" title="Modifier">\u270e</button>'
-          + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-disc" data-id="' + disc.id + '" title="Supprimer">\u2715</button>'
-          + '</td></tr>';
-
-        // Sous-lignes groupes de cours (pas la grille — elle est maintenant en colonnes)
-        html += '<tr class="gc-subrows-row" id="gc-sub-' + disc.id + '" style="display:none"><td colspan="' + nbCols + '"><div class="gc-subrows">';
-        if (b.groupesCours.length === 0) {
-          html += '<div class="gc-empty">Aucun groupe de cours \u2014 cliquez sur + pour en ajouter (ex. LV2 Espagnol, LV2 Allemand\u2026)</div>';
-        } else {
-          b.groupesCours.forEach(gc => {
-            const classesLabel = gc.classesNoms && gc.classesNoms.length > 0 ? gc.classesNoms.join(', ') : '\u2014';
-            html += '<div class="gc-subrow">'
-              + '<span class="gc-arrow">\u2514</span>'
-              + '<span class="gc-nom"><strong>' + _esc(gc.nom||'\u2014') + '</strong></span>'
-              + '<span class="gc-classes">' + _esc(classesLabel) + '</span>'
-              + '<span class="gc-effectif">' + (gc.effectif||0) + ' \u00e9l\u00e8ves</span>'
-              + '<span class="gc-heures" style="font-family:\'JetBrains Mono\',monospace;font-weight:700">' + (gc.heures||0) + ' h/sem</span>'
-              + '<span class="gc-actions">'
-              + '<button class="btn-icon-sm" data-action="edit-gc" data-disc-id="' + disc.id + '" data-gc-id="' + gc.id + '" title="Modifier">\u270e</button>'
-              + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-gc" data-disc-id="' + disc.id + '" data-gc-id="' + gc.id + '" title="Supprimer">\u2715</button>'
-              + '</span></div>';
-          });
-          if (b.heuresGroupes > 0) {
-            html += '<div class="gc-total-row"><span>Total groupes de cours\u00a0:</span><strong style="font-family:\'JetBrains Mono\',monospace">' + (b.heuresGroupesReel||b.heuresGroupes) + ' h/sem</strong></div>';
-          }
-        }
-        html += '</div></td></tr>';
-      });
-
-      // tfoot : totaux par colonne
-      let tfootHtml = '<tfoot class="dot-tfoot"><tr class="dot-total-row"><td></td><td><strong>Total</strong></td>';
-      niveauxCols.forEach(niv => {
-        const nb = nbDivParNiv[niv] || 0;
-        // Sommer h/div par discipline pour ce niveau, puis multiplier par nb divisions
-        let hParDivTotal = 0;
-        besoins.forEach(b => {
-          const gl = b.grilleLignes && b.grilleLignes[niv];
-          const hParDiv = (gl && gl.valeur !== null && gl.valeur !== undefined && gl.valeur !== '')
-            ? parseFloat(gl.valeur)
-            : (gl && gl.men !== null && gl.men !== undefined ? parseFloat(gl.men) : 0);
-          hParDivTotal += hParDiv || 0;
-        });
-        const hParDivTotalR = Math.round(hParDivTotal * 2) / 2;
-        const hTotalNiv    = Math.round(hParDivTotal * nb * 2) / 2;
-        // Afficher : h/div en grand + total (h x nb div) en petit
-        // Wrapper div explicite pour comportement identique Chrome et Firefox
-        tfootHtml += '<td class="col-num col-grille">'
-          + '<div class="grille-tfoot-cell">'
-          + '<strong style="font-family:\'JetBrains Mono\',monospace">' + hParDivTotalR + '\u00a0h</strong>'
-          + '<span class="grille-col-total">' + hTotalNiv + 'h \u00d7' + nb + '</span>'
-          + '</div>'
-          + '</td>';
-      });
-      const tfBesoin = Math.round(besoins.reduce((s,b) => s + (b.besoinTheorique||0), 0) * 2) / 2;
-      tfootHtml += '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + tfBesoin + ' h</strong></td>';
-      const tfHP  = Math.round(besoins.reduce((s,b) => s + (b.hPoste||0), 0) * 2) / 2;
-      tfootHtml += '<td class="col-num dot-col-hp"><strong style="font-family:\'JetBrains Mono\',monospace">' + tfHP + ' h</strong></td>';
-      const tfHSA = Math.round(besoins.reduce((s,b) => s + (b.hsa||0), 0) * 2) / 2;
-      tfootHtml += '<td class="col-num dot-col-hsa"><strong style="font-family:\'JetBrains Mono\',monospace">' + tfHSA + ' h</strong></td>';
-      const tfAll = Math.round((tfHP + tfHSA) * 2) / 2;
-      tfootHtml += '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace;color:var(--c-accent)">' + tfAll + ' h</strong></td>';
-      const tfEcart = Math.round((tfAll - tfBesoin) * 2) / 2;
-      const tfEcCls = tfEcart > 0 ? 'dot-ecart-over' : tfEcart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
-      tfootHtml += '<td class="col-num"><span class="dot-ecart ' + tfEcCls + '"><strong>' + (tfEcart >= 0 ? '+' : '') + tfEcart + ' h</strong></span></td>';
-      tfootHtml += '<td class="col-bar"></td><td class="col-actions"></td></tr></tfoot>';
-      listEl.innerHTML = html + '</tbody>' + tfootHtml + '</table>';
-
-      // Total général en bas du tableau
-      const totalBar = document.getElementById('dotTotalBar');
-      if (totalBar && disciplines.length > 0) {
-        totalBar.style.display = '';
-        const totHP  = besoins.reduce((s,b) => s + (b.hPoste||0), 0);
-        const totHSA = besoins.reduce((s,b) => s + (b.hsa||0), 0);
-        _set('dot-total-hp-val',  Math.round(totHP*2)/2  + ' h');
-        _set('dot-total-hsa-val', Math.round(totHSA*2)/2 + ' h');
-        _set('dot-total-sum-val', Math.round((totHP+totHSA)*2)/2 + ' h');
-      } else if (totalBar) { totalBar.style.display = 'none'; }
-
-
-      // Inputs HP+HSA inline
-      listEl.querySelectorAll('.dot-input-h').forEach(inp => {
-        inp.addEventListener('change', e => {
-          const id    = e.target.dataset.discId;
-          const field = e.target.dataset.field;
-          const val   = parseFloat(e.target.value) || 0;
-          if (id && field) { DGHData.setRepartition(id, { [field]: val }); _renderDotation(); _renderDashboard(); }
-        });
-      });
-
-      // Inputs grille horaire par niveau (inline dans sous-ligne)
-      listEl.querySelectorAll('.grille-input').forEach(inp => {
-        inp.addEventListener('change', e => {
-          const discNom = e.target.dataset.discNom;
-          const niv     = e.target.dataset.niveau;
-          const men     = parseFloat(e.target.dataset.men);
-          const val     = e.target.value !== '' ? parseFloat(e.target.value) : null;
-          // Si identique à MEN ou vide -> supprimer l'override (retour MEN)
-          if (val === null || val === men) DGHData.setGrille(discNom, niv, null);
-          else DGHData.setGrille(discNom, niv, val);
-          _renderDotation(); _renderDashboard();
-        });
-        // Double-clic -> réinitialiser à MEN
-        inp.addEventListener('dblclick', e => {
-          const discNom = e.target.dataset.discNom;
-          const niv     = e.target.dataset.niveau;
-          DGHData.setGrille(discNom, niv, null);
-          _renderDotation(); _renderDashboard();
-        });
-      });
-
-      // Toggle groupes de cours
-      listEl.querySelectorAll('.btn-toggle-gc').forEach(btn => {
-        btn.addEventListener('click', e => {
-          const discId = e.currentTarget.dataset.discId;
-          const subRow = document.getElementById('gc-sub-' + discId);
-          if (!subRow) return;
-          const open = subRow.style.display !== 'none';
-          subRow.style.display = open ? 'none' : '';
-          e.currentTarget.textContent = open ? '▶' : '▼';
-        });
-      });
-
-      // Enveloppe inline — save on blur/change
-      [document.getElementById('inputEnvHP'), document.getElementById('inputEnvHSA')].forEach(inp => {
-        if (inp && !inp._bound) {
-          inp._bound = true;
-          inp.addEventListener('change', _saveEnveloppe);
-          inp.addEventListener('blur',   _saveEnveloppe);
-        }
-      });
-
-    } catch(err) { console.error('[DGH] renderDotation:', err); }
-  }
-
-  // ── DÉPLIER TOUS LES GROUPES ──────────────────────────────────────
-  function _toggleAllGC() {
-    const btn = document.getElementById('btnToggleAllGC'); if (!btn) return;
-    const allSubRows = document.querySelectorAll('[id^="gc-sub-"]');
-    if (allSubRows.length === 0) return;
-    // Un sous-panneau est 'ouvert' si display != 'none' (vide ou explicitement '')
-    const allOpen = Array.from(allSubRows).every(r => r.style.display !== 'none');
-    const shouldOpen = !allOpen; // si tout est ouvert on ferme, sinon on ouvre
-    allSubRows.forEach(r => { r.style.display = shouldOpen ? '' : 'none'; });
-    document.querySelectorAll('.btn-toggle-gc').forEach(b => { b.textContent = shouldOpen ? '▼' : '▶'; });
-    btn.textContent = shouldOpen ? '⊟ Tout replier' : '⊞ Tout déplier';
-  }
-
-  function _saveEnveloppe() {
-    const hp  = parseFloat(document.getElementById('inputEnvHP')?.value)  || 0;
-    const hsa = parseFloat(document.getElementById('inputEnvHSA')?.value) || 0;
-    DGHData.setDotation(hp, hsa);
-    _set('dot-env-total', (hp+hsa) > 0 ? (hp+hsa)+' h' : '— h');
-    _renderDotation(); _renderDashboard();
-  }
-
-  // ── MODAL DISCIPLINE ──────────────────────────────────────────────
-  function _openModalDisc(id) {
-    const modal = document.getElementById('modalDisc'); if (!modal) return;
-    if (id) {
-      const disc = DGHData.getDiscipline(id); if (!disc) return;
-      _set('modalDiscTitle','Modifier la discipline'); _setVal('modalDiscId',id);
-      _setVal('inputDiscNom',disc.nom); _setVal('inputDiscCouleur',disc.couleur||'#2d6a4f'); _updateColorHint(disc.couleur||'#2d6a4f');
-    } else {
-      _set('modalDiscTitle','Ajouter une discipline'); _setVal('modalDiscId','');
-      _setVal('inputDiscNom',''); _setVal('inputDiscCouleur','#2d6a4f'); _updateColorHint('#2d6a4f');
-    }
-    modal.classList.add('modal-open');
-    setTimeout(()=>document.getElementById('inputDiscNom')?.focus(),60);
-  }
-  function _updateColorHint(v) { const h=document.getElementById('colorHint'); if(h) h.textContent=v; }
-  function _closeModalDisc() { const m=document.getElementById('modalDisc'); if(m) m.classList.remove('modal-open'); }
-  function _saveModalDisc() {
-    const id  = document.getElementById('modalDiscId')?.value||'';
-    const nom = (document.getElementById('inputDiscNom')?.value||'').trim();
-    if (!nom) { toast('Le nom est requis','warning'); return; }
-    const couleur = document.getElementById('inputDiscCouleur')?.value||'#2d6a4f';
-    if (id) { DGHData.updateDiscipline(id,{nom,couleur}); toast('Discipline mise à jour','success'); }
-    else    { DGHData.addDiscipline({nom,couleur}); toast('Discipline «\u00a0'+nom+'\u00a0» ajoutée','success'); }
-    _closeModalDisc(); _renderDotation(); _renderDashboard();
-  }
-  function _confirmDeleteDisc(id) { const disc=DGHData.getDiscipline(id); if(!disc) return; const m=document.getElementById('confirmDisc'); if(!m) return; _set('confirmDiscMsg','Supprimer «\u00a0'+disc.nom+'\u00a0» ?'); m.dataset.targetId=id; m.classList.add('modal-open'); }
-  function _closeConfirmDisc() { const m=document.getElementById('confirmDisc'); if(m){m.classList.remove('modal-open');m.dataset.targetId='';} }
-  function _execDeleteDisc() { const id=document.getElementById('confirmDisc')?.dataset?.targetId; if(!id) return; DGHData.deleteDiscipline(id); _closeConfirmDisc(); _renderDotation(); _renderDashboard(); toast('Discipline supprimée','info'); }
-
-  // ── SUGGESTION HP ─────────────────────────────────────────────────
-  function _suggererHP() {
-    const ann = DGHData.getAnnee();
-    if ((ann.dotation.hPosteEnveloppe||0) === 0) { toast('Saisissez d\'abord l\'enveloppe H-Poste','warning'); return; }
-    if ((ann.structures||[]).length === 0) { toast('Saisissez d\'abord les structures de classes','warning'); return; }
-    const suggestions = Calculs.suggererRepartition(ann);
-    if (suggestions.length === 0) { toast('Impossible de calculer des suggestions','warning'); return; }
-    suggestions.forEach(s => { DGHData.setRepartition(s.disciplineId, { hPoste: s.suggested }); });
-    _renderDotation(); _renderDashboard();
-    toast('Suggestion appliquée sur '+suggestions.length+' discipline(s) — ajustez selon votre TRM','success', 5000);
-  }
-
-  // ── ÉCART ZÉRO ────────────────────────────────────────────────────
-  function _ecartZero(discId, besoin, hsa) {
-    if (!discId || besoin <= 0) return;
-    const nouvelleHP = Math.max(0, Math.round((besoin - hsa) * 2) / 2);
-    DGHData.setRepartition(discId, { hPoste: nouvelleHP });
-    _renderDotation(); _renderDashboard();
-    toast('HP ajustées à ' + nouvelleHP + '\u00a0h — écart = 0', 'success', 3000);
-  }
-
-  // ── MODAL GROUPE DE COURS ─────────────────────────────────────────
-  function _openModalGC(discId, gcId) {
-    const modal = document.getElementById('modalGC'); if (!modal) return;
-    _setVal('modalGCDiscId', discId);
-    _setVal('modalGCId', gcId||'');
-
-    // Remplir checkboxes classes
-    const classesDiv = document.getElementById('gcClassesCheck');
-    const structures = DGHData.getStructures();
-    if (classesDiv) {
-      if (structures.length === 0) {
-        classesDiv.innerHTML = '<p class="form-hint">Aucune division saisie — <button class="btn-link" data-navigate="structures">ajoutez d\'abord vos classes</button></p>';
-      } else {
-        classesDiv.innerHTML = structures.map(div =>
-          '<label class="niv-check-label">'
-          + '<input type="checkbox" class="classe-check" value="' + div.id + '" />'
-          + '<span>' + _esc(div.nom) + ' <small style="color:var(--c-text-dim)">(' + (div.effectif||0) + ')</small></span>'
-          + '</label>'
-        ).join('');
-      }
-    }
-
-    // Hint heures depuis grille si discipline connue
-    const disc = DGHData.getDiscipline(discId);
-    const hint = document.getElementById('inputGCHeuresHint');
-    if (hint && disc) {
-      const grille = Calculs.GRILLES_MEN;
-      const hParNiv = Object.entries(grille)
-        .filter(([,g]) => g[disc.nom])
-        .map(([niv,g]) => niv + ':' + g[disc.nom] + 'h')
-        .join(', ');
-      hint.textContent = hParNiv ? 'Grille MEN : ' + hParNiv : '';
-    }
-
-    if (gcId) {
-      const gc = DGHData.getGroupeCours(discId, gcId); if (!gc) return;
-      _set('modalGCTitle', 'Modifier le groupe de cours');
-      _setVal('inputGCNom', gc.nom); _setVal('inputGCHeures', gc.heures); _setVal('inputGCComment', gc.commentaire||'');
-      (gc.classesIds||[]).forEach(id => { const cb=classesDiv?.querySelector('[value="'+id+'"]'); if(cb) cb.checked=true; });
-    } else {
-      _set('modalGCTitle', 'Ajouter un groupe de cours pour ' + (disc ? disc.nom : ''));
-      _setVal('inputGCNom',''); _setVal('inputGCHeures',''); _setVal('inputGCComment','');
-    }
-
-    _updateGCEffectif();
-    classesDiv?.querySelectorAll('.classe-check').forEach(cb => cb.addEventListener('change', _updateGCEffectif));
-    const btnGCAll = document.getElementById('btnGCSelectAll');
-    if (btnGCAll) btnGCAll.textContent = 'Tout sélectionner';
-    modal.classList.add('modal-open');
-    setTimeout(()=>document.getElementById('inputGCNom')?.focus(),60);
-  }
-
-  function _updateGCEffectif() {
-    const checked  = Array.from(document.querySelectorAll('#gcClassesCheck .classe-check:checked'));
-    const total    = checked.reduce((s,cb) => { const div=DGHData.getDivision(cb.value); return s+(div?div.effectif||0:0); }, 0);
-    const efDiv    = document.getElementById('gcEffectifAuto');
-    if (efDiv) efDiv.textContent = checked.length > 0 ? 'Effectif calculé : ' + total + ' élèves (' + checked.length + ' classe(s))' : '';
-  }
-
-  function _closeModalGC() { const m=document.getElementById('modalGC'); if(m) m.classList.remove('modal-open'); }
-  function _saveModalGC() {
-    const discId = document.getElementById('modalGCDiscId')?.value||''; if (!discId) return;
-    const gcId   = document.getElementById('modalGCId')?.value||'';
-    const nom    = (document.getElementById('inputGCNom')?.value||'').trim();
-    if (!nom) { toast('Le nom du groupe est requis','warning'); return; }
-    const classesIds = Array.from(document.querySelectorAll('#gcClassesCheck .classe-check:checked')).map(cb=>cb.value);
-    const fields = { nom, classesIds, heures: parseFloat(document.getElementById('inputGCHeures')?.value)||0, commentaire: document.getElementById('inputGCComment')?.value||'' };
-    if (gcId) { DGHData.updateGroupeCours(discId, gcId, fields); toast('Groupe mis à jour','success'); }
-    else      { DGHData.addGroupeCours(discId, fields); toast('Groupe «\u00a0'+nom+'\u00a0» ajouté','success'); }
-    _closeModalGC(); _renderDotation();
-    // Rouvrir le panneau de la discipline
-    const subRow = document.getElementById('gc-sub-'+discId);
-    if (subRow) { subRow.style.display=''; const btn=document.querySelector('[data-disc-id="'+discId+'"].btn-toggle-gc'); if(btn) btn.textContent='▼'; }
-  }
-
-  function _confirmDeleteGC(discId, gcId) {
-    const gc = DGHData.getGroupeCours(discId, gcId); if (!gc) return;
-    const m  = document.getElementById('confirmGC'); if (!m) return;
-    _set('confirmGCMsg','Supprimer le groupe «\u00a0'+gc.nom+'\u00a0» ?');
-    m.dataset.discId = discId; m.dataset.gcId = gcId; m.classList.add('modal-open');
-  }
-  function _closeConfirmGC() { const m=document.getElementById('confirmGC'); if(m){m.classList.remove('modal-open');delete m.dataset.discId;delete m.dataset.gcId;} }
-  function _execDeleteGC() {
-    const m=document.getElementById('confirmGC'); if(!m) return;
-    DGHData.deleteGroupeCours(m.dataset.discId, m.dataset.gcId);
-    _closeConfirmGC(); _renderDotation(); toast('Groupe supprimé','info');
-  }
-
-  // ── HPC ───────────────────────────────────────────────────────────
-  function _renderHPC() {
-    try {
-      const hpcs        = DGHData.getHeuresPedaComp();
-      const disciplines = DGHData.getDisciplines();
-      const structures  = DGHData.getStructures();
-      const bilan       = Calculs.bilanHPC(hpcs, disciplines);
-      const LABELS      = {}; DGHData.getCategoriesHPC().forEach(c => { LABELS[c.value]=c.label; });
-
-      _set('hpc-kpi-nb',     bilan.nbHeures);
-      _set('hpc-kpi-heures', bilan.totalHeures);
-
-      const listEl = document.getElementById('hpc-list'); if (!listEl) return;
-      if (hpcs.length === 0) {
-        listEl.innerHTML = '<div class="struct-empty"><div class="struct-empty-icon">◈</div>'
-          + '<p>Aucune heure complémentaire saisie.</p>'
-          + '<p class="struct-empty-sub">Ajoutez ici vos options (Latin, Grec), heures de labo, chorale, orchestre, dispositifs…</p></div>';
-        return;
-      }
-      const discMap = {}; disciplines.forEach(d => { discMap[d.id]=d; });
-      const structMap = {}; structures.forEach(d => { structMap[d.id]=d; });
-
-      let totalHPCHp = 0, totalHPCHsa = 0;
-      let html = '<table class="dot-table"><thead><tr><th>Intitulé</th><th>Catégorie</th><th>Discipline</th><th>Classes</th><th class="col-num">H/sem</th><th class="col-num dot-col-hp">Type</th><th class="col-num">Effectif</th><th class="col-actions">Actions</th></tr></thead><tbody>';
-      hpcs.forEach(h => {
-        const catLabel  = (LABELS[h.categorie]||h.categorie).split('(')[0].trim();
-        const discNom   = h.disciplineId && discMap[h.disciplineId] ? discMap[h.disciplineId].nom : '—';
-        const classesIds = h.classesIds||[];
-        const classesNoms = classesIds.map(id => structMap[id] ? structMap[id].nom : '?').join(', ') || '—';
-        const effectifCalc = classesIds.reduce((s,id) => s+(structMap[id]?structMap[id].effectif||0:0), 0);
-        const effectif = effectifCalc > 0 ? effectifCalc : (h.effectif||0);
-        const isHSA = (h.typeHeure||'hp') === 'hsa';
-        if (isHSA) totalHPCHsa += h.heures||0; else totalHPCHp += h.heures||0;
-        const typeBadge = isHSA
-          ? '<button class="dot-col-badge dot-col-hsa hpc-type-toggle" data-action="toggle-hpc-type" data-id="' + h.id + '" title="Cliquer pour passer en HP">⇄ HSA</button>'
-          : '<button class="dot-col-badge dot-col-hp hpc-type-toggle" data-action="toggle-hpc-type" data-id="' + h.id + '" title="Cliquer pour passer en HSA">⇄ HP</button>';
-        html += '<tr>'
-          + '<td><strong class="div-nom">' + _esc(h.nom||'—') + '</strong>' + (h.commentaire?'<br><span class="grp-comment">'+_esc(h.commentaire)+'</span>':'') + '</td>'
-          + '<td><span class="grp-type-badge">' + _esc(catLabel) + '</span></td>'
-          + '<td>' + _esc(discNom) + '</td>'
-          + '<td><span class="grp-niveaux">' + _esc(classesNoms) + '</span></td>'
-          + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + (h.heures||0) + ' h</strong></td>'
-          + '<td class="col-num">' + typeBadge + '</td>'
-          + '<td class="col-num">' + effectif + '</td>'
-          + '<td class="col-actions"><button class="btn-icon-sm" data-action="edit-hpc" data-id="' + h.id + '" title="Modifier">✎</button><button class="btn-icon-sm btn-icon-danger" data-action="delete-hpc" data-id="' + h.id + '" title="Supprimer">✕</button></td>'
-          + '</tr>';
-      });
-      // Ligne de total HPC
-      if (hpcs.length > 0) {
-        html += '<tr class="struct-total-row"><td colspan="4"><strong>Total H. péda. complémentaires</strong></td>'
-          + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + Math.round((totalHPCHp+totalHPCHsa)*2)/2 + ' h</strong></td>'
-          + '<td class="col-num"><span class="dot-col-badge dot-col-hp" title="HP">' + totalHPCHp + '</span> <span class="dot-col-badge dot-col-hsa" title="HSA">' + totalHPCHsa + '</span></td>'
-          + '<td colspan="2"></td></tr>';
-      }
-      listEl.innerHTML = html + '</tbody></table>';
-    } catch(e) { console.error('[DGH] renderHPC:', e); }
-  }
-
-  function _openModalHPC(id) {
-    const modal = document.getElementById('modalHPC'); if (!modal) return;
-    const selCat  = document.getElementById('inputHPCCategorie');
-    const selDisc = document.getElementById('inputHPCDisc');
-    const structures = DGHData.getStructures();
-
-    if (selCat)  selCat.innerHTML  = DGHData.getCategoriesHPC().map(c => '<option value="'+c.value+'">'+c.label+'</option>').join('');
-    if (selDisc) selDisc.innerHTML = '<option value="">— Aucune —</option>' + DGHData.getDisciplines().map(d => '<option value="'+d.id+'">'+_esc(d.nom)+'</option>').join('');
-
-    const classesDiv = document.getElementById('hpcClassesCheck');
-    if (classesDiv) {
-      classesDiv.innerHTML = structures.length === 0
-        ? '<p class="form-hint">Aucune division — ajoutez d\'abord vos classes dans Structures.</p>'
-        : structures.map(div =>
-            '<label class="niv-check-label"><input type="checkbox" class="hpc-classe-check" value="' + div.id + '" />'
-            + '<span>' + _esc(div.nom) + ' <small style="color:var(--c-text-dim)">(' + (div.effectif||0) + ')</small></span></label>'
-          ).join('');
-      classesDiv.querySelectorAll('.hpc-classe-check').forEach(cb => cb.addEventListener('change', _updateHPCEffectif));
-    }
-
-    if (id) {
-      const h = DGHData.getHPC(id); if (!h) return;
-      _set('modalHPCTitle','Modifier');
-      _setVal('modalHPCId',id); _setVal('inputHPCNom',h.nom);
-      if (selCat)  selCat.value  = h.categorie;
-      if (selDisc) selDisc.value = h.disciplineId||'';
-      (h.classesIds||[]).forEach(cid => { const cb=classesDiv?.querySelector('[value="'+cid+'"]'); if(cb) cb.checked=true; });
-      _setVal('inputHPCHeures',h.heures); _setVal('inputHPCEffectif',h.effectif); _setVal('inputHPCComment',h.commentaire||''); _setVal('inputHPCTypeHeure',h.typeHeure||'hp');
-    } else {
-      _set('modalHPCTitle','Ajouter des heures complémentaires');
-      _setVal('modalHPCId',''); _setVal('inputHPCNom',''); _setVal('inputHPCHeures',''); _setVal('inputHPCEffectif',''); _setVal('inputHPCComment','');
-    }
-
-    _updateHPCEffectif();
-    const btnAll = document.getElementById('btnHPCSelectAll');
-    if (btnAll) btnAll.textContent = 'Tout sélectionner';
-    modal.classList.add('modal-open');
-    setTimeout(()=>document.getElementById('inputHPCNom')?.focus(),60);
-  }
-
-  function _updateHPCEffectif() {
-    const checked = Array.from(document.querySelectorAll('#hpcClassesCheck .hpc-classe-check:checked'));
-    const total   = checked.reduce((s,cb) => { const div=DGHData.getDivision(cb.value); return s+(div?div.effectif||0:0); }, 0);
-    const efDiv   = document.getElementById('hpcEffectifAuto');
-    if (efDiv) efDiv.textContent = checked.length > 0 ? 'Effectif calculé : '+total+' élèves ('+checked.length+' classe(s))' : '';
-    if (checked.length > 0) _setVal('inputHPCEffectif', total);
-  }
-
-  function _gcSelectAllClasses() {
-    const allChecked = Array.from(document.querySelectorAll('#gcClassesCheck .classe-check'));
-    const anyUnchecked = allChecked.some(cb => !cb.checked);
-    allChecked.forEach(cb => { cb.checked = anyUnchecked; });
-    _updateGCEffectif();
-    const btn = document.getElementById('btnGCSelectAll');
-    if (btn) btn.textContent = anyUnchecked ? 'Tout désélectionner' : 'Tout sélectionner';
-  }
-
-  function _hpcSelectAllClasses() {
-    const allChecked = Array.from(document.querySelectorAll('#hpcClassesCheck .hpc-classe-check'));
-    const anyUnchecked = allChecked.some(cb => !cb.checked);
-    allChecked.forEach(cb => { cb.checked = anyUnchecked; });
-    _updateHPCEffectif();
-    const btn = document.getElementById('btnHPCSelectAll');
-    if (btn) btn.textContent = anyUnchecked ? 'Tout désélectionner' : 'Tout sélectionner';
-  }
-
-  function _toggleHPCType(id) {
-    const h = DGHData.getHPC(id); if (!h) return;
-    const nouveau = (h.typeHeure||'hp') === 'hp' ? 'hsa' : 'hp';
-    DGHData.updateHPC(id, { typeHeure: nouveau });
-    _renderHPC(); _renderDashboard();
-    toast(h.nom + ' passé en ' + nouveau.toUpperCase(), 'success', 2000);
-  }
-
-  function _closeModalHPC() { const m=document.getElementById('modalHPC'); if(m) m.classList.remove('modal-open'); }
-  function _saveModalHPC() {
-    const id  = document.getElementById('modalHPCId')?.value||'';
-    const nom = (document.getElementById('inputHPCNom')?.value||'').trim();
-    if (!nom) { toast('L\'intitulé est requis','warning'); return; }
-    const classesIds = Array.from(document.querySelectorAll('#hpcClassesCheck .hpc-classe-check:checked')).map(cb=>cb.value);
-    const effectifCalc = classesIds.reduce((s,cid)=>{ const d=DGHData.getDivision(cid); return s+(d?d.effectif||0:0); }, 0);
-    const fields = {
-      nom, categorie: document.getElementById('inputHPCCategorie')?.value||'autre',
-      disciplineId: document.getElementById('inputHPCDisc')?.value||null,
-      classesIds,
-      heures:   parseFloat(document.getElementById('inputHPCHeures')?.value)||0,
-      effectif: effectifCalc > 0 ? effectifCalc : parseInt(document.getElementById('inputHPCEffectif')?.value,10)||0,
-      typeHeure: document.getElementById('inputHPCTypeHeure')?.value||'hp',
-      commentaire: document.getElementById('inputHPCComment')?.value||''
-    };
-    if (id) { DGHData.updateHPC(id,fields); toast('Entrée mise à jour','success'); }
-    else    { DGHData.addHPC(fields); toast('«\u00a0'+nom+'\u00a0» ajouté','success'); }
-    _closeModalHPC(); _renderHPC(); _renderDashboard();
-  }
-
-  function _confirmDeleteHPC(id) { const h=DGHData.getHPC(id); if(!h) return; const m=document.getElementById('confirmHPC'); if(!m) return; _set('confirmHPCMsg','Supprimer «\u00a0'+h.nom+'\u00a0» ?'); m.dataset.targetId=id; m.classList.add('modal-open'); }
-  function _closeConfirmHPC() { const m=document.getElementById('confirmHPC'); if(m){m.classList.remove('modal-open');m.dataset.targetId='';} }
-  function _execDeleteHPC() { const id=document.getElementById('confirmHPC')?.dataset?.targetId; if(!id) return; DGHData.deleteHPC(id); _closeConfirmHPC(); _renderHPC(); _renderDashboard(); toast('Entrée supprimée','info'); }
-
-  // ── ONGLETS MODAL ÉTABLISSEMENT ──────────────────────────────────
-  function _switchModalTab(tab) {
-    document.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-    document.querySelectorAll('.modal-tab-panel').forEach(p => p.style.display = p.id === 'tab-' + tab ? '' : 'none');
-  }
-
-  // ── MODAL ÉTABLISSEMENT ───────────────────────────────────────────
-  function _openModal() {
-    try {
-      const etab = DGHData.getEtab()||{};
-      const ann  = DGHData.getAnnee()||{};
-      const dot  = ann.dotation||{};
-      const m    = document.getElementById('modalEtab'); if (!m) return;
-      _setVal('inputNomEtab',etab.nom||''); _setVal('inputUAI',etab.uai||''); _setVal('inputAcademie',etab.academie||'');
-      _setVal('inputDGH_HP',  dot.hPosteEnveloppe != null ? dot.hPosteEnveloppe : '');
-      _setVal('inputDGH_HSA', dot.hsaEnveloppe    != null ? dot.hsaEnveloppe    : '');
-      _updateModalDotTotal();
-      _renderModalYearSelect(); _renderYearListAdmin();
-      _switchModalTab('etab');
-      m.classList.add('modal-open');
-      setTimeout(()=>document.getElementById('inputNomEtab')?.focus(),60);
-    } catch(e) { console.error('[DGH] modal etab:', e); toast('Impossible d\'ouvrir les paramètres','error'); }
-  }
-
-  function _updateModalDotTotal() {
-    const hp  = parseFloat(document.getElementById('inputDGH_HP')?.value)||0;
-    const hsa = parseFloat(document.getElementById('inputDGH_HSA')?.value)||0;
-    const el  = document.getElementById('modalDotTotal');
-    if (el) el.textContent = (hp+hsa) > 0 ? 'Total : ' + (hp+hsa) + ' h (HP + HSA)' : '';
-  }
-
-  function _renderModalYearSelect() {
-    const sel    = document.getElementById('modalYearSelect'); if (!sel) return;
-    const active = DGHData.getAnneeActive();
-    sel.innerHTML = '';
-    DGHData.getAnnees().forEach(a => { const opt=document.createElement('option'); opt.value=a; opt.textContent=a.replace('-',' – '); if(a===active) opt.selected=true; sel.appendChild(opt); });
-  }
-
-  function _renderYearListAdmin() {
-    const zone   = document.getElementById('yearListAdmin'); if (!zone) return;
-    const active = DGHData.getAnneeActive();
-    const annees = DGHData.getAnnees();
-    if (annees.length <= 1) { zone.innerHTML=''; return; }
-    zone.innerHTML = '<div class="year-list-admin-title">Supprimer une année</div>'
-      + annees.map(a => '<div class="year-admin-row"><span class="year-admin-label'+(a===active?' year-admin-active':'')+'">'+a.replace('-',' – ')+(a===active?' ★ active':'')+'</span>'+(a===active?'':'<button class="btn-danger btn-sm btn-delete-annee" data-annee="'+a+'">Supprimer</button>')+'</div>').join('');
-  }
-
-  function _closeModal() { const m=document.getElementById('modalEtab'); if(m) m.classList.remove('modal-open'); }
-
-  function _saveModal() {
-    try {
-      const ms = document.getElementById('modalYearSelect');
-      if (ms && ms.value && ms.value !== DGHData.getAnneeActive()) DGHData.setAnneeActive(ms.value);
-      DGHData.setEtab({ nom:document.getElementById('inputNomEtab')?.value?.trim()||'', uai:document.getElementById('inputUAI')?.value?.trim()||'', academie:document.getElementById('inputAcademie')?.value?.trim()||'' });
-      DGHData.setDotation(parseFloat(document.getElementById('inputDGH_HP')?.value)||0, parseFloat(document.getElementById('inputDGH_HSA')?.value)||0);
-      _closeModal(); _renderAll(); _renderDashboard();
-      toast('Paramètres enregistrés','success');
-    } catch(e) { console.error('[DGH] save modal:', e); toast('Erreur lors de la sauvegarde','error'); }
-  }
-
-  function _addModalYear() {
-    const input = document.getElementById('inputNewYear'); if (!input) return;
-    const val   = input.value.trim();
-    if (!/^\d{4}-\d{4}$/.test(val)) { toast('Format requis : 2026-2027','warning'); input.focus(); return; }
-    const [debut,fin] = val.split('-').map(Number);
-    if (fin !== debut+1) { toast('Les deux années doivent se suivre','warning'); input.focus(); return; }
-    if (DGHData.getAnnees().includes(val)) { toast('Cette année existe déjà','info'); const s=document.getElementById('modalYearSelect'); if(s)s.value=val; input.value=''; return; }
-    DGHData.setAnneeActive(val); input.value=''; _renderModalYearSelect(); _renderYearSelect(); _renderYearListAdmin();
-    toast('Année '+val.replace('-','–')+' créée','success');
-  }
-
-  function _openConfirmReset() { const m=document.getElementById('confirmReset'); if(!m) return; _set('confirmResetMsg','Réinitialiser toutes les données de l\'année '+DGHData.getAnneeActive().replace('-','–')+' ?'); m.classList.add('modal-open'); }
-  function _closeConfirmReset() { const m=document.getElementById('confirmReset'); if(m) m.classList.remove('modal-open'); }
-  function _execResetAnnee() { const a=DGHData.getAnneeActive(); DGHData.resetAnnee(); _closeConfirmReset(); _closeModal(); _renderAll(); _renderDashboard(); toast('Année '+a.replace('-','–')+' réinitialisée','info'); }
-
-  function _openConfirmDeleteAnnee(annee) { const m=document.getElementById('confirmDeleteAnnee'); if(!m) return; _set('confirmDeleteAnneeMsg','Supprimer définitivement l\'année '+annee.replace('-','–')+' ?'); m.dataset.targetAnnee=annee; m.classList.add('modal-open'); }
-  function _closeConfirmDeleteAnnee() { const m=document.getElementById('confirmDeleteAnnee'); if(m){m.classList.remove('modal-open');m.dataset.targetAnnee='';} }
-  function _execDeleteAnnee() { const annee=document.getElementById('confirmDeleteAnnee')?.dataset?.targetAnnee; if(!annee) return; const res=DGHData.deleteAnnee(annee); if(!res.ok){toast(res.message,'warning');_closeConfirmDeleteAnnee();return;} _closeConfirmDeleteAnnee();_closeModal();_renderAll();_renderDashboard();toast('Année '+annee.replace('-','–')+' supprimée','info'); }
-
-  // ── ALERTES ──────────────────────────────────────────────────────
-  function _renderAlertes() {
-    try {
-      const alertes = Calculs.genererAlertes(DGHData.getAnnee());
-      const zone    = document.getElementById('alertes-zone'); if (!zone) return;
-      zone.className='section-card';
-      zone.innerHTML='<div class="alertes-list">'
-        +(alertes.length
-          ? alertes.map(a=>'<div class="alerte-item sev-'+a.severite+'"><span class="alerte-dot">'+({error:'✕',warning:'⚠',info:'ℹ'}[a.severite]||'·')+'</span><span class="alerte-msg">'+a.message+'</span></div>').join('')
-          : '<div class="alertes-empty">✓ Aucune alerte — tout est en ordre.</div>')
-        +'</div>';
-    } catch(e) { console.error('[DGH] renderAlertes:', e); }
-  }
-
-  // ── DISCIPLINES MEN ───────────────────────────────────────────────
-  function _initDisciplinesMEN() {
-    const nb = DGHData.initDisciplinesMEN();
-    _renderDotation(); _renderDashboard();
-    toast(nb > 0 ? nb+' disciplines MEN ajoutées' : 'Toutes les disciplines MEN sont déjà présentes', nb > 0 ? 'success' : 'info');
+    if (window.innerWidth <= 768) document.getElementById('sidebar')?.classList.remove('open');
+    if (viewId === 'dashboard')  DGHDashboard.renderDashboard();
+    if (viewId === 'alertes')    DGHEtab.renderAlertes();
+    if (viewId === 'structures') DGHStructures.renderStructures();
+    if (viewId === 'dotation')   DGHDotation.renderDotation();
+    if (viewId === 'hpc')        DGHHPC.renderHPC();
   }
 
   // ── RENDU GLOBAL ─────────────────────────────────────────────────
-  function _renderAll() { _updateBtnEtab(); _renderYearSelect(); }
+  function renderAll() { DGHDashboard.updateBtnEtab(); renderYearSelect(); }
 
-  function _renderYearSelect() {
+  function renderYearSelect() {
     const sel    = document.getElementById('yearSelect'); if (!sel) return;
     const active = DGHData.getAnneeActive();
     sel.innerHTML='';
-    DGHData.getAnnees().forEach(a => { const opt=document.createElement('option'); opt.value=a; opt.textContent=a.replace('-',' – '); if(a===active) opt.selected=true; sel.appendChild(opt); });
+    DGHData.getAnnees().forEach(a => {
+      const opt=document.createElement('option'); opt.value=a;
+      opt.textContent=a.replace('-',' – '); if(a===active) opt.selected=true;
+      sel.appendChild(opt);
+    });
   }
 
-  // ── DÉLÉGATION GLOBALE ────────────────────────────────────────────
+  // ── FERMETURE MODALE PAR ID ───────────────────────────────────────
+  function _closeModalById(id) {
+    const M = {
+      modalEtab:          DGHEtab.closeModal,
+      modalDiv:           DGHStructures.closeModalDiv,
+      modalDisc:          DGHDotation.closeModalDisc,
+      modalGC:            DGHDotation.closeModalGC,
+      modalHPC:           DGHHPC.closeModalHPC,
+      modalMatrice:       DGHStructures.closeModalMatrice,
+      confirmDiv:         DGHStructures.closeConfirmDiv,
+      confirmDisc:        DGHDotation.closeConfirmDisc,
+      confirmGC:          DGHDotation.closeConfirmGC,
+      confirmHPC:         DGHHPC.closeConfirmHPC,
+      confirmReset:       DGHEtab.closeConfirmReset,
+      confirmDeleteAnnee: DGHEtab.closeConfirmDeleteAnnee
+    };
+    if (M[id]) M[id]();
+  }
+
+  // ── DÉLÉGATION GLOBALE CLICK ──────────────────────────────────────
   function _onGlobalClick(e) {
     const navItem = e.target.closest('.nav-item[data-view]');
     if (navItem) { navigate(navItem.dataset.view); return; }
@@ -1133,241 +107,240 @@ const app = (() => {
     const actionBtn = e.target.closest('[data-action]');
     if (actionBtn) {
       const { action, id, discId, gcId } = actionBtn.dataset;
-      if (action==='edit-div')    { _openModalDiv(id);              return; }
-      if (action==='delete-div')  { _confirmDeleteDiv(id);          return; }
-      if (action==='edit-disc')   { _openModalDisc(id);             return; }
-      if (action==='delete-disc') { _confirmDeleteDisc(id);         return; }
-      if (action==='add-gc')      { _openModalGC(discId||actionBtn.dataset.discId, null); return; }
-      if (action==='edit-gc')     { _openModalGC(discId||actionBtn.dataset.discId, gcId||actionBtn.dataset.gcId); return; }
-      if (action==='delete-gc')   { _confirmDeleteGC(discId||actionBtn.dataset.discId, gcId||actionBtn.dataset.gcId); return; }
-      if (action==='edit-hpc')    { _openModalHPC(id);              return; }
-      if (action==='delete-hpc')  { _confirmDeleteHPC(id);          return; }
-      if (action==='toggle-hpc-type') { _toggleHPCType(id);         return; }
-      if (action==='ecart-zero')      { _ecartZero(actionBtn.dataset.discId, parseFloat(actionBtn.dataset.besoin)||0, parseFloat(actionBtn.dataset.hsa)||0); return; }
+      if (action==='edit-div')        { DGHStructures.openModalDiv(id);                                                              return; }
+      if (action==='delete-div')      { DGHStructures.confirmDeleteDiv(id);                                                         return; }
+      if (action==='edit-disc')       { DGHDotation.openModalDisc(id);                                                              return; }
+      if (action==='delete-disc')     { DGHDotation.confirmDeleteDisc(id);                                                          return; }
+      if (action==='add-gc')          { DGHDotation.openModalGC(discId||actionBtn.dataset.discId, null);                            return; }
+      if (action==='edit-gc')         { DGHDotation.openModalGC(discId||actionBtn.dataset.discId, gcId||actionBtn.dataset.gcId);    return; }
+      if (action==='delete-gc')       { DGHDotation.confirmDeleteGC(discId||actionBtn.dataset.discId, gcId||actionBtn.dataset.gcId);return; }
+      if (action==='edit-hpc')        { DGHHPC.openModalHPC(id);                                                                    return; }
+      if (action==='delete-hpc')      { DGHHPC.confirmDeleteHPC(id);                                                                return; }
+      if (action==='toggle-hpc-type') { DGHHPC.toggleHPCType(id);                                                                  return; }
+      if (action==='ecart-zero')      { DGHDotation.ecartZero(actionBtn.dataset.discId, parseFloat(actionBtn.dataset.besoin)||0, parseFloat(actionBtn.dataset.hsa)||0); return; }
     }
 
+    // btn-toggle-gc (généré dynamiquement) — délégué ici
+    const toggleGCBtn = e.target.closest('.btn-toggle-gc');
+    if (toggleGCBtn && toggleGCBtn.dataset.discId) {
+      DGHDotation.handleToggleGC(toggleGCBtn.dataset.discId); return;
+    }
+
+    // Supprimer une année (liste admin dans modal)
     const btnDeleteAnnee = e.target.closest('.btn-delete-annee');
-    if (btnDeleteAnnee) { _openConfirmDeleteAnnee(btnDeleteAnnee.dataset.annee); return; }
+    if (btnDeleteAnnee) { DGHEtab.openConfirmDeleteAnnee(btnDeleteAnnee.dataset.annee); return; }
 
     // Onglets internes modal établissement
     const modalTab = e.target.closest('.modal-tab');
-    if (modalTab) { _switchModalTab(modalTab.dataset.tab); return; }
+    if (modalTab) { DGHEtab.switchModalTab(modalTab.dataset.tab); return; }
 
-    if (e.target.closest('#btnAddDiv'))    { _openModalDiv(null);     return; }
-    if (e.target.closest('#btnMatrice'))   { _openModalMatrice();     return; }
-    if (e.target.closest('#btnAddDisc'))   { _openModalDisc(null);    return; }
-    if (e.target.closest('#btnInitDisc'))  { _initDisciplinesMEN();   return; }
-    if (e.target.closest('#btnSuggerer'))  { _suggererHP();           return; }
-    if (e.target.closest('#btnToggleAllGC')) { _toggleAllGC();          return; }
-    if (e.target.closest('#btnGCSelectAll'))  { _gcSelectAllClasses();   return; }
-    if (e.target.closest('#btnAddHPC'))    { _openModalHPC(null);     return; }
-    if (e.target.closest('#btnHPCSelectAll')) { _hpcSelectAllClasses();  return; }
-    if (e.target.closest('#btnEtab'))      { _openModal();            return; }
+    // Boutons statiques
+    if (e.target.closest('#btnAddDiv'))       { DGHStructures.openModalDiv(null);    return; }
+    if (e.target.closest('#btnMatrice'))      { DGHStructures.openModalMatrice();     return; }
+    if (e.target.closest('#btnAddDisc'))      { DGHDotation.openModalDisc(null);      return; }
+    if (e.target.closest('#btnInitDisc'))     { DGHEtab.initDisciplinesMEN();         return; }
+    if (e.target.closest('#btnSuggerer'))     { DGHDotation.suggererHP();             return; }
+    if (e.target.closest('#btnToggleAllGC'))  { DGHDotation.toggleAllGC();            return; }
+    if (e.target.closest('#btnGCSelectAll'))  { DGHDotation.gcSelectAllClasses();     return; }
+    if (e.target.closest('#btnAddHPC'))       { DGHHPC.openModalHPC(null);            return; }
+    if (e.target.closest('#btnHPCSelectAll')) { DGHHPC.hpcSelectAllClasses();         return; }
+    if (e.target.closest('#btnEtab'))         { DGHEtab.openModal();                  return; }
 
-    // Fermeture modals par overlay
+    // Fermeture modales par clic overlay
     const overlays = ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice','confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee'];
     for (const oid of overlays) {
       if (e.target === document.getElementById(oid)) { _closeModalById(oid); return; }
     }
 
-    if (e.target.closest('#modalClose'))            { _closeModal();              return; }
-    if (e.target.closest('#modalCancel'))           { _closeModal();              return; }
-    if (e.target.closest('#modalSave'))             { _saveModal();               return; }
-    if (e.target.closest('#btnAddYear'))            { _addModalYear();            return; }
-    if (e.target.closest('#btnResetAnnee'))         { _openConfirmReset();        return; }
+    if (e.target.closest('#modalClose'))           { DGHEtab.closeModal();                    return; }
+    if (e.target.closest('#modalCancel'))          { DGHEtab.closeModal();                    return; }
+    if (e.target.closest('#modalSave'))            { DGHEtab.saveModal();                     return; }
+    if (e.target.closest('#btnAddYear'))           { DGHEtab.addModalYear();                  return; }
+    if (e.target.closest('#btnResetAnnee'))        { DGHEtab.openConfirmReset();              return; }
 
-    if (e.target.closest('#modalDivClose'))         { _closeModalDiv();           return; }
-    if (e.target.closest('#modalDivCancel'))        { _closeModalDiv();           return; }
-    if (e.target.closest('#modalDivSave'))          { _saveModalDiv();            return; }
+    if (e.target.closest('#modalDivClose'))        { DGHStructures.closeModalDiv();           return; }
+    if (e.target.closest('#modalDivCancel'))       { DGHStructures.closeModalDiv();           return; }
+    if (e.target.closest('#modalDivSave'))         { DGHStructures.saveModalDiv();            return; }
 
-    if (e.target.closest('#modalDiscClose'))        { _closeModalDisc();          return; }
-    if (e.target.closest('#modalDiscCancel'))       { _closeModalDisc();          return; }
-    if (e.target.closest('#modalDiscSave'))         { _saveModalDisc();           return; }
+    if (e.target.closest('#modalMatriceClose'))    { DGHStructures.closeModalMatrice();       return; }
+    if (e.target.closest('#modalMatriceCancel'))   { DGHStructures.closeModalMatrice();       return; }
+    if (e.target.closest('#modalMatriceSave'))     { DGHStructures.saveModalMatrice();        return; }
 
-    if (e.target.closest('#modalGCClose'))          { _closeModalGC();            return; }
-    if (e.target.closest('#modalGCCancel'))         { _closeModalGC();            return; }
-    if (e.target.closest('#modalGCSave'))           { _saveModalGC();             return; }
+    if (e.target.closest('#modalDiscClose'))       { DGHDotation.closeModalDisc();            return; }
+    if (e.target.closest('#modalDiscCancel'))      { DGHDotation.closeModalDisc();            return; }
+    if (e.target.closest('#modalDiscSave'))        { DGHDotation.saveModalDisc();             return; }
 
-    if (e.target.closest('#modalHPCClose'))         { _closeModalHPC();           return; }
-    if (e.target.closest('#modalHPCCancel'))        { _closeModalHPC();           return; }
-    if (e.target.closest('#modalHPCSave'))          { _saveModalHPC();            return; }
+    if (e.target.closest('#modalGCClose'))         { DGHDotation.closeModalGC();              return; }
+    if (e.target.closest('#modalGCCancel'))        { DGHDotation.closeModalGC();              return; }
+    if (e.target.closest('#modalGCSave'))          { DGHDotation.saveModalGC();               return; }
 
-    if (e.target.closest('#modalMatriceClose'))     { _closeModalMatrice();       return; }
-    if (e.target.closest('#modalMatriceCancel'))    { _closeModalMatrice();       return; }
-    if (e.target.closest('#modalMatriceSave'))      { _saveModalMatrice();        return; }
+    if (e.target.closest('#modalHPCClose'))        { DGHHPC.closeModalHPC();                  return; }
+    if (e.target.closest('#modalHPCCancel'))       { DGHHPC.closeModalHPC();                  return; }
+    if (e.target.closest('#modalHPCSave'))         { DGHHPC.saveModalHPC();                   return; }
 
-    if (e.target.closest('#confirmDivCancel'))      { _closeConfirmDiv();         return; }
-    if (e.target.closest('#confirmDivAnnuler'))     { _closeConfirmDiv();         return; }
-    if (e.target.closest('#confirmDivOk'))          { _execDeleteDiv();           return; }
+    if (e.target.closest('#confirmDivCancel'))     { DGHStructures.closeConfirmDiv();         return; }
+    if (e.target.closest('#confirmDivAnnuler'))    { DGHStructures.closeConfirmDiv();         return; }
+    if (e.target.closest('#confirmDivOk'))         { DGHStructures.execDeleteDiv();           return; }
 
-    if (e.target.closest('#confirmDiscCancel'))     { _closeConfirmDisc();        return; }
-    if (e.target.closest('#confirmDiscAnnuler'))    { _closeConfirmDisc();        return; }
-    if (e.target.closest('#confirmDiscOk'))         { _execDeleteDisc();          return; }
+    if (e.target.closest('#confirmDiscCancel'))    { DGHDotation.closeConfirmDisc();          return; }
+    if (e.target.closest('#confirmDiscAnnuler'))   { DGHDotation.closeConfirmDisc();          return; }
+    if (e.target.closest('#confirmDiscOk'))        { DGHDotation.execDeleteDisc();            return; }
 
-    if (e.target.closest('#confirmGCCancel'))       { _closeConfirmGC();          return; }
-    if (e.target.closest('#confirmGCAnnuler'))      { _closeConfirmGC();          return; }
-    if (e.target.closest('#confirmGCOk'))           { _execDeleteGC();            return; }
+    if (e.target.closest('#confirmGCCancel'))      { DGHDotation.closeConfirmGC();            return; }
+    if (e.target.closest('#confirmGCAnnuler'))     { DGHDotation.closeConfirmGC();            return; }
+    if (e.target.closest('#confirmGCOk'))          { DGHDotation.execDeleteGC();              return; }
 
-    if (e.target.closest('#confirmHPCCancel'))      { _closeConfirmHPC();         return; }
-    if (e.target.closest('#confirmHPCAnnuler'))     { _closeConfirmHPC();         return; }
-    if (e.target.closest('#confirmHPCOk'))          { _execDeleteHPC();           return; }
+    if (e.target.closest('#confirmHPCCancel'))     { DGHHPC.closeConfirmHPC();                return; }
+    if (e.target.closest('#confirmHPCAnnuler'))    { DGHHPC.closeConfirmHPC();                return; }
+    if (e.target.closest('#confirmHPCOk'))         { DGHHPC.execDeleteHPC();                  return; }
 
-    if (e.target.closest('#confirmResetCancel'))    { _closeConfirmReset();       return; }
-    if (e.target.closest('#confirmResetAnnuler'))   { _closeConfirmReset();       return; }
-    if (e.target.closest('#confirmResetOk'))        { _execResetAnnee();          return; }
+    if (e.target.closest('#confirmResetCancel'))   { DGHEtab.closeConfirmReset();             return; }
+    if (e.target.closest('#confirmResetAnnuler'))  { DGHEtab.closeConfirmReset();             return; }
+    if (e.target.closest('#confirmResetOk'))       { DGHEtab.execResetAnnee();                return; }
 
-    if (e.target.closest('#confirmDeleteAnneeCancel'))  { _closeConfirmDeleteAnnee(); return; }
-    if (e.target.closest('#confirmDeleteAnneeAnnuler')) { _closeConfirmDeleteAnnee(); return; }
-    if (e.target.closest('#confirmDeleteAnneeOk'))      { _execDeleteAnnee();         return; }
+    if (e.target.closest('#confirmDeleteAnneeCancel'))  { DGHEtab.closeConfirmDeleteAnnee();  return; }
+    if (e.target.closest('#confirmDeleteAnneeAnnuler')) { DGHEtab.closeConfirmDeleteAnnee();  return; }
+    if (e.target.closest('#confirmDeleteAnneeOk'))      { DGHEtab.execDeleteAnnee();           return; }
 
+    // Sidebar mobile
     if (window.innerWidth <= 768) {
       const sb=document.getElementById('sidebar'), mb=document.getElementById('mobileMenuBtn');
       if (sb && mb && !sb.contains(e.target) && !mb.contains(e.target)) sb.classList.remove('open');
     }
   }
 
-  function _closeModalById(id) {
-    const M = { modalEtab:_closeModal, modalDiv:_closeModalDiv, modalDisc:_closeModalDisc, modalGC:_closeModalGC, modalHPC:_closeModalHPC, modalMatrice:_closeModalMatrice, confirmDiv:_closeConfirmDiv, confirmDisc:_closeConfirmDisc, confirmGC:_closeConfirmGC, confirmHPC:_closeConfirmHPC, confirmReset:_closeConfirmReset, confirmDeleteAnnee:_closeConfirmDeleteAnnee };
-    if (M[id]) M[id]();
+  // ── DÉLÉGATION GLOBALE CHANGE ─────────────────────────────────────
+  function _onGlobalChange(e) {
+    if (e.target.classList.contains('dot-input-h'))       { DGHDotation.handleDotInput(e.target);   return; }
+    if (e.target.classList.contains('grille-input'))      { DGHDotation.handleGrilleInput(e.target); return; }
+    if (e.target.id==='inputEnvHP'||e.target.id==='inputEnvHSA') { DGHDotation.saveEnveloppe();     return; }
+    if (e.target.id==='modalYearSelect')                  { DGHEtab.onModalYearChange(e.target.value); return; }
+    if (e.target.classList.contains('classe-check'))      { DGHDotation.updateGCEffectif();           return; }
+    if (e.target.classList.contains('hpc-classe-check'))  { DGHHPC.updateHPCEffectif();               return; }
+  }
+
+  // ── DÉLÉGATION GLOBALE DBLCLICK ───────────────────────────────────
+  function _onGlobalDblClick(e) {
+    if (e.target.classList.contains('grille-input')) { DGHDotation.handleGrilleReset(e.target); }
+  }
+
+  // ── DÉLÉGATION GLOBALE BLUR (capture) ────────────────────────────
+  function _onGlobalBlur(e) {
+    if (e.target.id==='inputEnvHP'||e.target.id==='inputEnvHSA') DGHDotation.saveEnveloppe();
   }
 
   // ── EVENTS ───────────────────────────────────────────────────────
   function _bindEvents() {
-    document.addEventListener('click', _onGlobalClick);
-
-    document.getElementById('themeToggle').addEventListener('click', () => {
-      const cur = document.documentElement.getAttribute('data-theme')||'light';
-      _applyTheme(cur==='dark'?'light':'dark');
-    });
+    document.addEventListener('click',    _onGlobalClick);
+    document.addEventListener('change',   _onGlobalChange);
+    document.addEventListener('dblclick', _onGlobalDblClick);
+    document.addEventListener('blur',     _onGlobalBlur, true);
 
     document.addEventListener('input', e => {
-      if (e.target.id==='inputDivNom'||e.target.id==='inputDivDup') _updateDupPreview();
-      if (e.target.id==='inputDiscCouleur') _updateColorHint(e.target.value);
-      if (e.target.id==='inputDGH_HP'||e.target.id==='inputDGH_HSA') _updateModalDotTotal();
+      if (e.target.id==='inputDivNom'||e.target.id==='inputDivDup') DGHStructures.updateDupPreview();
+      if (e.target.id==='inputDiscCouleur') DGHDotation.updateColorHint(e.target.value);
+      if (e.target.id==='inputDGH_HP'||e.target.id==='inputDGH_HSA') DGHEtab.updateModalDotTotal();
     });
 
+    // Éléments garantis dans le DOM au chargement initial (SKILL.md §3)
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const cur=document.documentElement.getAttribute('data-theme')||'light';
+      _applyTheme(cur==='dark'?'light':'dark');
+    });
     document.getElementById('sidebarToggle').addEventListener('click', () => {
       document.getElementById('sidebar').classList.toggle('collapsed');
     });
     document.getElementById('mobileMenuBtn').addEventListener('click', () => {
       document.getElementById('sidebar').classList.toggle('open');
     });
-
     document.getElementById('yearSelect').addEventListener('change', e => {
-      DGHData.setAnneeActive(e.target.value); _renderAll(); _renderDashboard();
-      const active = document.querySelector('.nav-item.active[data-view]');
+      DGHData.setAnneeActive(e.target.value); renderAll(); DGHDashboard.renderDashboard();
+      const active=document.querySelector('.nav-item.active[data-view]');
       if (active) {
-        if (active.dataset.view==='structures') _renderStructures();
-        if (active.dataset.view==='dotation')   _renderDotation();
-        if (active.dataset.view==='hpc')        _renderHPC();
+        if (active.dataset.view==='structures') DGHStructures.renderStructures();
+        if (active.dataset.view==='dotation')   DGHDotation.renderDotation();
+        if (active.dataset.view==='hpc')        DGHHPC.renderHPC();
       }
       toast('Année '+e.target.value.replace('-','–')+' chargée','info');
     });
-
-    document.addEventListener('change', e => {
-      if (e.target.id==='modalYearSelect') {
-        DGHData.setAnneeActive(e.target.value);
-        const dot=DGHData.getAnnee().dotation||{};
-        _setVal('inputDGH_HP',  dot.hPosteEnveloppe!=null?dot.hPosteEnveloppe:'');
-        _setVal('inputDGH_HSA', dot.hsaEnveloppe!=null?dot.hsaEnveloppe:'');
-        _updateModalDotTotal(); _renderYearSelect(); _renderYearListAdmin();
-      }
-    });
-
-    document.addEventListener('keydown', e => {
-      if (e.key!=='Escape') return;
-      ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice','confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee']
-        .forEach(id => { if(document.getElementById(id)?.classList.contains('modal-open')) _closeModalById(id); });
-    });
-
-    document.addEventListener('keydown', e => {
-      if (e.target.id==='inputNewYear'&&e.key==='Enter') { e.preventDefault(); _addModalYear(); }
-    });
-
-    document.addEventListener('keydown', e => {
-      if ((e.ctrlKey||e.metaKey)&&e.key==='s') { e.preventDefault(); try{toast('Exporté : '+DGHData.exportJSON(),'success');}catch(err){toast('Erreur export','error');} }
-    });
-
     document.getElementById('btnExport').addEventListener('click', () => {
       try{toast('Exporté : '+DGHData.exportJSON(),'success');}catch(e){toast('Erreur export : '+e.message,'error');}
     });
-
-    const fileImport = document.getElementById('fileImport');
-    document.getElementById('btnImport').addEventListener('click',()=>fileImport.click());
-    document.getElementById('btnImportEmpty').addEventListener('click',()=>fileImport.click());
+    const fileImport=document.getElementById('fileImport');
+    document.getElementById('btnImport').addEventListener('click', ()=>fileImport.click());
+    document.getElementById('btnImportEmpty').addEventListener('click', ()=>fileImport.click());
     fileImport.addEventListener('change', async e => {
       const file=e.target.files[0]; if(!file) return;
-      try{const r=await DGHData.importJSON(file);_renderAll();_renderDashboard();toast('Importé — '+(r.etablissement||'?'),'success');}
-      catch(err){toast('Erreur : '+err.message,'error',5000);}
+      try {
+        const r=await DGHData.importJSON(file);
+        renderAll(); DGHDashboard.renderDashboard();
+        toast('Importé — '+(r.etablissement||'?'),'success');
+      } catch(err) { toast('Erreur : '+err.message,'error',5000); }
       fileImport.value='';
     });
-
     document.addEventListener('dgh:storage-error', ()=>toast('Erreur de sauvegarde locale','error',6000));
 
-    // ── TOOLTIPS FLOTTANTS (position:fixed, z-index max) ─────────────
-    function _positionTip(tipEl, rect) {
-      const GAP = 10, M = 12;
-      const tw = tipEl.offsetWidth || 220, th = tipEl.offsetHeight || 160;
-      const vw = window.innerWidth, vh = window.innerHeight;
-      let left = rect.left + rect.width / 2 - tw / 2;
-      left = Math.max(M, Math.min(left, vw - tw - M));
-      let top = rect.bottom + GAP;
-      if (top + th + M > vh) top = rect.top - th - GAP;
-      if (top < M) top = M;
-      tipEl.style.left = left + 'px';
-      tipEl.style.top  = top  + 'px';
-    }
+    document.addEventListener('keydown', e => {
+      if (e.key==='Escape') {
+        ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice',
+         'confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee']
+          .forEach(id => { if(document.getElementById(id)?.classList.contains('modal-open')) _closeModalById(id); });
+      }
+    });
+    document.addEventListener('keydown', e => {
+      if (e.target.id==='inputNewYear'&&e.key==='Enter') { e.preventDefault(); DGHEtab.addModalYear(); }
+    });
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey||e.metaKey)&&e.key==='s') {
+        e.preventDefault();
+        try{toast('Exporté : '+DGHData.exportJSON(),'success');}catch(err){toast('Erreur export','error');}
+      }
+    });
 
-    // KPI tooltips
-    const kpiTip = document.getElementById('kpiFloatTip');
+    // ── TOOLTIPS FLOTTANTS ────────────────────────────────────────
+    function _positionTip(tipEl, rect) {
+      const GAP=10, M=12;
+      const tw=tipEl.offsetWidth||220, th=tipEl.offsetHeight||160;
+      const vw=window.innerWidth, vh=window.innerHeight;
+      let left=rect.left+rect.width/2-tw/2;
+      left=Math.max(M, Math.min(left, vw-tw-M));
+      let top=rect.bottom+GAP;
+      if (top+th+M>vh) top=rect.top-th-GAP;
+      if (top<M) top=M;
+      tipEl.style.left=left+'px'; tipEl.style.top=top+'px';
+    }
+    const kpiTip=document.getElementById('kpiFloatTip');
     if (kpiTip) {
+      kpiTip.classList.add('is-hidden');
       document.querySelectorAll('.kpi-tooltip-card').forEach(card => {
-        const src = card.querySelector('.kpi-tooltip');
+        const src=card.querySelector('.kpi-tooltip');
         card.addEventListener('mouseenter', () => {
-          if (!src || !src.innerHTML) return;
-          kpiTip.innerHTML = src.innerHTML;
-          kpiTip.style.display = 'block';
+          if (!src||!src.innerHTML) return;
+          kpiTip.innerHTML=src.innerHTML; kpiTip.classList.remove('is-hidden');
           _positionTip(kpiTip, card.getBoundingClientRect());
         });
-        card.addEventListener('mouseleave', () => { kpiTip.style.display = 'none'; });
-        card.addEventListener('mousemove',  () => { if (kpiTip.style.display==='block') _positionTip(kpiTip, card.getBoundingClientRect()); });
+        card.addEventListener('mouseleave', () => kpiTip.classList.add('is-hidden'));
+        card.addEventListener('mousemove',  () => { if (!kpiTip.classList.contains('is-hidden')) _positionTip(kpiTip, card.getBoundingClientRect()); });
       });
     }
-
-    // Discipline tooltips (delegation — HTML regenere dynamiquement)
-    const discTip = document.getElementById('discFloatTip');
+    const discTip=document.getElementById('discFloatTip');
     if (discTip) {
+      discTip.classList.add('is-hidden');
       document.addEventListener('mouseover', e => {
-        const wrap = e.target.closest('.disc-tip-wrap');
-        if (!wrap) { discTip.style.display = 'none'; return; }
-        const src = wrap.querySelector('.disc-tip');
-        if (!src || !src.innerHTML) return;
-        discTip.innerHTML = src.innerHTML;
-        discTip.style.display = 'block';
+        const wrap=e.target.closest('.disc-tip-wrap');
+        if (!wrap) { discTip.classList.add('is-hidden'); return; }
+        const src=wrap.querySelector('.disc-tip');
+        if (!src||!src.innerHTML) return;
+        discTip.innerHTML=src.innerHTML; discTip.classList.remove('is-hidden');
         _positionTip(discTip, wrap.getBoundingClientRect());
       });
       document.addEventListener('mouseout', e => {
-        const wrap = e.target.closest('.disc-tip-wrap');
+        const wrap=e.target.closest('.disc-tip-wrap');
         if (!wrap) return;
-        if (!e.relatedTarget || !e.relatedTarget.closest('.disc-tip-wrap')) {
-          discTip.style.display = 'none';
-        }
+        if (!e.relatedTarget||!e.relatedTarget.closest('.disc-tip-wrap')) discTip.classList.add('is-hidden');
       });
     }
   }
-
-  // ── PREVIEW DUP ───────────────────────────────────────────────────
-  function _updateDupPreview() {
-    const preview=document.getElementById('dupPreview'); if(!preview) return;
-    const nom=( document.getElementById('inputDivNom')?.value||'').trim();
-    const dup=parseInt(document.getElementById('inputDivDup')?.value,10)||0;
-    if(!nom||dup<=0){preview.innerHTML='';return;}
-    const noms=[nom];let cur=nom;
-    for(let i=0;i<dup;i++){cur=_previewNextName(cur);noms.push(cur);}
-    preview.innerHTML='<span class="dup-preview-label">Sera créé\u00a0:</span>'+noms.map(n=>'<span class="dup-preview-chip">'+_esc(n)+'</span>').join('');
-  }
-  function _previewNextName(nom){const nm=nom.match(/^(.*?)(\d+)$/);if(nm){const n=parseInt(nm[2],10)+1;return nm[1]+(nm[2].length>1?String(n).padStart(nm[2].length,'0'):String(n));}const lm=nom.match(/^(.*?)([A-Z]+)$/);if(lm)return lm[1]+_nextAlpha(lm[2]);const ll=nom.match(/^(.*?)([a-z]+)$/);if(ll)return ll[1]+_nextAlpha(ll[2].toUpperCase()).toLowerCase();return nom+'2';}
-  function _nextAlpha(s){const c=s.split('');let i=c.length-1;while(i>=0){const code=c[i].charCodeAt(0);if(code<90){c[i]=String.fromCharCode(code+1);return c.join('');}c[i]='A';i--;}return 'A'+c.join('');}
 
   // ── TOAST ────────────────────────────────────────────────────────
   function toast(msg, type, duration) {
@@ -1377,14 +350,11 @@ const app = (() => {
     const el=document.createElement('div'); el.className='toast '+type;
     el.innerHTML='<span class="toast-icon">'+(ICONS[type]||'ℹ')+'</span><span>'+msg+'</span>';
     c.appendChild(el);
-    setTimeout(()=>{el.style.cssText+='opacity:0;transform:translateX(10px);transition:.2s ease;';setTimeout(()=>el.remove(),200);},duration);
+    setTimeout(()=>{ el.style.cssText+='opacity:0;transform:translateX(10px);transition:.2s ease;'; setTimeout(()=>el.remove(),200); }, duration);
   }
 
-  function _set(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
-  function _setVal(id,val){const el=document.getElementById(id);if(el)el.value=val;}
-  function _esc(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  return { init, navigate, toast, renderAll, renderYearSelect };
 
-  return { init, navigate, toast };
 })();
 
 document.addEventListener('DOMContentLoaded', ()=>app.init());
