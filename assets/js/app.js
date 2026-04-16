@@ -563,7 +563,7 @@ const app = (() => {
       const tfEcCls = tfEcart > 0 ? 'dot-ecart-over' : tfEcart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
       tfootHtml += '<td class="col-num"><span class="dot-ecart ' + tfEcCls + '"><strong>' + (tfEcart >= 0 ? '+' : '') + tfEcart + ' h</strong></span></td>';
       tfootHtml += '<td class="col-bar"></td><td class="col-actions"></td></tr></tfoot>';
-      listEl.innerHTML = html + tfootHtml + '</tbody></table>';
+      listEl.innerHTML = html + '</tbody>' + tfootHtml + '</table>';
 
       // Total général en bas du tableau
       const totalBar = document.getElementById('dotTotalBar');

@@ -405,7 +405,10 @@ input::placeholder { color: var(--c-text-dim); }
 .empty-actions  { display: flex; justify-content: center; gap: .75rem; flex-wrap: wrap; }
 
 /* ── CARDS ──────────────────────────────────────────────────────── */
-.section-card { background: var(--c-surface); border: 1.5px solid var(--c-border); border-radius: var(--r-lg); overflow: hidden; margin-top: 1.25rem; }
+.section-card { background: var(--c-surface); border: 1.5px solid var(--c-border); border-radius: var(--r-lg); margin-top: 1.25rem; overflow: visible; }
+/* Tableaux dans section-card : overflow clip pour respecter le border-radius */
+.section-card > table, .section-card > div > table { border-radius: inherit; overflow: hidden; }
+#dot-list, #struct-list, #hpc-list { overflow: hidden; border-radius: 0 0 var(--r-lg) var(--r-lg); }
 .section-card-header { display: flex; justify-content: space-between; align-items: center; padding: .875rem 1.125rem; border-bottom: 1px solid var(--c-border); }
 .section-card-header h2 { font-weight: 700; font-size: .875rem; color: var(--c-text); }
 
