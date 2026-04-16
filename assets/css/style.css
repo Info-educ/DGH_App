@@ -1215,19 +1215,20 @@ input::placeholder { color: var(--c-text-dim); }
 /* ══════════════════════════════════════════════════════════════════
    DASHBOARD — Tooltips KPI au survol
    ══════════════════════════════════════════════════════════════════ */
-.kpi-tooltip-card { position: relative; cursor: help; }
-.kpi-tooltip {
-  display: none; position: absolute; z-index: 9000;
-  top: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+.kpi-tooltip-card { cursor: help; }
+/* Le tooltip KPI est géré en position:fixed par JS pour échapper à tout stacking context */
+#kpiFloatTip {
+  display: none; position: fixed; z-index: 99999;
   background: var(--c-surface); border: 1.5px solid var(--c-border);
-  border-radius: var(--r); padding: .65rem .9rem;
-  font-size: .76rem; line-height: 1.6; color: var(--c-text);
-  white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,.18);
-  pointer-events: none; min-width: 180px;
+  border-radius: var(--r-lg); padding: .7rem .95rem;
+  font-size: .76rem; line-height: 1.65; color: var(--c-text);
+  white-space: nowrap; box-shadow: 0 8px 28px rgba(0,0,0,.22);
+  pointer-events: none; min-width: 190px;
+  transition: opacity .12s ease;
 }
-.kpi-tooltip-card:hover .kpi-tooltip { display: block; }
-.kpi-tooltip strong { display: block; margin-bottom: .35rem; font-size: .79rem; color: var(--c-accent); border-bottom: 1px solid var(--c-border); padding-bottom: .3rem; }
-.kpi-grid { overflow: visible; }
+#kpiFloatTip strong { display: block; margin-bottom: .35rem; font-size: .79rem; color: var(--c-accent); border-bottom: 1px solid var(--c-border); padding-bottom: .3rem; }
+/* Les .kpi-tooltip cachés servent juste de source de données */
+.kpi-tooltip { display: none !important; }
 
 @media (max-width: 768px) {
   .dash-hphsa-grid { grid-template-columns: 1fr; }
@@ -1272,18 +1273,19 @@ input::placeholder { color: var(--c-text-dim); }
 
 /* ── Tooltip sur lignes disciplines dashboard ───────────────────── */
 /* Tooltip riche sur les lignes disciplines du dashboard */
-.disc-tip-wrap { position: relative; cursor: default; }
-.disc-tip {
-  display: none; position: absolute; z-index: 9100;
-  top: calc(100% + 6px); left: 0;
+.disc-tip-wrap { cursor: default; }
+/* disc-tip géré en position:fixed par JS */
+#discFloatTip {
+  display: none; position: fixed; z-index: 99999;
   background: var(--c-surface); border: 1.5px solid var(--c-border);
   border-radius: var(--r-lg); padding: .7rem .9rem;
   font-size: .76rem; line-height: 1.6; color: var(--c-text);
   min-width: 210px; white-space: nowrap;
-  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
   pointer-events: none;
 }
-.disc-tip-wrap:hover .disc-tip { display: block; }
+/* Les .disc-tip inline servent de source de données */
+.disc-tip { display: none !important; }
 .disc-tip strong {
   display: block; font-size: .79rem; color: var(--c-accent);
   border-bottom: 1px solid var(--c-border); padding-bottom: .3rem; margin-bottom: .4rem;

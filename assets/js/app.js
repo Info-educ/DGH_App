@@ -1245,6 +1245,57 @@ const app = (() => {
     });
 
     document.addEventListener('dgh:storage-error', ()=>toast('Erreur de sauvegarde locale','error',6000));
+
+    // ── TOOLTIPS FLOTTANTS (position:fixed, z-index max) ─────────────
+    function _positionTip(tipEl, rect) {
+      const GAP = 10, M = 12;
+      const tw = tipEl.offsetWidth || 220, th = tipEl.offsetHeight || 160;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      let left = rect.left + rect.width / 2 - tw / 2;
+      left = Math.max(M, Math.min(left, vw - tw - M));
+      let top = rect.bottom + GAP;
+      if (top + th + M > vh) top = rect.top - th - GAP;
+      if (top < M) top = M;
+      tipEl.style.left = left + 'px';
+      tipEl.style.top  = top  + 'px';
+    }
+
+    // KPI tooltips
+    const kpiTip = document.getElementById('kpiFloatTip');
+    if (kpiTip) {
+      document.querySelectorAll('.kpi-tooltip-card').forEach(card => {
+        const src = card.querySelector('.kpi-tooltip');
+        card.addEventListener('mouseenter', () => {
+          if (!src || !src.innerHTML) return;
+          kpiTip.innerHTML = src.innerHTML;
+          kpiTip.style.display = 'block';
+          _positionTip(kpiTip, card.getBoundingClientRect());
+        });
+        card.addEventListener('mouseleave', () => { kpiTip.style.display = 'none'; });
+        card.addEventListener('mousemove',  () => { if (kpiTip.style.display==='block') _positionTip(kpiTip, card.getBoundingClientRect()); });
+      });
+    }
+
+    // Discipline tooltips (delegation — HTML regenere dynamiquement)
+    const discTip = document.getElementById('discFloatTip');
+    if (discTip) {
+      document.addEventListener('mouseover', e => {
+        const wrap = e.target.closest('.disc-tip-wrap');
+        if (!wrap) { discTip.style.display = 'none'; return; }
+        const src = wrap.querySelector('.disc-tip');
+        if (!src || !src.innerHTML) return;
+        discTip.innerHTML = src.innerHTML;
+        discTip.style.display = 'block';
+        _positionTip(discTip, wrap.getBoundingClientRect());
+      });
+      document.addEventListener('mouseout', e => {
+        const wrap = e.target.closest('.disc-tip-wrap');
+        if (!wrap) return;
+        if (!e.relatedTarget || !e.relatedTarget.closest('.disc-tip-wrap')) {
+          discTip.style.display = 'none';
+        }
+      });
+    }
   }
 
   // ── PREVIEW DUP ───────────────────────────────────────────────────
