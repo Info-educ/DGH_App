@@ -431,6 +431,26 @@ const app = (() => {
   function _closeConfirmDiv() { const m=document.getElementById('confirmDiv'); if(m){m.classList.remove('modal-open');m.dataset.targetId='';} }
   function _execDeleteDiv() { const id=document.getElementById('confirmDiv')?.dataset?.targetId; if(!id) return; DGHData.deleteDivision(id); _closeConfirmDiv(); _renderStructures(); _renderDashboard(); toast('Division supprimée','info'); }
 
+  // ── RENDU CELLULE ÉCART ───────────────────────────────────────────
+  // Bouton cliquable si écart non nul, span statique si écart = 0 ou besoin inconnu
+  function _renderEcartCell(b, discId, ecartCls) {
+    if (!b || b.besoinTheorique <= 0) return '<span class="dot-ecart dot-ecart-ok">\u2014</span>';
+    const ecart = b.ecart;
+    const sign  = ecart >= 0 ? '+' : '';
+    if (ecart === 0) return '<span class="dot-ecart dot-ecart-ok">+0 h</span>';
+    // Écart non nul → bouton cliquable
+    const cibleHP  = Math.max(0, Math.round((b.besoinTheorique - b.hsa) * 2) / 2);
+    const tipText  = 'Cliquer pour ajuster les HP à 0 d\u2019\u00e9cart\u00a0: besoin ' + b.besoinTheorique + '\u00a0h \u2212 HSA ' + b.hsa + '\u00a0h = ' + cibleHP + '\u00a0h HP';
+    return '<button class="dot-ecart ' + ecartCls + ' dot-ecart-btn"'
+      + ' data-action="ecart-zero"'
+      + ' data-disc-id="' + _esc(discId) + '"'
+      + ' data-besoin="' + b.besoinTheorique + '"'
+      + ' data-hsa="' + b.hsa + '"'
+      + ' title="' + _esc(tipText) + '">'
+      + sign + ecart + '\u00a0h \u2731'
+      + '</button>';
+  }
+
   // ── DOTATION ─────────────────────────────────────────────────────
   function _renderDotation() {
     try {
@@ -539,7 +559,7 @@ const app = (() => {
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hp" data-disc-id="' + disc.id + '" data-field="hPoste" value="' + b.hPoste + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hsa" data-disc-id="' + disc.id + '" data-field="hsa" value="' + b.hsa + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + b.total + ' h</strong></td>'
-          + '<td class="col-num">' + (b.besoinTheorique > 0 && b.ecart !== 0 ? '<button class="dot-ecart ' + ecartCls + ' dot-ecart-btn" data-action="ecart-zero" data-disc-id="' + disc.id + '" data-besoin="' + b.besoinTheorique + '" data-hsa="' + b.hsa + '" title="Cliquer pour ajuster les HP à 0 d\'écart (' + b.besoinTheorique + 'h besoin − ' + b.hsa + 'h HSA = ' + Math.max(0, Math.round((b.besoinTheorique - b.hsa)*2)/2) + 'h HP)">' + (b.ecart >= 0 ? '+' : '') + b.ecart + ' h ✱</button>' : '<span class="dot-ecart ' + ecartCls + '">' + (b.besoinTheorique > 0 ? (b.ecart >= 0 ? '+' : '') + b.ecart + ' h' : '\u2014') + '</span>') + '</td>'
+          + '<td class="col-num dot-ecart-cell">' + _renderEcartCell(b, disc.id, ecartCls) + '</td>'
           + '<td class="col-bar"><div class="dot-bar-track"><div class="dot-bar-fill" style="width:' + pctBar + '%;background:' + _esc(disc.couleur) + '"></div></div><span class="dot-bar-pct">' + pctBar + '%</span></td>'
           + '<td class="col-actions">'
           + '<button class="btn-icon-sm btn-add-gc" data-action="add-gc" data-disc-id="' + disc.id + '" title="Ajouter un groupe de cours">+</button>'

@@ -1027,8 +1027,9 @@ input::placeholder { color: var(--c-text-dim); }
 .dash-resume-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
+  gap: 1.5rem 2rem;
   align-items: start;
+  padding: 1rem 1.125rem;
 }
 .dash-resume-col { display: flex; flex-direction: column; min-width: 0; }
 .dash-resume-col-header {
@@ -1039,7 +1040,7 @@ input::placeholder { color: var(--c-text-dim); }
 }
 .dash-resume-col-header h2 { font-weight: 700; font-size: .875rem; color: var(--c-text); margin: 0; }
 .dash-hpc-empty { font-size:.82rem; color:var(--c-text-muted); padding:.5rem 0; line-height:1.6; }
-@media(max-width:860px) { .dash-resume-grid { grid-template-columns: 1fr; } }
+@media(max-width:700px) { .dash-resume-grid { grid-template-columns: 1fr; } }
 
 /* ── Écart cliquable (bouton ajuster HP à 0) ────────────────────── */
 .dot-ecart-btn {
