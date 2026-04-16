@@ -1355,3 +1355,8 @@ td.col-grille {
   background: var(--c-surface2);
   padding-top: .6rem; padding-bottom: .6rem;
 }
+/* Wrapper dans cellules niveau du tfoot — force le même rendu Chrome/Firefox */
+.grille-tfoot-cell {
+  display: flex; flex-direction: column; align-items: center; gap: .1rem;
+}
+.grille-tfoot-cell strong { font-family: 'JetBrains Mono', monospace; font-size: .85rem; }

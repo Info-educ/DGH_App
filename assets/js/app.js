@@ -552,9 +552,12 @@ const app = (() => {
         const hParDivTotalR = Math.round(hParDivTotal * 2) / 2;
         const hTotalNiv    = Math.round(hParDivTotal * nb * 2) / 2;
         // Afficher : h/div en grand + total (h x nb div) en petit
+        // Wrapper div explicite pour comportement identique Chrome et Firefox
         tfootHtml += '<td class="col-num col-grille">'
+          + '<div class="grille-tfoot-cell">'
           + '<strong style="font-family:\'JetBrains Mono\',monospace">' + hParDivTotalR + '\u00a0h</strong>'
           + '<span class="grille-col-total">' + hTotalNiv + 'h \u00d7' + nb + '</span>'
+          + '</div>'
           + '</td>';
       });
       const tfBesoin = Math.round(besoins.reduce((s,b) => s + (b.besoinTheorique||0), 0) * 2) / 2;

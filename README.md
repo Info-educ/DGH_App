@@ -1,9 +1,9 @@
-# ◈ DGH App — v3.0.2
+# ◈ DGH App — v3.1.6
 
 > Outil de pilotage de la Dotation Globale Horaire pour collège  
 > Développé par et pour les personnels de direction d'EPLE
 
-[![Version](https://img.shields.io/badge/version-3.0.2-green)](#)
+[![Version](https://img.shields.io/badge/version-3.1.6-green)](#)
 [![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)](#)
 [![RGPD](https://img.shields.io/badge/RGPD-100%25%20local-blue)](#)
 
@@ -51,13 +51,13 @@ git clone https://github.com/Info-educ/DGH_App.git
 
 | Module | Description | Statut |
 |--------|-------------|--------|
-| ⬡ **Dashboard** | KPIs (enveloppe HP/HSA, solde, divisions), barre de progression duale, résumé disciplines | ✅ v3.0 |
-| ⊞ **Structures** | Saisie matricielle (6e→3e), tableau récap par niveau avec h théoriques MEN, dispositifs masqués | ✅ v3.0 |
-| ◎ **Dotation DGH** | Enveloppe HP/HSA séparée, suggestion auto depuis besoin MEN, tableau disciplines avec groupes de cours dépliables, sélection par classes | ✅ v3.0 |
-| ◈ **H. Péda. Complémentaires** | Options, labo/TP, dispositifs, arts & culture, sport, accompagnement — avec sélection classes et calcul effectif auto | ✅ v3.0 |
+| ⬡ **Dashboard** | KPIs (enveloppe HP/HSA, solde, divisions), encart HP/HSA consommé/disponible, tooltips au survol, résumé disciplines avec détail par niveau | ✅ v3.1 |
+| ⊞ **Structures** | Saisie matricielle (6e→3e), tableau récap par niveau, noms des groupes/HPC affichés dans la colonne dispositif | ✅ v3.1 |
+| ◎ **Dotation DGH** | Enveloppe HP/HSA, colonnes h/div par niveau éditables, besoin réel (GC ou MEN), groupes dépliables, totaux par colonne | ✅ v3.1 |
+| ◈ **H. Péda. Complémentaires** | Options, labo, dispositifs, arts & culture, sport — type HP/HSA cliquable, sélection classes, total HP/HSA | ✅ v3.1 |
 | ◉ **Enseignants** | Services individuels, ORS auto par grade, HSA, TZR, compléments | 🔜 Sprint 6 |
 | ◷ **Pilotage pédagogique** | Dédoublements, co-enseignement, simulation impact DGH | 🔜 Sprint 7 |
-| ◬ **Alertes** | Dépassements, sous-services, anomalies détectées automatiquement | ✅ actif (enrichissement Sprint 6) |
+| ◬ **Alertes** | Dépassements, sous-services, anomalies détectées automatiquement | ✅ actif |
 | ▤ **Synthèses** | Documents imprimables pour CA + tableaux HTML copiables | 🔜 Sprint 8 |
 | ◷ **Historique** | Comparaisons pluriannuelles, évolution DGH | 🔜 Sprint 9 |
 | ⟳ **Import TRM** | Import du Tableau de Répartition des Moyens DSDEN pour pré-remplir HP/HSA | 🔜 Sprint 6 |
@@ -68,13 +68,15 @@ git clone https://github.com/Info-educ/DGH_App.git
 
 ### Enveloppe DGH
 La DGH (Dotation Globale Horaire) se compose de deux types d'heures :
-- **H-Poste (HP)** : heures structurelles qui constituent les postes d'enseignants — attribuées par la DSDEN. Ce sont les heures qui "font" les emplois du temps.
+- **H-Poste (HP)** : heures structurelles qui constituent les postes d'enseignants — attribuées par la DSDEN.
 - **HSA (Heures Supplémentaires Annuelles)** : heures supplémentaires payées, votées lors du CA — budget de l'établissement. Ne constituent pas de postes.
 
-### Besoin théorique MEN
-Calculé automatiquement depuis les grilles horaires nationales (BO spécial n°11 du 26 novembre 2015) × nombre de divisions par niveau. Sert de référence pour la ventilation et la détection d'écarts.
+### Besoin réel vs besoin MEN
+- **Besoin MEN** = grille horaire nationale (BO spécial n°11 du 26 novembre 2015) × nb divisions. Modifiable par discipline et par niveau directement dans le tableau.
+- **Besoin réel** = si des groupes de cours existent pour une discipline, leur coût total (heures × nb classes) **prévaut** sur le besoin MEN. Ex : LV2 Espagnol (2,5h × 16 classes) + LV2 Allemand (2,5h × 3 classes) = 47,5h.
+- **Écart** = heures allouées (HP+HSA) − besoin réel → affiché avec couleur.
 
-### Grilles horaires intégrées (h/élève/semaine)
+### Grilles horaires (h/div/semaine) — modifiables par discipline
 
 | Discipline | 6e | 5e | 4e | 3e |
 |------------|----|----|----|----|
@@ -93,16 +95,15 @@ Calculé automatiquement depuis les grilles horaires nationales (BO spécial n°
 | EMC | 0,5 | 0,5 | 0,5 | 0,5 |
 | AP | 3 | 2 | 2 | 2 |
 
-### Groupes de cours vs Heures pédagogiques complémentaires
+Les valeurs MEN sont modifiables inline dans le tableau Dotation DGH. Double-clic pour revenir à la valeur réglementaire.
 
-**Groupes de cours** (dans Dotation DGH, sous-lignes d'une discipline) :  
-Heures de cours rattachées à une discipline de la grille, avec scission de classes.  
-Ex : *LV2 Espagnol* (5eA + 5eB + 5eC) et *LV2 Allemand* (5eC uniquement) s'imputent tous deux sur la discipline LV2. L'effectif est calculé automatiquement depuis les classes sélectionnées.
+### Groupes de cours
+Rattachés à une discipline, constitués de classes précises. Le coût DGH = heures prof × nombre de classes du groupe.
+Ex : LV2 Espagnol → 5eA+5eB+5eC (15 élèves), LV2 Allemand → 5eC (5 élèves) = 2 groupes simultanés possibles.
 
-> ⚠️ Une classe peut appartenir à **plusieurs groupes simultanément** sur le même créneau horaire (ex : 5eC → groupe Espagnol ET groupe Allemand). Chaque groupe coûte une heure prof distincte. L'impact DGH exact par créneau sera modélisé dans le module Pilotage pédagogique (Sprint 7).
-
-**Heures pédagogiques complémentaires** (onglet dédié) :  
+### Heures Pédagogiques Complémentaires
 Heures hors grille standard — options (Latin, Grec), labo/TP, savoir nager, chorale, orchestre, devoirs faits, HVC, AP dédoublé, UNSS…
+Chaque HPC est déclarée en **HP** ou **HSA** (bascule au clic dans le tableau). L'impact est répercuté dans le tableau de bord.
 
 ### ORS intégrées
 
@@ -115,25 +116,19 @@ Heures hors grille standard — options (Latin, Grec), labo/TP, savoir nager, ch
 | Documentaliste | 36 h présence |
 | CPE, Psy-EN | 35 h |
 
-Les ORS sont modifiables manuellement par enseignant (réductions réglementaires, BMP, etc.).
-
 ---
 
 ## 💾 Gestion des données
 
-### Format du fichier JSON (v3.0)
+### Format du fichier JSON (v3.1)
 ```json
 {
-  "_meta": { "version": "3.0.0", "updatedAt": "..." },
+  "_meta": { "version": "3.1.0", "updatedAt": "..." },
   "etablissement": { "nom": "...", "uai": "...", "academie": "..." },
   "anneeActive": "2025-2026",
   "annees": {
     "2025-2026": {
-      "dotation": {
-        "hPosteEnveloppe": 320,
-        "hsaEnveloppe": 30,
-        "commentaire": ""
-      },
+      "dotation": { "hPosteEnveloppe": 320, "hsaEnveloppe": 30, "commentaire": "" },
       "structures": [
         { "id": "div_...", "niveau": "6e", "nom": "6eA", "effectif": 28, "dispositif": null }
       ],
@@ -145,13 +140,17 @@ Les ORS sont modifiables manuellement par enseignant (réductions réglementaire
           "disciplineId": "disc_...",
           "hPoste": 18, "hsa": 2, "commentaire": "",
           "groupesCours": [
-            { "id": "gc_...", "nom": "LV2 Espagnol", "classesIds": ["div_...", "div_..."], "heures": 2.5 }
+            { "id": "gc_...", "nom": "LV2 Espagnol", "classesIds": ["div_..."], "heures": 2.5 }
           ]
         }
       ],
       "heuresPedaComp": [
-        { "id": "hpc_...", "nom": "Latin 4e", "categorie": "option", "disciplineId": null, "classesIds": ["div_..."], "heures": 3, "effectif": 12 }
+        { "id": "hpc_...", "nom": "Latin 4e", "categorie": "option", "disciplineId": null,
+          "classesIds": ["div_..."], "typeHeure": "hp", "heures": 3, "effectif": 12 }
       ],
+      "grilles": {
+        "Français": { "6e": 4, "5e": 4.5 }
+      },
       "enseignants": []
     }
   }
@@ -162,7 +161,8 @@ Les ORS sont modifiables manuellement par enseignant (réductions réglementaire
 `data.js` migre automatiquement les fichiers des versions précédentes :
 - v1 → v2 : `heuresAllouees` → `hPoste`
 - v2 → v3 : `dotation.enveloppe` → `hPosteEnveloppe` + `hsaEnveloppe`
-- v2 → v3 : `groupes` → `heuresPedaComp` (avec mapping des catégories)
+- v2 → v3 : `groupes` → `heuresPedaComp`
+- v3.0 → v3.1 : ajout `typeHeure: 'hp'` sur les HPC existantes + `grilles: {}`
 
 ---
 
@@ -192,14 +192,14 @@ Zéro dépendance, zéro build, zéro framework. Maintenable en autonomie sur pl
 ## 🗓️ Feuille de route
 
 ### Sprint 6 — Enseignants & TRM
-- Module enseignants : fiche par personne (grade → ORS auto, services affectés, HSA, TZR, compléments de service)
+- Module enseignants : fiche par personne (grade → ORS auto, services affectés, HSA, TZR, compléments)
 - Import TRM DSDEN (CSV ou copier-coller) → pré-remplissage HP/HSA enveloppe
-- Flux guidé : Structures → TRM → Dotation → Groupes
+- Flux guidé : Structures → TRM → Dotation → Groupes → HPC → Enseignants
 
 ### Sprint 7 — Pilotage pédagogique
 - Déclaration de dédoublements (SVT labo, Techno, EPS mixte…)
 - Co-enseignement
-- Impact DGH par créneau et par classe (gestion du cas LV2 multi-groupes simultanés)
+- Impact DGH par créneau et par classe
 - Simulation : "si je supprime ce dédoublement, je récupère Xh"
 
 ### Sprint 8 — Synthèses & exports
