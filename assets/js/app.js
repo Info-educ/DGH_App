@@ -324,18 +324,32 @@ const app = (() => {
     }
     const discTip=document.getElementById('discFloatTip');
     if (discTip) {
+      // Délégation robuste : mouseenter/mouseleave ne bubblent pas aux enfants
+      // On écoute mouseover/mouseout mais on ne réagit que si le wrap change
+      let _activeWrap = null;
       document.addEventListener('mouseover', e => {
-        const wrap=e.target.closest('.disc-tip-wrap');
+        const wrap = e.target.closest('.disc-tip-wrap');
+        if (wrap === _activeWrap) return; // déjà sur ce wrap, ne rien faire
+        _activeWrap = wrap;
         if (!wrap) { discTip.style.display='none'; return; }
-        const src=wrap.querySelector('.disc-tip');
-        if (!src||!src.innerHTML) return;
-        discTip.innerHTML=src.innerHTML; discTip.style.display='block';
+        const src = wrap.querySelector('.disc-tip');
+        if (!src || !src.innerHTML) return;
+        discTip.innerHTML = src.innerHTML;
+        discTip.style.display = 'block';
         _positionTip(discTip, wrap.getBoundingClientRect());
       });
+      document.addEventListener('mousemove', e => {
+        if (_activeWrap && discTip.style.display==='block') {
+          _positionTip(discTip, _activeWrap.getBoundingClientRect());
+        }
+      });
       document.addEventListener('mouseout', e => {
-        const wrap=e.target.closest('.disc-tip-wrap');
-        if (!wrap) return;
-        if (!e.relatedTarget||!e.relatedTarget.closest('.disc-tip-wrap')) discTip.style.display='none';
+        if (!_activeWrap) return;
+        const to = e.relatedTarget;
+        if (!to || !_activeWrap.contains(to)) {
+          _activeWrap = null;
+          discTip.style.display = 'none';
+        }
       });
     }
   }
