@@ -5,6 +5,25 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## [3.1.1] — Sprint 5 ter — Corrections réglementaires & UX Dotation
+
+### Corrigé
+- 📜 **Référence réglementaire corrigée** — la mention « BO spécial n°11 du 26 novembre 2015 » (qui désigne les programmes) est remplacée par la référence exacte des grilles horaires : *arrêté du 19 mai 2015 relatif à l'organisation des enseignements dans les classes de collège, J.O. du 20 mai 2015, modifié* (source : Légifrance)
+- 🗑️ **Doublon CSS `.dot-ecart`** supprimé (deux blocs identiques coexistaient dans `style.css`)
+- 📐 **`.disc-resume-nom`** corrigé en `flex:1; min-width:0` pour éviter le débordement dans la grille deux colonnes
+
+### Ajouté
+- ✱ **Clic sur Écart (Dotation DGH)** — lorsque l'écart d'une discipline n'est pas nul, il s'affiche comme un bouton cliquable (bordure pointillée + ✱). Un clic ajuste automatiquement les HP pour que l'écart soit égal à 0 (HP = besoin − HSA). Le bouton disparaît dès que l'écart est à 0.
+- 📊 **Tableau de bord — deux colonnes** — la section « Répartition par discipline » est maintenant accompagnée, côte à côte, d'un résumé des **Heures pédagogiques complémentaires** (intitulé, heures/sem, catégorie, total). Responsive : une colonne sous 860 px.
+
+### Technique
+- Nouvelle fonction `_ecartZero(discId, besoin, hsa)` dans `app.js`
+- Nouvelle action `ecart-zero` dans `_onGlobalClick`
+- Nouveau CSS : `.dash-resume-grid`, `.dash-resume-col`, `.dash-resume-col-header`, `.dash-hpc-empty`, `.dot-ecart-btn`
+- Nouveau `id` HTML : `dashHPCList` (rendu par `_renderDashboard`)
+
+---
+
 ## [3.1.0] — Sprint 5 bis — UX & Dashboard enrichi
 
 ### Ajouté

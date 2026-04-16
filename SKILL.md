@@ -193,6 +193,12 @@ Toute modification du schéma implique :
 
 ## Concepts métier — À connaître absolument
 
+### Référence réglementaire des grilles horaires — IMPORTANT
+Les volumes horaires des enseignements obligatoires au collège sont fixés par l'**arrêté du 19 mai 2015 relatif à l'organisation des enseignements dans les classes de collège** (J.O. du 20 mai 2015), modifié à plusieurs reprises (dernière modification connue : arrêté du 4 avril 2025).
+
+**⚠️ Ne jamais citer** le « BO spécial n°11 du 26 novembre 2015 » pour les grilles horaires — ce numéro désigne les *programmes des cycles*, pas les volumes horaires. La mention correcte dans le code et l'interface est :
+> *arrêté du 19 mai 2015 relatif à l'organisation des enseignements dans les classes de collège, J.O. du 20 mai 2015, modifié*
+
 ### HP vs HSA — distinction fondamentale
 - **H-Poste** : constituent les postes d'enseignants. Décidées par la DSDEN.
 - **HSA** : heures supplémentaires payées. Budget CA. Ne constituent pas de postes.
@@ -252,8 +258,14 @@ Document DSDEN. **Sprint 6** : import TRM → pré-remplissage HP/HSA dans Dotat
 .dot-tfoot .dot-total-row  → ligne totaux en bas du tableau dotation
 .hpc-type-toggle   → badge HP/HSA cliquable dans tableau HPC
 .div-tag-struct    → badge bleu dans colonne dispositif Structures (noms groupes/HPC)
+.dash-resume-grid  → grille 2 colonnes dans dashboard (disciplines + HPC), 1 colonne sous 860px
+.dash-resume-col   → colonne de la grille dashboard
+.dash-resume-col-header → en-tête de colonne (titre h2 + bouton lien)
+.dot-ecart-btn     → écart cliquable dans tableau Dotation (bordure pointillée, action ecart-zero)
+  → affiché uniquement si écart ≠ 0 ; clic → HP ajustées pour écart = 0
 #kpiFloatTip       → tooltip KPI fixe (z-index:99999, géré par JS)
 #discFloatTip      → tooltip disciplines dashboard fixe (z-index:99999, géré par JS)
+#dashHPCList       → résumé HPC dans le dashboard (colonne droite)
 app.toast(msg, 'success|error|info|warning', duration?)
 ```
 

@@ -72,7 +72,7 @@ La DGH (Dotation Globale Horaire) se compose de deux types d'heures :
 - **HSA (Heures Supplémentaires Annuelles)** : heures supplémentaires payées, votées lors du CA — budget de l'établissement. Ne constituent pas de postes.
 
 ### Besoin réel vs besoin MEN
-- **Besoin MEN** = grille horaire nationale (BO spécial n°11 du 26 novembre 2015) × nb divisions. Modifiable par discipline et par niveau directement dans le tableau.
+- **Besoin MEN** = volume horaire réglementaire (arrêté du 19 mai 2015 relatif à l'organisation des enseignements dans les classes de collège, J.O. du 20 mai 2015, modifié) × nb divisions. Modifiable par discipline et par niveau directement dans le tableau.
 - **Besoin réel** = si des groupes de cours existent pour une discipline, leur coût total (heures × nb classes) **prévaut** sur le besoin MEN. Ex : LV2 Espagnol (2,5h × 16 classes) + LV2 Allemand (2,5h × 3 classes) = 47,5h.
 - **Écart** = heures allouées (HP+HSA) − besoin réel → affiché avec couleur.
 

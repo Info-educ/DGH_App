@@ -117,11 +117,22 @@
           </div>
         </div>
         <div class="section-card" id="disciplineResume" style="display:none">
-          <div class="section-card-header">
-            <h2>Répartition par discipline</h2>
-            <button class="btn-link" data-navigate="dotation">Voir tout →</button>
+          <div class="dash-resume-grid">
+            <div class="dash-resume-col">
+              <div class="dash-resume-col-header">
+                <h2>Répartition par discipline</h2>
+                <button class="btn-link" data-navigate="dotation">Voir tout →</button>
+              </div>
+              <div id="disciplineList"></div>
+            </div>
+            <div class="dash-resume-col">
+              <div class="dash-resume-col-header">
+                <h2>H. pédagogiques complémentaires</h2>
+                <button class="btn-link" data-navigate="hpc">Voir tout →</button>
+              </div>
+              <div id="dashHPCList"></div>
+            </div>
           </div>
-          <div id="disciplineList"></div>
         </div>
       </section>
 
@@ -245,7 +256,7 @@
             <span class="dot-total-sum">= <strong id="dot-total-sum-val">0 h</strong></span>
           </div>
         </div>
-        <p class="dot-footnote">Besoin théorique calculé d'après les grilles horaires MEN (BO spécial n°11 du 26 novembre 2015) × nombre de divisions par niveau.</p>
+        <p class="dot-footnote">Besoin théorique calculé d'après les volumes horaires des enseignements obligatoires (arrêté du 19 mai 2015 relatif à l'organisation des enseignements dans les classes de collège, J.O. du 20 mai 2015, modifié) × nombre de divisions par niveau.</p>
       </section>
 
       <!-- ══ HEURES PÉDAGOGIQUES COMPLÉMENTAIRES ═════════════════════ -->

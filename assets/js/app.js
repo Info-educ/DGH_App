@@ -222,6 +222,42 @@ const app = (() => {
           discListEl.innerHTML = html;
         }
       }
+
+      // Résumé HPC dans le dashboard
+      const hpcListEl = document.getElementById('dashHPCList');
+      if (hpcListEl) {
+        const hpcs       = DGHData.getHeuresPedaComp ? DGHData.getHeuresPedaComp() : (data.heuresPedaComp||[]);
+        const disciplines = DGHData.getDisciplines ? DGHData.getDisciplines() : (data.disciplines||[]);
+        if (hpcs.length === 0) {
+          hpcListEl.innerHTML = '<p class="dash-hpc-empty">Aucune heure complémentaire saisie.<br><button class="btn-link" data-navigate="hpc">Ajouter des heures complémentaires →</button></p>';
+        } else {
+          const LABELS = {}; (DGHData.getCategoriesHPC ? DGHData.getCategoriesHPC() : []).forEach(c => { LABELS[c.value] = c.label; });
+          const discMap = {}; disciplines.forEach(d => { discMap[d.id] = d; });
+          let hpcHtml = '<div class="disc-resume-grid">';
+          hpcs.forEach(h => {
+            const isHSA    = (h.typeHeure||'hp') === 'hsa';
+            const catLabel = (LABELS[h.categorie]||h.categorie||'autre').split('(')[0].trim();
+            const discNom  = h.disciplineId && discMap[h.disciplineId] ? discMap[h.disciplineId].nom : null;
+            hpcHtml += '<div class="disc-resume-row">'
+              + '<span class="disc-color-dot" style="background:' + (isHSA ? 'var(--c-indigo)' : 'var(--c-accent)') + '"></span>'
+              + '<span class="disc-resume-nom">' + _esc(h.nom||'—') + (discNom ? '<small style="color:var(--c-text-dim);margin-left:.3em">(' + _esc(discNom) + ')</small>' : '') + '</span>'
+              + '<span class="disc-resume-h">' + (h.heures||0) + ' h</span>'
+              + '<span class="grp-type-badge" style="font-size:.65rem;padding:1px 5px">' + _esc(catLabel) + '</span>'
+              + '</div>';
+          });
+          // Ligne total HPC
+          const bilanHPC = Calculs.bilanHPC(hpcs, disciplines);
+          hpcHtml += '<div class="disc-resume-row" style="border-top:1px solid var(--c-border);margin-top:.25rem;padding-top:.35rem">'
+            + '<span></span>'
+            + '<span class="disc-resume-nom" style="color:var(--c-text-muted);font-size:.78rem">Total (' + hpcs.length + ' entrée' + (hpcs.length>1?'s':'') + ')</span>'
+            + '<span class="disc-resume-h" style="font-weight:700">' + bilanHPC.totalHeures + ' h</span>'
+            + '<span></span>'
+            + '</div>';
+          hpcHtml += '</div>';
+          hpcListEl.innerHTML = hpcHtml;
+        }
+      }
+
     } catch(e) { console.error('[DGH] renderDashboard:', e); }
     _updateBtnEtab();
   }
@@ -503,7 +539,7 @@ const app = (() => {
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hp" data-disc-id="' + disc.id + '" data-field="hPoste" value="' + b.hPoste + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hsa" data-disc-id="' + disc.id + '" data-field="hsa" value="' + b.hsa + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + b.total + ' h</strong></td>'
-          + '<td class="col-num"><span class="dot-ecart ' + ecartCls + '">' + (b.besoinTheorique > 0 ? (b.ecart >= 0 ? '+' : '') + b.ecart + ' h' : '\u2014') + '</span></td>'
+          + '<td class="col-num">' + (b.besoinTheorique > 0 && b.ecart !== 0 ? '<button class="dot-ecart ' + ecartCls + ' dot-ecart-btn" data-action="ecart-zero" data-disc-id="' + disc.id + '" data-besoin="' + b.besoinTheorique + '" data-hsa="' + b.hsa + '" title="Cliquer pour ajuster les HP à 0 d\'écart (' + b.besoinTheorique + 'h besoin − ' + b.hsa + 'h HSA = ' + Math.max(0, Math.round((b.besoinTheorique - b.hsa)*2)/2) + 'h HP)">' + (b.ecart >= 0 ? '+' : '') + b.ecart + ' h ✱</button>' : '<span class="dot-ecart ' + ecartCls + '">' + (b.besoinTheorique > 0 ? (b.ecart >= 0 ? '+' : '') + b.ecart + ' h' : '\u2014') + '</span>') + '</td>'
           + '<td class="col-bar"><div class="dot-bar-track"><div class="dot-bar-fill" style="width:' + pctBar + '%;background:' + _esc(disc.couleur) + '"></div></div><span class="dot-bar-pct">' + pctBar + '%</span></td>'
           + '<td class="col-actions">'
           + '<button class="btn-icon-sm btn-add-gc" data-action="add-gc" data-disc-id="' + disc.id + '" title="Ajouter un groupe de cours">+</button>'
@@ -701,6 +737,15 @@ const app = (() => {
     suggestions.forEach(s => { DGHData.setRepartition(s.disciplineId, { hPoste: s.suggested }); });
     _renderDotation(); _renderDashboard();
     toast('Suggestion appliquée sur '+suggestions.length+' discipline(s) — ajustez selon votre TRM','success', 5000);
+  }
+
+  // ── ÉCART ZÉRO ────────────────────────────────────────────────────
+  function _ecartZero(discId, besoin, hsa) {
+    if (!discId || besoin <= 0) return;
+    const nouvelleHP = Math.max(0, Math.round((besoin - hsa) * 2) / 2);
+    DGHData.setRepartition(discId, { hPoste: nouvelleHP });
+    _renderDotation(); _renderDashboard();
+    toast('HP ajustées à ' + nouvelleHP + '\u00a0h — écart = 0', 'success', 3000);
   }
 
   // ── MODAL GROUPE DE COURS ─────────────────────────────────────────
@@ -1078,6 +1123,7 @@ const app = (() => {
       if (action==='edit-hpc')    { _openModalHPC(id);              return; }
       if (action==='delete-hpc')  { _confirmDeleteHPC(id);          return; }
       if (action==='toggle-hpc-type') { _toggleHPCType(id);         return; }
+      if (action==='ecart-zero')      { _ecartZero(actionBtn.dataset.discId, parseFloat(actionBtn.dataset.besoin)||0, parseFloat(actionBtn.dataset.hsa)||0); return; }
     }
 
     const btnDeleteAnnee = e.target.closest('.btn-delete-annee');

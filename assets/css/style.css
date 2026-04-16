@@ -837,16 +837,6 @@ input::placeholder { color: var(--c-text-dim); }
   outline: none;
 }
 
-/* ── Écart discipline ───────────────────────────────────────────── */
-.dot-ecart {
-  display: inline-block;
-  font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: .8rem;
-  padding: .15rem .5rem; border-radius: 5px;
-}
-.dot-ecart-ok    { background: var(--c-green-bg); color: var(--c-green); }
-.dot-ecart-over  { background: var(--c-amber-bg); color: var(--c-amber); }
-.dot-ecart-under { background: var(--c-red-bg);   color: var(--c-red); }
-
 /* ── Mini barre de proportion ───────────────────────────────────── */
 .dot-bar-track {
   height: 6px; background: var(--c-surface2);
@@ -1029,9 +1019,42 @@ input::placeholder { color: var(--c-text-dim); }
   transition:background var(--tf);
 }
 .disc-resume-row:hover { background:var(--c-surface3); }
-.disc-resume-nom { flex:0 0 160px; font-weight:500; color:var(--c-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.disc-resume-nom { flex:1; min-width:0; font-weight:500; color:var(--c-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .disc-resume-h   { flex:0 0 52px; text-align:right; font-weight:600; color:var(--c-text); font-size:.8rem; }
 @media(max-width:600px) { .disc-resume-nom { flex:1; } }
+
+/* ── Dashboard deux colonnes ────────────────────────────────────── */
+.dash-resume-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+.dash-resume-col { display: flex; flex-direction: column; min-width: 0; }
+.dash-resume-col-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .5rem 0 .6rem;
+  border-bottom: 1px solid var(--c-border);
+  margin-bottom: .6rem;
+}
+.dash-resume-col-header h2 { font-weight: 700; font-size: .875rem; color: var(--c-text); margin: 0; }
+.dash-hpc-empty { font-size:.82rem; color:var(--c-text-muted); padding:.5rem 0; line-height:1.6; }
+@media(max-width:860px) { .dash-resume-grid { grid-template-columns: 1fr; } }
+
+/* ── Écart cliquable (bouton ajuster HP à 0) ────────────────────── */
+.dot-ecart-btn {
+  cursor: pointer;
+  background: none;
+  border: 1px dashed currentColor;
+  border-radius: 5px;
+  padding: .15rem .4rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  font-size: .78rem;
+  transition: background var(--tf), opacity var(--tf);
+  line-height: 1.4;
+}
+.dot-ecart-btn:hover { opacity: .75; background: var(--c-surface2); }
 
 /* ══════════════════════════════════════════════════════════════════
    SPRINT 5 — Enveloppe HP/HSA saisie dans Dotation
