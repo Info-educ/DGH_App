@@ -170,3 +170,40 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 - `localStorage` dans `app.js` limité au thème UI (exception documentée)
 - Zéro appel de fonction privée entre modules (tout passe par l'API publique `return{}`)
 - Zéro style injecté en JS sauf valeurs calculées dynamiquement (width%, marginLeft%)
+
+## v3.2.1 — Corrections post-refactorisation (2026-04-16)
+
+### Bugs corrigés
+
+- **Dashboard — répartition disciplines et HPC invisibles** : `disciplineResume` avait
+  `style="display:none"` dans le HTML et `class="is-hidden"` ajouté en second attribut.
+  Le navigateur ignore le second attribut `class=` — l'élément restait caché.
+  Corrigé : fusion en `class="section-card is-hidden"`. Même correction sur
+  `structNiveauCard`, `dotTotalBar`, `tab-annees`, `tab-danger`, `dashHpHsaGrid`.
+
+- **Tooltips KPI et disciplines invisibles au survol** : `#kpiFloatTip` et `#discFloatTip`
+  ont `display: none` dans leur règle CSS propre. `classList.remove('is-hidden')` ne
+  peut pas annuler une règle CSS ciblant directement l'id. Corrigé : retour à
+  `style.display = 'block'/'none'` pour ces deux éléments uniquement (exception documentée
+  dans SKILL.md).
+
+- **Tooltip disciplines clignotant** : `mouseover` se déclenche sur chaque enfant du
+  `.disc-tip-wrap`, provoquant des clignotements lors du survol. Corrigé avec un tracker
+  `_activeWrap` : le tooltip ne change d'état que si le wrapper change vraiment.
+
+- **Couleurs écarts et badges HP/HSA disparues** : le bloc CSS `MODULE DOTATION DGH — HP + HSA`
+  supprimé lors de la refactorisation contenait des règles uniques non présentes dans le
+  premier bloc : `.dot-ecart-ok/over/under`, `.dot-col-badge`, `.dot-col-hp/hsa`,
+  `.dot-bar-track`, `.dot-input-hp/hsa:focus`. Restaurées depuis le CSS original v3.1.6
+  dans le bon ordre de cascade (`.dot-ecart-btn` déclaré après les couleurs).
+
+### Comportement modifié
+
+- **Bouton écart (Dotation DGH)** : le clic règle désormais HP = besoin théorique
+  **et** remet HSA = 0. Précédemment : HP ajustée à (besoin − HSA existantes), HSA inchangées.
+  Nouveau tooltip : "Cliquer : HP → Xh · HSA → 0h (écart = 0)".
+
+### Documentation
+
+- SKILL.md v3.2.1 : ajout de 4 nouveaux pièges (double attribut class, exception
+  tooltips flottants, tooltip clignotant, suppression CSS partielle).

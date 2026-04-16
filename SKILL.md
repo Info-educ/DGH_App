@@ -2,7 +2,7 @@
 
 > **À fournir à Claude au début de chaque session de développement.**  
 > Ce fichier garantit la cohérence du code sur plusieurs années d'évolution du projet.  
-> Mis à jour à chaque sprint. Version courante : **3.2.0**
+> Mis à jour à chaque sprint. Version courante : **3.2.1**
 
 ---
 
@@ -443,7 +443,7 @@ DGHData.genId(prefix) / isEmpty()
 |-----------|---------|--------------------------------|
 | `DGHDashboard` | `modules/dashboard.js` | `renderDashboard()`, `updateBtnEtab()` |
 | `DGHStructures` | `modules/structures.js` | `renderStructures()`, `openModalDiv(id)`, `openModalMatrice()`, `confirmDeleteDiv(id)`, `updateDupPreview()` |
-| `DGHDotation` | `modules/dotation.js` | `renderDotation()`, `saveEnveloppe()`, `handleToggleGC(discId)`, `handleDotInput(target)`, `handleGrilleInput(target)`, `handleGrilleReset(target)`, `openModalDisc(id)`, `openModalGC(discId, gcId)`, `suggererHP()`, `ecartZero(discId, besoin, hsa)`, `gcSelectAllClasses()`, `toggleAllGC()`, `updateColorHint(v)`, `updateGCEffectif()` |
+| `DGHDotation` | `modules/dotation.js` | `renderDotation()`, `saveEnveloppe()`, `handleToggleGC(discId)`, `handleDotInput(target)`, `handleGrilleInput(target)`, `handleGrilleReset(target)`, `openModalDisc(id)`, `openModalGC(discId, gcId)`, `suggererHP()`, `ecartZero(discId, besoin)`, `gcSelectAllClasses()`, `toggleAllGC()`, `updateColorHint(v)`, `updateGCEffectif()` |
 | `DGHHPC` | `modules/hpc.js` | `renderHPC()`, `openModalHPC(id)`, `toggleHPCType(id)`, `hpcSelectAllClasses()`, `updateHPCEffectif()` |
 | `DGHEtab` | `modules/etab.js` | `openModal()`, `saveModal()`, `switchModalTab(tab)`, `addModalYear()`, `onModalYearChange(val)`, `renderAlertes()`, `initDisciplinesMEN()`, `openConfirmReset()`, `openConfirmDeleteAnnee(annee)`, `updateModalDotTotal()` |
 | `app` | `app.js` | `navigate(viewId)`, `toast(msg, type, duration?)`, `renderAll()`, `renderYearSelect()` |
@@ -491,6 +491,46 @@ DGHData.genId(prefix) / isEmpty()
 ### Encodage Python
 - Toujours `rb`/`wb` pour les fichiers JS contenant des caractères Unicode
 - Les `replace()` peuvent échouer silencieusement sur des chaînes multi-octets en mode texte
+
+### Attributs HTML — jamais deux `class=` sur le même élément
+Un élément HTML ne peut avoir qu'**un seul** attribut `class`. Quand on passe de
+`style="display:none"` à `class="is-hidden"` sur un élément qui a déjà une classe,
+il faut **fusionner** — pas ajouter un second attribut :
+```html
+<!-- ❌ Invalide — le navigateur ignore le second class= -->
+<div class="section-card" id="monEl" class="is-hidden">
+
+<!-- ✅ Correct — une seule valeur d'attribut class -->
+<div class="section-card is-hidden" id="monEl">
+```
+
+### Tooltips flottants — exception `style.display`
+`#kpiFloatTip` et `#discFloatTip` ont `display: none` dans leur **règle CSS propre** (pas via `.is-hidden`).
+Pour les afficher, il faut `style.display = 'block'` — `classList.remove('is-hidden')` ne suffit pas
+car une règle CSS directe sur l'id ne peut pas être annulée par le retrait d'une classe.
+```js
+// ✅ Correct pour ces deux tooltips spécifiques
+tipEl.style.display = 'block';   // afficher
+tipEl.style.display = 'none';    // cacher
+
+// ❌ Ne fonctionne pas ici (la règle #kpiFloatTip { display:none } reste active)
+tipEl.classList.remove('is-hidden');
+```
+Cette exception est **limitée** à `#kpiFloatTip` et `#discFloatTip`. Tous les autres
+éléments masqués/affichés utilisent `.is-hidden`.
+
+### Tooltip disciplines — `mouseover` clignotant
+Le tooltip `.disc-tip-wrap` / `#discFloatTip` ne doit pas utiliser `mouseover` naïvement :
+l'événement se déclenche sur chaque enfant du wrapper, provoquant des clignotements.
+Solution : tracker l'élément wrapper actif avec `_activeWrap` pour ne réagir qu'au
+**changement de wrapper**, pas aux transitions entre enfants du même wrapper.
+
+### Suppression CSS — vérifier l'unicité des règles avant de supprimer
+Avant de supprimer un bloc CSS considéré comme "doublon", vérifier que **chaque règle**
+de ce bloc existe aussi dans le bloc conservé. Deux blocs peuvent sembler dupliquer
+les déclarations de base (`.dot-table`, `.dot-kpi-bar`) mais l'un contient
+des règles de couleur uniques (`.dot-ecart-ok`, `.dot-col-badge`) absentes de l'autre.
+Supprimer le "doublon" efface silencieusement ces règles uniques.
 
 ---
 
@@ -540,6 +580,8 @@ DGHData.genId(prefix) / isEmpty()
 - [ ] `grep -n "localStorage" assets/js/calculs.js` → vide
 - [ ] `grep -rn "\.style\.color\|\.style\.display" assets/js/modules/` → vide
 - [ ] Aucun `id` JS sans équivalent HTML
+- [ ] Aucun double attribut `class=` dans index.html (fusionner en `class="a b"`)
+- [ ] Tooltips `#kpiFloatTip`/`#discFloatTip` gérés via `style.display` (pas classList)
 - [ ] Aucune couleur hardcodée dans le CSS
 - [ ] Aucun style injecté en JS (sauf `width`, `marginLeft`, `left`, `top` calculés)
 - [ ] `data/exemple.json` mis à jour si schéma modifié
@@ -552,4 +594,4 @@ DGHData.genId(prefix) / isEmpty()
 
 *Ce fichier fait partie intégrante du projet DGH App.*  
 *Le mettre à jour à chaque évolution structurelle ou décision de conception.*  
-*Version : 3.2.0 — Dernière mise à jour : refactorisation structurelle*
+*Version : 3.2.1 — Dernière mise à jour : corrections post-refactorisation*
