@@ -173,25 +173,49 @@ const app = (() => {
         if (disciplines.length === 0) {
           discListEl.innerHTML = '<p style="color:var(--c-text-muted);font-size:.83rem;padding:.5rem 0">Aucune discipline — initialisez les <button class="btn-link" data-navigate="dotation">disciplines MEN dans Dotation</button>.</p>';
         } else {
+          // Nb divisions par niveau pour calcul h/niveau
+          const nbDivParNiv = {};
+          structures.forEach(s => { nbDivParNiv[s.niveau] = (nbDivParNiv[s.niveau]||0) + 1; });
+          const niveauxDispo = ['6e','5e','4e','3e'].filter(niv => nbDivParNiv[niv]);
+
           let html = '<div class="disc-resume-grid">';
           besoins.forEach(b => {
             const pct = bilan.enveloppe > 0 ? Math.min(100, Math.round((b.total / bilan.enveloppe) * 100)) : 0;
             const ecartCls = b.ecart > 0 ? 'dot-ecart-over' : b.ecart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
-            // Tooltip : detail HP/HSA/besoin/ecart
-            const tipLines = [
-              'HP : ' + b.hPoste + ' h',
-              'HSA : ' + b.hsa + ' h',
-              b.hasGroupes
-                ? 'Besoin réel (GC) : ' + (b.heuresGroupesReel||b.heuresGroupes) + ' h'
-                : (b.besoinMEN > 0 ? 'Besoin MEN : ' + b.besoinMEN + ' h' : null),
-              b.besoinTheorique > 0 ? 'Écart : ' + (b.ecart >= 0 ? '+' : '') + b.ecart + ' h' : null
-            ].filter(Boolean).join(' | ');
-            html += '<div class="disc-resume-row disc-resume-tooltip-row" title="' + _esc(tipLines) + '">'
+
+            // Tooltip HTML riche : heures par niveau + HP/HSA/ecart
+            let tipHtml = '<strong>' + _esc(b.nom) + '</strong>';
+            if (niveauxDispo.length > 0) {
+              niveauxDispo.forEach(niv => {
+                const gl = b.grilleLignes && b.grilleLignes[niv];
+                const hParDiv = gl ? gl.valeur : null;
+                const nb = nbDivParNiv[niv] || 0;
+                if (hParDiv !== null && hParDiv !== undefined && hParDiv !== '') {
+                  const hTot = Math.round(parseFloat(hParDiv) * nb * 2) / 2;
+                  const modifie = gl && gl.modifie ? ' \u270e' : '';
+                  tipHtml += '<div class="disc-tip-row"><span class="disc-tip-niv">' + niv + '</span><span class="disc-tip-val">' + hTot + '\u00a0h</span><small>(' + hParDiv + 'h \u00d7 ' + nb + ' div' + modifie + ')</small></div>';
+                } else {
+                  tipHtml += '<div class="disc-tip-row disc-tip-absent"><span class="disc-tip-niv">' + niv + '</span><span>\u2014</span><small>non pr\u00e9vu</small></div>';
+                }
+              });
+            }
+            tipHtml += '<hr class="disc-tip-sep">';
+            tipHtml += '<div class="disc-tip-row"><span class="disc-tip-hp">HP</span><span>' + b.hPoste + '\u00a0h</span></div>';
+            tipHtml += '<div class="disc-tip-row"><span class="disc-tip-hsa">HSA</span><span>' + b.hsa + '\u00a0h</span></div>';
+            if (b.besoinTheorique > 0) {
+              const ecartSign = b.ecart >= 0 ? '+' : '';
+              const ecartCss  = b.ecart > 0 ? 'dot-ecart-over' : b.ecart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
+              tipHtml += '<div class="disc-tip-row">Besoin<span>' + b.besoinTheorique + '\u00a0h</span></div>';
+              tipHtml += '<div class="disc-tip-row"><span class="dot-ecart ' + ecartCss + '">' + (b.ecart >= 0 ? '+' : '') + b.ecart + '\u00a0h</span><small>\u00e9cart</small></div>';
+            }
+
+            html += '<div class="disc-resume-row disc-tip-wrap">'
               + '<span class="disc-color-dot" style="background:' + _esc(b.couleur) + '"></span>'
               + '<span class="disc-resume-nom">' + _esc(b.nom) + '</span>'
               + '<span class="disc-resume-h">' + b.total + ' h</span>'
               + (b.besoinTheorique > 0 ? '<span class="dot-ecart ' + ecartCls + '" style="font-size:.68rem">' + (b.ecart >= 0 ? '+' : '') + b.ecart + '</span>' : '<span></span>')
               + '<div class="dot-bar-track" style="flex:1;min-width:40px"><div class="dot-bar-fill" style="width:' + pct + '%;background:' + _esc(b.couleur) + '"></div></div>'
+              + '<div class="disc-tip">' + tipHtml + '</div>'
               + '</div>';
           });
           html += '</div>';
@@ -418,84 +442,95 @@ const app = (() => {
         return;
       }
       const besoinsMap = {}; besoins.forEach(b => { besoinsMap[b.disciplineId] = b; });
-      let html = '<table class="dot-table"><thead><tr>'
-        + '<th></th><th>Discipline</th><th class="col-num">Besoin réel</th>'
+
+      // Niveaux présents dans les structures (uniquement ceux-là en colonnes)
+      const niveauxCols = ['6e','5e','4e','3e'].filter(niv => structures.some(s => s.niveau === niv));
+      const nbDivParNiv = {};
+      structures.forEach(s => { nbDivParNiv[s.niveau] = (nbDivParNiv[s.niveau]||0) + 1; });
+      // Nombre total de colonnes du tableau (pour colspan des sous-lignes)
+      // toggle | disc | [niveaux...] | besoin | HP | HSA | total | ecart | bar | actions
+      const nbCols = 2 + niveauxCols.length + 6;
+
+      // En-têtes : colonnes niveaux entre Discipline et Besoin réel
+      let colsHead = niveauxCols.map(niv =>
+        '<th class="col-num col-grille" title="' + niv + ' — h/div/semaine MEN (modifiable)">' + niv + '</th>'
+      ).join('');
+
+      let html = '<table class="dot-table dot-table-grille"><thead><tr>'
+        + '<th></th><th>Discipline</th>'
+        + colsHead
+        + '<th class="col-num">Besoin r\u00e9el</th>'
         + '<th class="col-num dot-col-hp">H-Poste</th>'
         + '<th class="col-num dot-col-hsa">HSA</th>'
         + '<th class="col-num">Total</th>'
-        + '<th class="col-num">Écart</th>'
+        + '<th class="col-num">\u00c9cart</th>'
         + '<th class="col-bar">Part</th>'
         + '<th class="col-actions">Actions</th>'
         + '</tr></thead><tbody>';
 
       disciplines.forEach(disc => {
-        const b       = besoinsMap[disc.id] || { besoinTheorique:0, besoinMEN:0, hPoste:0, hsa:0, total:0, ecart:0, groupesCours:[], heuresGroupes:0, hasGroupes:false };
+        const b       = besoinsMap[disc.id] || { besoinTheorique:0, besoinMEN:0, hPoste:0, hsa:0, total:0, ecart:0, groupesCours:[], heuresGroupes:0, hasGroupes:false, grilleLignes:{} };
         const pctBar  = bilan.enveloppe > 0 ? Math.min(100, Math.round((b.total / bilan.enveloppe)*100)) : 0;
         const ecartCls = b.ecart > 0 ? 'dot-ecart-over' : b.ecart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
         const nbGC    = (b.groupesCours||[]).length;
 
+        // Cellules colonnes niveau
+        let colsCells = niveauxCols.map(niv => {
+          const gl  = b.grilleLignes && b.grilleLignes[niv] ? b.grilleLignes[niv] : { men: null, valeur: '', modifie: false };
+          const placeholder = (gl.men !== null && gl.men !== undefined) ? gl.men : '';
+          const val = (gl.valeur !== null && gl.valeur !== undefined && gl.valeur !== '') ? gl.valeur : '';
+          const cls = gl.modifie ? ' grille-input-modifie' : '';
+          const nb  = nbDivParNiv[niv] || 0;
+          const hTot = val !== '' ? Math.round(parseFloat(val)*nb*2)/2 : (placeholder !== '' ? Math.round(parseFloat(placeholder)*nb*2)/2 : null);
+          const tip = 'MEN\u00a0: ' + (placeholder||'\u2014') + '\u00a0h \u00d7 ' + nb + ' div = ' + (hTot !== null ? hTot + '\u00a0h' : '\u2014');
+          return '<td class="col-num col-grille">'
+            + '<input type="number" class="grille-input' + cls + '" data-disc-nom="' + _esc(disc.nom) + '" data-niveau="' + niv + '" data-men="' + placeholder + '" value="' + val + '" placeholder="' + placeholder + '" min="0" step="0.5" title="' + tip + '" />'
+            + (hTot !== null ? '<span class="grille-col-total">' + hTot + 'h</span>' : '')
+            + '</td>';
+        }).join('');
+
         html += '<tr class="dot-disc-row">'
           + '<td class="col-toggle">'
-          + (nbGC > 0 || true ? '<button class="btn-toggle-gc" data-disc-id="' + disc.id + '" title="Groupes de cours">▶</button>' : '')
+          + '<button class="btn-toggle-gc" data-disc-id="' + disc.id + '" title="Groupes de cours">\u25b6</button>'
           + '</td>'
           + '<td><span class="disc-color-dot" style="background:' + _esc(disc.couleur) + '"></span><strong class="div-nom">' + _esc(disc.nom) + '</strong>'
           + (nbGC > 0 ? '<span class="gc-count-badge">' + nbGC + ' groupe' + (nbGC>1?'s':'') + '</span>' : '') + '</td>'
+          + colsCells
           + '<td class="col-num dot-theorique">' + (b.hasGroupes
-            ? (b.heuresGroupesReel||b.heuresGroupes) + ' h <span class="dot-besoin-gc-tag" title="' + (b.groupesCours||[]).map(gc=>(gc.nom||'?')+'�: '+(gc.heures||0)+'h×'+(gc.classesIds&&gc.classesIds.length>0?gc.classesIds.length:1)).join(' | ') + '">GC</span>'
-            + (b.besoinMEN > 0 ? '<br><small class="dot-besoin-men-hint">MEN�: ' + b.besoinMEN + ' h</small>' : '')
-            : (b.besoinTheorique > 0 ? b.besoinTheorique + ' h' : '<span class="no-tag">—</span>')) + '</td>'
+            ? (b.heuresGroupesReel||b.heuresGroupes) + ' h <span class="dot-besoin-gc-tag" title="' + (b.groupesCours||[]).map(gc=>(gc.nom||'?')+'\u00a0: '+(gc.heures||0)+'h\u00d7'+(gc.classesIds&&gc.classesIds.length>0?gc.classesIds.length:1)).join(' | ') + '">GC</span>'
+            + (b.besoinMEN > 0 ? '<br><small class="dot-besoin-men-hint">MEN\u00a0: ' + b.besoinMEN + ' h</small>' : '')
+            : (b.besoinTheorique > 0 ? b.besoinTheorique + ' h' : '<span class="no-tag">\u2014</span>')) + '</td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hp" data-disc-id="' + disc.id + '" data-field="hPoste" value="' + b.hPoste + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hsa" data-disc-id="' + disc.id + '" data-field="hsa" value="' + b.hsa + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + b.total + ' h</strong></td>'
-          + '<td class="col-num"><span class="dot-ecart ' + ecartCls + '">' + (b.besoinTheorique > 0 ? (b.ecart >= 0 ? '+' : '') + b.ecart + ' h' : '—') + '</span></td>'
+          + '<td class="col-num"><span class="dot-ecart ' + ecartCls + '">' + (b.besoinTheorique > 0 ? (b.ecart >= 0 ? '+' : '') + b.ecart + ' h' : '\u2014') + '</span></td>'
           + '<td class="col-bar"><div class="dot-bar-track"><div class="dot-bar-fill" style="width:' + pctBar + '%;background:' + _esc(disc.couleur) + '"></div></div><span class="dot-bar-pct">' + pctBar + '%</span></td>'
           + '<td class="col-actions">'
           + '<button class="btn-icon-sm btn-add-gc" data-action="add-gc" data-disc-id="' + disc.id + '" title="Ajouter un groupe de cours">+</button>'
-          + '<button class="btn-icon-sm" data-action="edit-disc" data-id="' + disc.id + '" title="Modifier">✎</button>'
-          + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-disc" data-id="' + disc.id + '" title="Supprimer">✕</button>'
+          + '<button class="btn-icon-sm" data-action="edit-disc" data-id="' + disc.id + '" title="Modifier">\u270e</button>'
+          + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-disc" data-id="' + disc.id + '" title="Supprimer">\u2715</button>'
           + '</td></tr>';
 
-        // Sous-lignes groupes de cours (masquées par défaut)
-        // Niveaux présents dans les structures
-        const niveauxPresents = ['6e','5e','4e','3e'].filter(niv => structures.some(s => s.niveau === niv));
-        html += '<tr class="gc-subrows-row" id="gc-sub-' + disc.id + '" style="display:none"><td colspan="9"><div class="gc-subrows">';
-        // Grille horaire par niveau (inputs editables)
-        if (niveauxPresents.length > 0) {
-          html += '<div class="gc-grille-row">';
-          html += '<span class="gc-grille-label">Horaire MEN (h/div/sem)</span>';
-          niveauxPresents.forEach(niv => {
-            const g = b.grilleLignes && b.grilleLignes[niv] ? b.grilleLignes[niv] : { men: null, valeur: '', modifie: false };
-            const placeholder = g.men !== null && g.men !== undefined ? g.men : '';
-            const val = g.valeur !== null && g.valeur !== undefined ? g.valeur : '';
-            const cls = g.modifie ? ' grille-input-modifie' : '';
-            const nbDiv = structures.filter(s => s.niveau === niv).length;
-            const total = val !== '' ? '= ' + Math.round(parseFloat(val)*nbDiv*2)/2 + 'h' : '';
-            html += '<div class="gc-grille-niv">'
-              + '<span class="gc-grille-niv-label">' + niv + '</span>'
-              + '<input type="number" class="grille-input' + cls + '" data-disc-nom="' + _esc(disc.nom) + '" data-niveau="' + niv + '" data-men="' + placeholder + '" value="' + val + '" placeholder="' + placeholder + '" min="0" step="0.5" title="MEN : ' + placeholder + ' h — modifiable" />'
-              + '<span class="gc-grille-total">' + total + '</span>'
-              + '</div>';
-          });
-          html += '</div>';
-        }
+        // Sous-lignes groupes de cours (pas la grille — elle est maintenant en colonnes)
+        html += '<tr class="gc-subrows-row" id="gc-sub-' + disc.id + '" style="display:none"><td colspan="' + nbCols + '"><div class="gc-subrows">';
         if (b.groupesCours.length === 0) {
-          html += '<div class="gc-empty">Aucun groupe de cours — cliquez sur + pour en ajouter (ex. LV2 Espagnol, LV2 Allemand…)</div>';
+          html += '<div class="gc-empty">Aucun groupe de cours \u2014 cliquez sur + pour en ajouter (ex. LV2 Espagnol, LV2 Allemand\u2026)</div>';
         } else {
           b.groupesCours.forEach(gc => {
-            const classesLabel = gc.classesNoms && gc.classesNoms.length > 0 ? gc.classesNoms.join(', ') : '—';
+            const classesLabel = gc.classesNoms && gc.classesNoms.length > 0 ? gc.classesNoms.join(', ') : '\u2014';
             html += '<div class="gc-subrow">'
-              + '<span class="gc-arrow">└</span>'
-              + '<span class="gc-nom"><strong>' + _esc(gc.nom||'—') + '</strong></span>'
+              + '<span class="gc-arrow">\u2514</span>'
+              + '<span class="gc-nom"><strong>' + _esc(gc.nom||'\u2014') + '</strong></span>'
               + '<span class="gc-classes">' + _esc(classesLabel) + '</span>'
-              + '<span class="gc-effectif">' + (gc.effectif||0) + ' élèves</span>'
+              + '<span class="gc-effectif">' + (gc.effectif||0) + ' \u00e9l\u00e8ves</span>'
               + '<span class="gc-heures" style="font-family:\'JetBrains Mono\',monospace;font-weight:700">' + (gc.heures||0) + ' h/sem</span>'
               + '<span class="gc-actions">'
-              + '<button class="btn-icon-sm" data-action="edit-gc" data-disc-id="' + disc.id + '" data-gc-id="' + gc.id + '" title="Modifier">✎</button>'
-              + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-gc" data-disc-id="' + disc.id + '" data-gc-id="' + gc.id + '" title="Supprimer">✕</button>'
+              + '<button class="btn-icon-sm" data-action="edit-gc" data-disc-id="' + disc.id + '" data-gc-id="' + gc.id + '" title="Modifier">\u270e</button>'
+              + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-gc" data-disc-id="' + disc.id + '" data-gc-id="' + gc.id + '" title="Supprimer">\u2715</button>'
               + '</span></div>';
           });
           if (b.heuresGroupes > 0) {
-            html += '<div class="gc-total-row"><span>Total groupes de cours :</span><strong style="font-family:\'JetBrains Mono\',monospace">' + b.heuresGroupes + ' h/sem</strong></div>';
+            html += '<div class="gc-total-row"><span>Total groupes de cours\u00a0:</span><strong style="font-family:\'JetBrains Mono\',monospace">' + (b.heuresGroupesReel||b.heuresGroupes) + ' h/sem</strong></div>';
           }
         }
         html += '</div></td></tr>';
