@@ -1,11 +1,12 @@
-# ◈ DGH App — v3.3.6
+# ◈ DGH App — v3.4.0
 
 > Outil de pilotage de la Dotation Globale Horaire pour collège  
 > Développé par et pour les personnels de direction d'EPLE
 
-[![Version](https://img.shields.io/badge/version-3.3.6-green)](#)
+[![Version](https://img.shields.io/badge/version-3.4.0-green)](#)
 [![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)](#)
 [![RGPD](https://img.shields.io/badge/RGPD-100%25%20local-blue)](#)
+[![Stack](https://img.shields.io/badge/stack-HTML5%20%2B%20CSS3%20%2B%20JS%20Vanilla-orange)](#)
 
 ---
 
@@ -47,11 +48,10 @@ Télécharger le ZIP → extraire → ouvrir `index.html` dans Chrome ou Firefox
 | ⊞ **Structures** | Saisie matricielle, récap par niveau | ✅ v3.1 |
 | ◎ **Dotation DGH** | Enveloppe HP/HSA, grilles éditables, groupes de cours | ✅ v3.1 |
 | ◈ **H. Péda. Complémentaires** | Options, labo, arts, sport — HP/HSA cliquable, multi-enseignants | ✅ v3.3 |
-| ◉ **Équipe pédagogique** | 3 vues (Liste · Par discipline · HPC). Service calculé (HP disc. + HPC-HP + HSA). ORS inline éditable, icône 💬 commentaire, H.dispo = ORS − HPC-HP. | ✅ v3.3 |
-| ◷ **Pilotage pédagogique** | Dédoublements, co-enseignement, simulation | 🔜 Sprint 7 |
+| ◉ **Équipe pédagogique** | 3 vues (Liste · Par discipline · HPC). Service calculé. ORS inline éditable. | ✅ v3.4 |
 | ◬ **Alertes** | Dépassements, sous-services, anomalies | ✅ actif |
-| ▤ **Synthèses** | Documents CA, tableaux copiables | 🔜 Sprint 8 |
-| ◷ **Historique** | Comparaisons pluriannuelles | 🔜 Sprint 9 |
+| ▤ **Synthèses** | Tableau de synthèse DGH pour le CA, rapports par discipline et par enseignant | 🔜 Sprint 8 |
+| ◷ **Historique** | Comparaisons pluriannuelles N / N-1 | 🔜 Sprint 9 |
 
 ---
 
@@ -101,11 +101,18 @@ Chaque HPC est typée **HP** ou **HSA** (bascule au clic). Ce typage se répercu
 
 ---
 
-## 💾 Format JSON (v3.3)
+## 💾 Format JSON (v3.4)
 
 ```json
 {
-  "_meta": { "version": "3.3.6" },
+  "_meta": { "version": "3.4.0" },
+  "etablissement": {
+    "nom": "Collège Exemple",
+    "uai": "0000000A",
+    "academie": "Académie Exemple",
+    "commune": "Exemple",
+    "typeEtab": "college"
+  },
   "heuresPedaComp": [{
     "id": "hpc_...", "nom": "Latin 4e", "typeHeure": "hp", "heures": 3,
     "enseignants": [{ "ensId": "ens_...", "heures": 3 }]
@@ -120,6 +127,7 @@ Chaque HPC est typée **HP** ou **HSA** (bascule au clic). Ce typage se répercu
 
 ### Migrations automatiques
 - v3.2 → v3.3 : `hpc.enseignantId` → `hpc.enseignants: [{ensId, heures}]`
+- v3.3 → v3.4 : `etablissement.typeEtab: 'college'` ajouté si absent
 
 ---
 
@@ -146,12 +154,14 @@ dgh-app/
 
 ---
 
-## 🗓️ Sprint 7 — Pilotage pédagogique (prochain)
+## 🗓️ Feuille de route
 
-- Dédoublements (SVT labo, Techno, EPS mixte…)
-- Co-enseignement
-- Ventilation HP/HSA par enseignant depuis la dotation discipline
-- Simulation : "si je supprime ce dédoublement → économie de Xh"
+| Sprint | Intitulé | Statut |
+|--------|----------|--------|
+| S1–S6 | Modules de base (Dashboard, Structures, Dotation, HPC, Enseignants) | ✅ Livré |
+| **S7** | **Stabilisation & Fondations** (bugs, nettoyage, typeEtab) | ✅ **Livré — v3.4.0** |
+| S8 | Synthèses & exports (bilan DGH pour CA, rapports PDF) | 🔜 Planifié |
+| S9 | Historique pluriannuel (comparaison N / N-1, graphiques SVG) | 🔜 Planifié |
 
 ---
 
@@ -159,6 +169,12 @@ dgh-app/
 
 Développé par un personnel de direction d'EPLE (Principal adjoint).  
 Inspiré des travaux de la communauté [#PartagePerdir](https://x.com/hashtag/PartagePerdir).
+
+---
+
+## 🛠️ Pour les développeurs
+
+Le fichier `SKILL.md` à la racine du projet contient l'intégralité des règles de développement, le schéma de données, l'API publique et la checklist de livraison. **Il doit être fourni à Claude au début de chaque session de développement.**
 
 ---
 

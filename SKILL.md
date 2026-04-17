@@ -314,13 +314,6 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 
 ## Prochains sprints — Conception validée
 
-### Sprint 7 — Pilotage pédagogique
-- Dédoublements : 1 classe → 2 groupes simultanés = 2h prof au lieu de 1h
-- Co-enseignement : 2 profs dans la même classe
-- Ventilation HP/HSA par enseignant depuis la dotation discipline (3e source de HSA après HPC)
-- Simulation : "si je supprime ce dédoublement → économie de Xh"
-- `serviceTotalEnseignant` est extensible : ajouter une 3e source dans `detailHSA`
-
 ### Sprint 8 — Synthèses & exports
 - Tableau de synthèse DGH pour le CA (format A4)
 - Rapport par discipline : besoin / HP / HSA / enseignants
@@ -360,4 +353,4 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 
 *Ce fichier fait partie intégrante du projet DGH App.*
 *Le mettre à jour à chaque évolution structurelle.*
-*Version : 3.3.6 — Dernière mise à jour : Sprint 6+*
+*Version : 3.4.0 — Dernière mise à jour : Sprint 7*
