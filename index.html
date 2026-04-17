@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DGH App â€” Pilotage de la Dotation Globale Horaire</title>
+  <title>DGH App — Pilotage de la Dotation Globale Horaire</title>
   <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body>
@@ -15,36 +15,36 @@
         <div class="logo-icon">DGH</div>
         <div>
           <div class="logo-title">DGH App</div>
-          <div class="logo-sub">CollÃ¨ge</div>
+          <div class="logo-sub">Collège</div>
         </div>
       </div>
-      <button class="sidebar-toggle" id="sidebarToggle" aria-label="RÃ©duire le menu">â€¹</button>
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Réduire le menu">‹</button>
     </div>
     <div class="year-selector">
-      <label class="year-label" for="yearSelect">AnnÃ©e scolaire</label>
+      <label class="year-label" for="yearSelect">Année scolaire</label>
       <select id="yearSelect" class="year-select"></select>
     </div>
     <ul class="nav-list" aria-label="Navigation principale">
       <li class="nav-section-label">Pilotage</li>
-      <li class="nav-item active" data-view="dashboard"><span class="nav-icon">â¬¡</span><span class="nav-label">Tableau de bord</span></li>
-      <li class="nav-item" data-view="structures"><span class="nav-icon">âŠž</span><span class="nav-label">Structures</span></li>
-      <li class="nav-item" data-view="dotation"><span class="nav-icon">â—Ž</span><span class="nav-label">DGH + Vol. Horaire</span></li>
-      <li class="nav-item" data-view="hpc"><span class="nav-icon">â—ˆ</span><span class="nav-label">H. pÃ©da. complÃ©mentaires</span></li>
-      <li class="nav-item" data-view="enseignants"><span class="nav-icon">â—‰</span><span class="nav-label">Ã‰quipe pÃ©dagogique</span></li>
+      <li class="nav-item active" data-view="dashboard"><span class="nav-icon">⬡</span><span class="nav-label">Tableau de bord</span></li>
+      <li class="nav-item" data-view="structures"><span class="nav-icon">⊞</span><span class="nav-label">Structures</span></li>
+      <li class="nav-item" data-view="dotation"><span class="nav-icon">◎</span><span class="nav-label">DGH + Vol. Horaire</span></li>
+      <li class="nav-item" data-view="hpc"><span class="nav-icon">◈</span><span class="nav-label">H. péda. complémentaires</span></li>
+      <li class="nav-item" data-view="enseignants"><span class="nav-icon">◉</span><span class="nav-label">Équipe pédagogique</span></li>
       <li class="nav-section-label">Analyse</li>
-      <li class="nav-item" data-view="alertes"><span class="nav-icon">â—¬</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
+      <li class="nav-item" data-view="alertes"><span class="nav-icon">◬</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
       <li class="nav-section-label">Restitution</li>
-      <li class="nav-item" data-view="synthese"><span class="nav-icon">â–¤</span><span class="nav-label">SynthÃ¨ses</span></li>
-      <li class="nav-item" data-view="historique"><span class="nav-icon">â—·</span><span class="nav-label">Historique</span></li>
+      <li class="nav-item" data-view="synthese"><span class="nav-icon">▤</span><span class="nav-label">Synthèses</span></li>
+      <li class="nav-item" data-view="historique"><span class="nav-icon">◷</span><span class="nav-label">Historique</span></li>
     </ul>
     <div class="sidebar-actions">
-      <button class="btn-data" id="btnExport"><span>â†“</span><span class="btn-data-label">Exporter</span></button>
-      <button class="btn-data btn-data-import" id="btnImport"><span>â†‘</span><span class="btn-data-label">Importer</span></button>
+      <button class="btn-data" id="btnExport"><span>↓</span><span class="btn-data-label">Exporter</span></button>
+      <button class="btn-data btn-data-import" id="btnImport"><span>↑</span><span class="btn-data-label">Importer</span></button>
       <input type="file" id="fileImport" accept=".json" style="display:none" />
     </div>
     <div class="sidebar-footer">
       <span>v3.3.6</span>
-      <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub â†—</a>
+      <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
 
@@ -52,31 +52,31 @@
   <main class="main-content">
     <header class="topbar">
       <div class="topbar-left">
-        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">â˜°</button>
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">☰</button>
         <span class="breadcrumb" id="breadcrumb">Tableau de bord</span>
       </div>
       <div class="topbar-right">
         <div class="topbar-stats" id="topbarStats"></div>
-        <button class="btn-theme" id="themeToggle" aria-label="Changer de thÃ¨me">â˜€ï¸Ž</button>
-        <button class="btn-etab" id="btnEtab">Mon CollÃ¨ge âš™</button>
+        <button class="btn-theme" id="themeToggle" aria-label="Changer de thème">☀︎</button>
+        <button class="btn-etab" id="btnEtab">Mon Collège ⚙</button>
       </div>
     </header>
 
     <div class="view-container">
 
-      <!-- â•â• DASHBOARD â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ══ DASHBOARD ══════════════════════════════════════════════ -->
       <section class="view active" id="view-dashboard">
         <div class="view-header">
           <h1 class="view-title">Tableau de bord</h1>
-          <p class="view-subtitle">Vue d'ensemble Â· <span id="dashYear">2025â€“2026</span></p>
+          <p class="view-subtitle">Vue d'ensemble · <span id="dashYear">2025–2026</span></p>
         </div>
         <div class="kpi-grid">
-          <div class="kpi-card kpi-tooltip-card" data-color="blue" data-kpi="dghtotal"><div class="kpi-label">Enveloppe DGH</div><div class="kpi-value" id="kpi-dghtotal">â€” h</div><div class="kpi-sub">HP + HSA total</div><div class="kpi-tooltip" id="kpi-tooltip-dghtotal"></div></div>
-          <div class="kpi-card kpi-tooltip-card" data-color="green" data-kpi="hposte"><div class="kpi-label">Heures-poste</div><div class="kpi-value" id="kpi-hposte">â€” h</div><div class="kpi-sub" id="kpi-hposte-sub">dotation structurelle</div><div class="kpi-tooltip" id="kpi-tooltip-hposte"></div></div>
-          <div class="kpi-card kpi-tooltip-card" data-color="indigo" data-kpi="hsa"><div class="kpi-label">HSA</div><div class="kpi-value" id="kpi-hsa-total">â€” h</div><div class="kpi-sub" id="kpi-hsa-sub">heures sup payÃ©es</div><div class="kpi-tooltip" id="kpi-tooltip-hsa"></div></div>
-          <div class="kpi-card kpi-tooltip-card" data-color="amber" data-kpi="solde"><div class="kpi-label">Solde disponible</div><div class="kpi-value" id="kpi-solde">â€” h</div><div class="kpi-sub" id="kpi-solde-sub">heures restantes</div><div class="kpi-tooltip" id="kpi-tooltip-solde"></div></div>
-          <div class="kpi-card" data-color="red"><div class="kpi-label">Alertes actives</div><div class="kpi-value" id="kpi-alertes">â€”</div><div class="kpi-sub">dÃ©passements / Ã©carts</div></div>
-          <div class="kpi-card" data-color="teal"><div class="kpi-label">Divisions</div><div class="kpi-value" id="kpi-divisions">â€”</div><div class="kpi-sub" id="kpi-effectif">â€” Ã©lÃ¨ves</div></div>
+          <div class="kpi-card kpi-tooltip-card" data-color="blue" data-kpi="dghtotal"><div class="kpi-label">Enveloppe DGH</div><div class="kpi-value" id="kpi-dghtotal">— h</div><div class="kpi-sub">HP + HSA total</div><div class="kpi-tooltip" id="kpi-tooltip-dghtotal"></div></div>
+          <div class="kpi-card kpi-tooltip-card" data-color="green" data-kpi="hposte"><div class="kpi-label">Heures-poste</div><div class="kpi-value" id="kpi-hposte">— h</div><div class="kpi-sub" id="kpi-hposte-sub">dotation structurelle</div><div class="kpi-tooltip" id="kpi-tooltip-hposte"></div></div>
+          <div class="kpi-card kpi-tooltip-card" data-color="indigo" data-kpi="hsa"><div class="kpi-label">HSA</div><div class="kpi-value" id="kpi-hsa-total">— h</div><div class="kpi-sub" id="kpi-hsa-sub">heures sup payées</div><div class="kpi-tooltip" id="kpi-tooltip-hsa"></div></div>
+          <div class="kpi-card kpi-tooltip-card" data-color="amber" data-kpi="solde"><div class="kpi-label">Solde disponible</div><div class="kpi-value" id="kpi-solde">— h</div><div class="kpi-sub" id="kpi-solde-sub">heures restantes</div><div class="kpi-tooltip" id="kpi-tooltip-solde"></div></div>
+          <div class="kpi-card" data-color="red"><div class="kpi-label">Alertes actives</div><div class="kpi-value" id="kpi-alertes">—</div><div class="kpi-sub">dépassements / écarts</div></div>
+          <div class="kpi-card" data-color="teal"><div class="kpi-label">Divisions</div><div class="kpi-value" id="kpi-divisions">—</div><div class="kpi-sub" id="kpi-effectif">— élèves</div></div>
         </div>
         <div class="progress-section">
           <div class="progress-header"><span>Consommation DGH</span><span id="progress-label">0 / 0 h</span></div>
@@ -85,50 +85,50 @@
             <div class="progress-fill dot-bar-hsa-part" id="progressBarHSA" style="width:0%"></div>
           </div>
           <div class="progress-legend">
-            <span class="prog-leg-item prog-leg-hp">H-Poste allouÃ©es : <strong id="prog-leg-hp">â€”</strong></span>
-            <span class="prog-leg-item prog-leg-hsa">HSA allouÃ©es : <strong id="prog-leg-hsa">â€”</strong></span>
+            <span class="prog-leg-item prog-leg-hp">H-Poste allouées : <strong id="prog-leg-hp">—</strong></span>
+            <span class="prog-leg-item prog-leg-hsa">HSA allouées : <strong id="prog-leg-hsa">—</strong></span>
           </div>
         </div>
-        <!-- Encart HP/HSA consommÃ© / disponible -->
+        <!-- Encart HP/HSA consommé / disponible -->
         <div class="dash-hphsa-grid is-hidden" id="dashHpHsaGrid">
           <div class="dash-hphsa-block dash-hphsa-hp">
             <div class="dash-hphsa-title">Heures-Poste (HP)</div>
-            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Enveloppe</span><span class="dash-hphsa-val" id="dash-hp-env">â€” h</span></div>
-            <div class="dash-hphsa-row"><span class="dash-hphsa-label">ConsommÃ©es</span><span class="dash-hphsa-val dash-hphsa-used" id="dash-hp-used">â€” h</span></div>
-            <div class="dash-hphsa-row dash-hphsa-dispo"><span class="dash-hphsa-label">Disponibles</span><span class="dash-hphsa-val dash-hphsa-free" id="dash-hp-free">â€” h</span></div>
+            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Enveloppe</span><span class="dash-hphsa-val" id="dash-hp-env">— h</span></div>
+            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Consommées</span><span class="dash-hphsa-val dash-hphsa-used" id="dash-hp-used">— h</span></div>
+            <div class="dash-hphsa-row dash-hphsa-dispo"><span class="dash-hphsa-label">Disponibles</span><span class="dash-hphsa-val dash-hphsa-free" id="dash-hp-free">— h</span></div>
             <div class="dash-hphsa-bar"><div class="progress-track"><div class="progress-fill dot-bar-hp" id="dash-bar-hp" style="width:0%"></div></div></div>
           </div>
           <div class="dash-hphsa-sep">+</div>
           <div class="dash-hphsa-block dash-hphsa-hsa">
-            <div class="dash-hphsa-title">HSA autorisÃ©es</div>
-            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Enveloppe</span><span class="dash-hphsa-val" id="dash-hsa-env">â€” h</span></div>
-            <div class="dash-hphsa-row"><span class="dash-hphsa-label">ConsommÃ©es</span><span class="dash-hphsa-val dash-hphsa-used" id="dash-hsa-used">â€” h</span></div>
-            <div class="dash-hphsa-row dash-hphsa-dispo"><span class="dash-hphsa-label">Disponibles</span><span class="dash-hphsa-val dash-hphsa-free" id="dash-hsa-free">â€” h</span></div>
+            <div class="dash-hphsa-title">HSA autorisées</div>
+            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Enveloppe</span><span class="dash-hphsa-val" id="dash-hsa-env">— h</span></div>
+            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Consommées</span><span class="dash-hphsa-val dash-hphsa-used" id="dash-hsa-used">— h</span></div>
+            <div class="dash-hphsa-row dash-hphsa-dispo"><span class="dash-hphsa-label">Disponibles</span><span class="dash-hphsa-val dash-hphsa-free" id="dash-hsa-free">— h</span></div>
             <div class="dash-hphsa-bar"><div class="progress-track"><div class="progress-fill dot-bar-hsa-part" id="dash-bar-hsa" style="width:0%"></div></div></div>
           </div>
         </div>
         <div class="empty-state" id="emptyState">
           <div class="empty-icon">DGH</div>
           <h2>Bienvenue dans DGH App</h2>
-          <p>Configurez votre Ã©tablissement, saisissez vos structures et votre dotation DGH.</p>
+          <p>Configurez votre établissement, saisissez vos structures et votre dotation DGH.</p>
           <div class="empty-actions">
             <button class="btn-primary" data-navigate="structures">Saisir les structures</button>
-            <button class="btn-secondary" id="btnImportEmpty">Importer des donnÃ©es</button>
+            <button class="btn-secondary" id="btnImportEmpty">Importer des données</button>
           </div>
         </div>
         <div class="section-card is-hidden" id="disciplineResume">
           <div class="dash-resume-grid">
             <div class="dash-resume-col">
               <div class="dash-resume-col-header">
-                <h2>RÃ©partition par discipline</h2>
-                <button class="btn-link" data-navigate="dotation">Voir tout â†’</button>
+                <h2>Répartition par discipline</h2>
+                <button class="btn-link" data-navigate="dotation">Voir tout →</button>
               </div>
               <div id="disciplineList"></div>
             </div>
             <div class="dash-resume-col">
               <div class="dash-resume-col-header">
-                <h2>H. pÃ©dagogiques complÃ©mentaires</h2>
-                <button class="btn-link" data-navigate="hpc">Voir tout â†’</button>
+                <h2>H. pédagogiques complémentaires</h2>
+                <button class="btn-link" data-navigate="hpc">Voir tout →</button>
               </div>
               <div id="dashHPCList"></div>
             </div>
@@ -136,7 +136,7 @@
         </div>
       </section>
 
-      <!-- â•â• STRUCTURES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ══ STRUCTURES ══════════════════════════════════════════════ -->
       <section class="view" id="view-structures">
         <div class="view-header">
           <div class="view-header-row">
@@ -145,16 +145,16 @@
               <p class="view-subtitle">Divisions par niveau</p>
             </div>
             <div class="view-header-actions">
-              <button class="btn-secondary" id="btnMatrice">âŠž Saisie rapide</button>
+              <button class="btn-secondary" id="btnMatrice">⊞ Saisie rapide</button>
               <button class="btn-primary" id="btnAddDiv">+ Ajouter</button>
             </div>
           </div>
         </div>
-        <!-- Tableau rÃ©cap par niveau -->
+        <!-- Tableau récap par niveau -->
         <div class="section-card is-hidden" id="structNiveauCard">
-          <div class="section-card-header"><h2>RÃ©sumÃ© par niveau</h2></div>
+          <div class="section-card-header"><h2>Résumé par niveau</h2></div>
           <table class="struct-niveau-table" id="structNiveauTable">
-            <thead><tr><th>Niveau</th><th>Divisions</th><th>Effectif</th><th>H/div (MEN)</th><th>Total thÃ©orique</th></tr></thead>
+            <thead><tr><th>Niveau</th><th>Divisions</th><th>Effectif</th><th>H/div (MEN)</th><th>Total théorique</th></tr></thead>
             <tbody id="structNiveauBody"></tbody>
             <tfoot id="structNiveauFoot"></tfoot>
           </table>
@@ -162,36 +162,36 @@
         <div class="struct-kpi-bar">
           <div class="struct-kpi-item"><span class="struct-kpi-val" id="struct-kpi-divisions">0</span><span class="struct-kpi-label">divisions</span></div>
           <div class="struct-kpi-sep"></div>
-          <div class="struct-kpi-item"><span class="struct-kpi-val" id="struct-kpi-effectif">0</span><span class="struct-kpi-label">Ã©lÃ¨ves</span></div>
+          <div class="struct-kpi-item"><span class="struct-kpi-val" id="struct-kpi-effectif">0</span><span class="struct-kpi-label">élèves</span></div>
           <div class="struct-kpi-sep"></div>
-          <div class="struct-kpi-item struct-kpi-niveaux"><span class="struct-kpi-label">Niveaux :</span><span class="struct-kpi-val-sm" id="struct-kpi-niveaux">â€”</span></div>
+          <div class="struct-kpi-item struct-kpi-niveaux"><span class="struct-kpi-label">Niveaux :</span><span class="struct-kpi-val-sm" id="struct-kpi-niveaux">—</span></div>
           <div class="struct-kpi-sep struct-kpi-sep-right"></div>
           <div class="struct-by-niveau" id="struct-by-niveau"></div>
         </div>
         <div class="section-card"><div class="section-card-header"><h2>Liste des divisions</h2></div><div id="struct-list"></div></div>
       </section>
 
-      <!-- â•â• DOTATION DGH â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ══ DOTATION DGH ════════════════════════════════════════════ -->
       <section class="view" id="view-dotation">
         <div class="view-header">
           <div class="view-header-row">
             <div>
               <h1 class="view-title">DGH + Vol. Horaire</h1>
-              <p class="view-subtitle">Enveloppe HP/HSA Â· rÃ©partition par discipline Â· groupes de cours</p>
+              <p class="view-subtitle">Enveloppe HP/HSA · répartition par discipline · groupes de cours</p>
             </div>
             <div class="view-header-actions">
-              <button class="btn-secondary" id="btnSuggerer">ðŸ’¡ SuggÃ©rer HP</button>
-              <button class="btn-secondary" id="btnInitDisc">â˜… Disciplines MEN</button>
+              <button class="btn-secondary" id="btnSuggerer">💡 Suggérer HP</button>
+              <button class="btn-secondary" id="btnInitDisc">★ Disciplines MEN</button>
               <button class="btn-primary" id="btnAddDisc">+ Discipline</button>
             </div>
           </div>
         </div>
 
-        <!-- Enveloppe HP / HSA â€” style dark card -->
+        <!-- Enveloppe HP / HSA — style dark card -->
         <div class="dot-env-card">
           <div class="dot-env-card-header">
             <span class="dot-env-card-title">Enveloppe annuelle</span>
-            <span class="dot-env-card-hint">RenseignÃ©e par la DSDEN</span>
+            <span class="dot-env-card-hint">Renseignée par la DSDEN</span>
           </div>
           <div class="dot-env-card-body">
             <div class="dot-env-card-field dot-env-card-hp">
@@ -200,32 +200,32 @@
                 <input type="number" id="inputEnvHP" class="dot-env-card-input" placeholder="320" min="0" step="0.5" />
                 <span class="dot-env-card-unit">h</span>
               </div>
-              <span class="dot-env-card-sub">Constituent les postes â€” dÃ©cidÃ©es par la DSDEN</span>
+              <span class="dot-env-card-sub">Constituent les postes — décidées par la DSDEN</span>
             </div>
             <div class="dot-env-card-op">+</div>
             <div class="dot-env-card-field dot-env-card-hsa">
-              <label class="dot-env-card-label" for="inputEnvHSA">HSA AUTORISÃ‰ES</label>
+              <label class="dot-env-card-label" for="inputEnvHSA">HSA AUTORISÉES</label>
               <div class="dot-env-card-input-row">
                 <input type="number" id="inputEnvHSA" class="dot-env-card-input" placeholder="30" min="0" step="0.5" />
                 <span class="dot-env-card-unit">h</span>
               </div>
-              <span class="dot-env-card-sub">Budget Ã©tablissement</span>
+              <span class="dot-env-card-sub">Budget établissement</span>
             </div>
             <div class="dot-env-card-op">=</div>
             <div class="dot-env-card-total">
               <div class="dot-env-card-total-label">TOTAL ENVELOPPE</div>
-              <div class="dot-env-card-total-val" id="dot-env-total">â€” h</div>
+              <div class="dot-env-card-total-val" id="dot-env-total">— h</div>
               <span class="dot-env-card-sub">HP + HSA</span>
             </div>
           </div>
         </div>
 
         <div class="dot-kpi-bar">
-          <div class="struct-kpi-item"><span class="struct-kpi-val dot-col-hp" id="dot-kpi-hposte" style="font-family:'JetBrains Mono',monospace">â€”</span><span class="struct-kpi-label">h-poste allouÃ©es</span></div>
+          <div class="struct-kpi-item"><span class="struct-kpi-val dot-col-hp" id="dot-kpi-hposte" style="font-family:'JetBrains Mono',monospace">—</span><span class="struct-kpi-label">h-poste allouées</span></div>
           <div class="struct-kpi-sep"></div>
-          <div class="struct-kpi-item"><span class="struct-kpi-val dot-col-hsa" id="dot-kpi-hsa" style="font-family:'JetBrains Mono',monospace">â€”</span><span class="struct-kpi-label">HSA allouÃ©es</span></div>
+          <div class="struct-kpi-item"><span class="struct-kpi-val dot-col-hsa" id="dot-kpi-hsa" style="font-family:'JetBrains Mono',monospace">—</span><span class="struct-kpi-label">HSA allouées</span></div>
           <div class="struct-kpi-sep"></div>
-          <div class="struct-kpi-item"><span class="struct-kpi-val" id="dot-kpi-solde" style="font-family:'JetBrains Mono',monospace">â€”</span><span class="struct-kpi-label" id="dot-kpi-solde-label">h solde</span></div>
+          <div class="struct-kpi-item"><span class="struct-kpi-val" id="dot-kpi-solde" style="font-family:'JetBrains Mono',monospace">—</span><span class="struct-kpi-label" id="dot-kpi-solde-label">h solde</span></div>
           <div class="struct-kpi-sep struct-kpi-sep-right"></div>
           <div class="struct-kpi-item"><span class="struct-kpi-val" id="dot-kpi-nb" style="font-family:'JetBrains Mono',monospace">0</span><span class="struct-kpi-label">disciplines</span></div>
         </div>
@@ -236,67 +236,67 @@
             <div class="progress-fill dot-bar-hsa-part" id="dot-bar-hsa" style="width:0%;margin-left:0%"></div>
           </div>
           <div class="progress-legend">
-            <span class="prog-leg-item prog-leg-hp">H-Poste : <strong id="dot-leg-hp">â€”</strong></span>
-            <span class="prog-leg-item prog-leg-hsa">HSA : <strong id="dot-leg-hsa">â€”</strong></span>
+            <span class="prog-leg-item prog-leg-hp">H-Poste : <strong id="dot-leg-hp">—</strong></span>
+            <span class="prog-leg-item prog-leg-hsa">HSA : <strong id="dot-leg-hsa">—</strong></span>
           </div>
         </div>
         <!-- Totaux par niveau MEN -->
         <div class="section-card">
           <div class="section-card-header">
-            <h2>RÃ©partition par discipline</h2>
+            <h2>Répartition par discipline</h2>
             <div class="dot-col-legend">
               <span class="dot-col-badge dot-col-hp">H-Poste</span>
               <span class="dot-col-badge dot-col-hsa">HSA</span>
             </div>
-            <button class="btn-secondary btn-sm" id="btnToggleAllGC" title="DÃ©plier/replier tous les groupes de cours">âŠž Tout dÃ©plier</button>
+            <button class="btn-secondary btn-sm" id="btnToggleAllGC" title="Déplier/replier tous les groupes de cours">⊞ Tout déplier</button>
           </div>
           <div id="dot-list"></div>
-          <!-- Total gÃ©nÃ©ral dotation -->
+          <!-- Total général dotation -->
           <div class="dot-total-bar is-hidden" id="dotTotalBar">
-            <span class="dot-total-label">Total allouÃ© (Dotation)</span>
+            <span class="dot-total-label">Total alloué (Dotation)</span>
             <span class="dot-total-hp"><span class="dot-col-badge dot-col-hp">HP</span> <strong id="dot-total-hp-val">0 h</strong></span>
             <span class="dot-total-hsa"><span class="dot-col-badge dot-col-hsa">HSA</span> <strong id="dot-total-hsa-val">0 h</strong></span>
             <span class="dot-total-sum">= <strong id="dot-total-sum-val">0 h</strong></span>
           </div>
         </div>
-        <p class="dot-footnote">Besoin thÃ©orique calculÃ© d'aprÃ¨s les volumes horaires des enseignements obligatoires (arrÃªtÃ© du 19 mai 2015 relatif Ã  l'organisation des enseignements dans les classes de collÃ¨ge, J.O. du 20 mai 2015, modifiÃ©) Ã— nombre de divisions par niveau.</p>
+        <p class="dot-footnote">Besoin théorique calculé d'après les volumes horaires des enseignements obligatoires (arrêté du 19 mai 2015 relatif à l'organisation des enseignements dans les classes de collège, J.O. du 20 mai 2015, modifié) × nombre de divisions par niveau.</p>
       </section>
 
-      <!-- â•â• HEURES PÃ‰DAGOGIQUES COMPLÃ‰MENTAIRES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ══ HEURES PÉDAGOGIQUES COMPLÉMENTAIRES ═════════════════════ -->
       <section class="view" id="view-hpc">
         <div class="view-header">
           <div class="view-header-row">
             <div>
-              <h1 class="view-title">Heures pÃ©dagogiques complÃ©mentaires</h1>
-              <p class="view-subtitle">Options, labo, dispositifs, arts &amp; culture, sportâ€¦</p>
+              <h1 class="view-title">Heures pédagogiques complémentaires</h1>
+              <p class="view-subtitle">Options, labo, dispositifs, arts &amp; culture, sport…</p>
             </div>
             <button class="btn-primary" id="btnAddHPC">+ Ajouter</button>
           </div>
         </div>
         <div class="dot-kpi-bar">
-          <div class="struct-kpi-item"><span class="struct-kpi-val" id="hpc-kpi-nb" style="font-family:'JetBrains Mono',monospace">0</span><span class="struct-kpi-label">entrÃ©es</span></div>
+          <div class="struct-kpi-item"><span class="struct-kpi-val" id="hpc-kpi-nb" style="font-family:'JetBrains Mono',monospace">0</span><span class="struct-kpi-label">entrées</span></div>
           <div class="struct-kpi-sep"></div>
           <div class="struct-kpi-item"><span class="struct-kpi-val" id="hpc-kpi-heures" style="font-family:'JetBrains Mono',monospace">0</span><span class="struct-kpi-label">h / semaine</span></div>
         </div>
         <div class="section-card"><div class="section-card-header"><h2>Liste</h2></div><div id="hpc-list"></div></div>
       </section>
 
-      <!-- â•â• Ã‰QUIPE PÃ‰DAGOGIQUE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ══ ÉQUIPE PÉDAGOGIQUE ══════════════════════════════════════════ -->
       <section class="view" id="view-enseignants">
         <div class="view-header">
           <div class="view-header-row">
             <div>
-              <h1 class="view-title">Ã‰quipe pÃ©dagogique</h1>
-              <p class="view-subtitle">Enseignants Â· disciplines Â· heures pÃ©dagogiques complÃ©mentaires</p>
+              <h1 class="view-title">Équipe pédagogique</h1>
+              <p class="view-subtitle">Enseignants · disciplines · heures pédagogiques complémentaires</p>
             </div>
             <div class="view-header-actions">
-              <button class="btn-secondary btn-danger-soft" id="btnViderEns">ðŸ—‘ Vider</button>
-              <button class="btn-secondary" id="btnImportCSV">ðŸ“¥ Importer CSV</button>
+              <button class="btn-secondary btn-danger-soft" id="btnViderEns">🗑 Vider</button>
+              <button class="btn-secondary" id="btnImportCSV">📥 Importer CSV</button>
               <button class="btn-primary" id="btnAddEns">+ Ajouter</button>
             </div>
           </div>
         </div>
-        <!-- Onglets statiques â€” toujours dans le DOM, jamais rÃ©Ã©crits -->
+        <!-- Onglets statiques — toujours dans le DOM, jamais réécrits -->
         <div class="ens-onglets-wrap">
           <div class="ens-onglets">
             <button class="ens-onglet ens-onglet-active" id="btnVueListe">
@@ -310,13 +310,13 @@
               <span class="ens-onglet-num" id="badgeOngletDisc">0</span>
               <span class="ens-onglet-content">
                 <span class="ens-onglet-label">Par discipline</span>
-                <span class="ens-onglet-sub">rÃ©partition des services</span>
+                <span class="ens-onglet-sub">répartition des services</span>
               </span>
             </button>
             <button class="ens-onglet" id="btnVueHPC">
               <span class="ens-onglet-num" id="badgeOngletHPC">0</span>
               <span class="ens-onglet-content">
-                <span class="ens-onglet-label">H. PÃ©da. Comp.</span>
+                <span class="ens-onglet-label">H. Péda. Comp.</span>
                 <span class="ens-onglet-sub">affectation enseignants</span>
               </span>
             </button>
@@ -326,22 +326,22 @@
         <div id="ens-list"></div>
       </section>
 
-      <!-- â•â• ALERTES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ══ ALERTES ══════════════════════════════════════════════════ -->
       <section class="view" id="view-alertes">
-        <div class="view-header"><h1 class="view-title">Alertes</h1><p class="view-subtitle">DÃ©passements, sous-services, anomalies dÃ©tectÃ©es</p></div>
+        <div class="view-header"><h1 class="view-title">Alertes</h1><p class="view-subtitle">Dépassements, sous-services, anomalies détectées</p></div>
         <div id="alertes-zone"></div>
       </section>
 
-      <!-- â•â• SYNTHÃˆSE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ══ SYNTHÈSE ══════════════════════════════════════════════════ -->
       <section class="view" id="view-synthese">
-        <div class="view-header"><h1 class="view-title">SynthÃ¨ses</h1><p class="view-subtitle">Documents pour le CA et les Ã©quipes pÃ©dagogiques</p></div>
-        <div class="placeholder-view"><div class="placeholder-icon">â–¤</div><p><strong>Module SynthÃ¨ses</strong> â€” Sprint 7</p></div>
+        <div class="view-header"><h1 class="view-title">Synthèses</h1><p class="view-subtitle">Documents pour le CA et les équipes pédagogiques</p></div>
+        <div class="placeholder-view"><div class="placeholder-icon">▤</div><p><strong>Module Synthèses</strong> — Sprint 7</p></div>
       </section>
 
-      <!-- â•â• HISTORIQUE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ══ HISTORIQUE ══════════════════════════════════════════════ -->
       <section class="view" id="view-historique">
         <div class="view-header"><h1 class="view-title">Historique</h1><p class="view-subtitle">Suivi pluriannuel de la DGH</p></div>
-        <div class="placeholder-view"><div class="placeholder-icon">â—·</div><p><strong>Module Historique</strong> â€” Sprint 8</p></div>
+        <div class="placeholder-view"><div class="placeholder-icon">◷</div><p><strong>Module Historique</strong> — Sprint 8</p></div>
       </section>
 
     </div>
@@ -349,54 +349,54 @@
 
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- â•â• MODAL Ã‰TABLISSEMENT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ MODAL ÉTABLISSEMENT ══════════════════════════════════════════ -->
   <div class="modal-overlay" id="modalEtab" role="dialog" aria-modal="true">
     <div class="modal modal-lg">
-      <div class="modal-header"><h2>ParamÃ¨tres</h2><button class="modal-close" id="modalClose">âœ•</button></div>
+      <div class="modal-header"><h2>Paramètres</h2><button class="modal-close" id="modalClose">✕</button></div>
 
       <!-- Onglets internes -->
       <div class="modal-tabs">
-        <button class="modal-tab active" data-tab="etab">Ã‰tablissement</button>
-        <button class="modal-tab" data-tab="annees">AnnÃ©es</button>
-        <button class="modal-tab" data-tab="danger">âš  Danger</button>
+        <button class="modal-tab active" data-tab="etab">Établissement</button>
+        <button class="modal-tab" data-tab="annees">Années</button>
+        <button class="modal-tab" data-tab="danger">⚠ Danger</button>
       </div>
 
       <div class="modal-body">
 
-        <!-- Onglet 1 : Ã‰tablissement + Dotation -->
+        <!-- Onglet 1 : Établissement + Dotation -->
         <div class="modal-tab-panel active" id="tab-etab">
-          <div class="form-group"><label for="inputNomEtab">Nom de l'Ã©tablissement</label><input type="text" id="inputNomEtab" placeholder="CollÃ¨ge Jean Moulin" /></div>
+          <div class="form-group"><label for="inputNomEtab">Nom de l'établissement</label><input type="text" id="inputNomEtab" placeholder="Collège Jean Moulin" /></div>
           <div class="form-row-2">
             <div class="form-group"><label for="inputUAI">UAI / RNE</label><input type="text" id="inputUAI" placeholder="0750001A" maxlength="8" /></div>
-            <div class="form-group"><label for="inputAcademie">AcadÃ©mie</label><input type="text" id="inputAcademie" placeholder="Paris" /></div>
+            <div class="form-group"><label for="inputAcademie">Académie</label><input type="text" id="inputAcademie" placeholder="Paris" /></div>
           </div>
-          <div class="modal-section-title modal-section-sep">Dotation de l'annÃ©e active</div>
+          <div class="modal-section-title modal-section-sep">Dotation de l'année active</div>
           <div class="form-row-2">
             <div class="form-group">
               <label for="inputDGH_HP">Heures-Poste (HP)</label>
               <input type="number" id="inputDGH_HP" placeholder="320" min="0" step="0.5" />
-              <span class="form-hint">Postes structurels â€” DSDEN</span>
+              <span class="form-hint">Postes structurels — DSDEN</span>
             </div>
             <div class="form-group">
-              <label for="inputDGH_HSA">HSA autorisÃ©es</label>
+              <label for="inputDGH_HSA">HSA autorisées</label>
               <input type="number" id="inputDGH_HSA" placeholder="30" min="0" step="0.5" />
-              <span class="form-hint">Budget Ã©tablissement</span>
+              <span class="form-hint">Budget établissement</span>
             </div>
           </div>
           <div class="dot-env-total-hint" id="modalDotTotal"></div>
         </div>
 
-        <!-- Onglet 2 : AnnÃ©es scolaires -->
+        <!-- Onglet 2 : Années scolaires -->
         <div class="modal-tab-panel is-hidden" id="tab-annees">
           <div class="form-group">
-            <label for="modalYearSelect">AnnÃ©e active</label>
+            <label for="modalYearSelect">Année active</label>
             <select id="modalYearSelect"></select>
-            <span class="form-hint">Changer l'annÃ©e bascule toutes les donnÃ©es.</span>
+            <span class="form-hint">Changer l'année bascule toutes les données.</span>
           </div>
-          <div class="modal-section-title modal-section-sep">CrÃ©er une nouvelle annÃ©e</div>
+          <div class="modal-section-title modal-section-sep">Créer une nouvelle année</div>
           <div class="year-add-row">
             <input type="text" id="inputNewYear" placeholder="ex. 2026-2027" maxlength="9" class="year-add-input" />
-            <button class="btn-secondary btn-add-year" id="btnAddYear">+ CrÃ©er</button>
+            <button class="btn-secondary btn-add-year" id="btnAddYear">+ Créer</button>
           </div>
           <div id="yearListAdmin" class="year-list-admin"></div>
         </div>
@@ -404,8 +404,8 @@
         <!-- Onglet 3 : Zone de danger -->
         <div class="modal-tab-panel is-hidden" id="tab-danger">
           <div class="danger-zone">
-            <div class="danger-zone-text"><strong>RÃ©initialiser l'annÃ©e active</strong><span>Efface structures, dotation et enseignants. IrrÃ©versible.</span></div>
-            <button class="btn-danger btn-sm" id="btnResetAnnee">RÃ©initialiser</button>
+            <div class="danger-zone-text"><strong>Réinitialiser l'année active</strong><span>Efface structures, dotation et enseignants. Irréversible.</span></div>
+            <button class="btn-danger btn-sm" id="btnResetAnnee">Réinitialiser</button>
           </div>
         </div>
 
@@ -414,12 +414,12 @@
     </div>
   </div>
 
-  <!-- â•â• MODAL SAISIE MATRICIELLE STRUCTURES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ MODAL SAISIE MATRICIELLE STRUCTURES ═══════════════════════ -->
   <div class="modal-overlay" id="modalMatrice" role="dialog" aria-modal="true">
     <div class="modal modal-lg">
-      <div class="modal-header"><h2>Saisie rapide des structures</h2><button class="modal-close" id="modalMatriceClose">âœ•</button></div>
+      <div class="modal-header"><h2>Saisie rapide des structures</h2><button class="modal-close" id="modalMatriceClose">✕</button></div>
       <div class="modal-body">
-        <p class="form-hint" style="margin-bottom:.75rem">Indiquez le nombre de divisions et l'effectif moyen par niveau. Les divisions seront nommÃ©es automatiquement (6eA, 6eBâ€¦).</p>
+        <p class="form-hint" style="margin-bottom:.75rem">Indiquez le nombre de divisions et l'effectif moyen par niveau. Les divisions seront nommées automatiquement (6eA, 6eB…).</p>
         <table class="matrice-table">
           <thead><tr><th>Niveau</th><th>Nb divisions</th><th>Effectif moyen</th></tr></thead>
           <tbody id="matriceBody"></tbody>
@@ -429,17 +429,17 @@
             <input type="checkbox" id="matriceRemplacer" />
             <span>Remplacer les divisions existantes de ces niveaux</span>
           </label>
-          <span class="form-hint">Sans cette option, les divisions supplÃ©mentaires sont ajoutÃ©es.</span>
+          <span class="form-hint">Sans cette option, les divisions supplémentaires sont ajoutées.</span>
         </div>
       </div>
-      <div class="modal-footer"><button class="btn-secondary" id="modalMatriceCancel">Annuler</button><button class="btn-primary" id="modalMatriceSave">GÃ©nÃ©rer les divisions</button></div>
+      <div class="modal-footer"><button class="btn-secondary" id="modalMatriceCancel">Annuler</button><button class="btn-primary" id="modalMatriceSave">Générer les divisions</button></div>
     </div>
   </div>
 
-  <!-- â•â• MODAL AJOUT / MODIFICATION DIVISION â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ MODAL AJOUT / MODIFICATION DIVISION ═══════════════════════ -->
   <div class="modal-overlay" id="modalDiv" role="dialog" aria-modal="true">
     <div class="modal">
-      <div class="modal-header"><h2 id="modalDivTitle">Ajouter une division</h2><button class="modal-close" id="modalDivClose">âœ•</button></div>
+      <div class="modal-header"><h2 id="modalDivTitle">Ajouter une division</h2><button class="modal-close" id="modalDivClose">✕</button></div>
       <div class="modal-body">
         <input type="hidden" id="modalDivId" />
         <div class="form-row-2">
@@ -453,9 +453,9 @@
           <div class="form-group"><label for="inputDivNom">Nom <span class="form-required">*</span></label><input type="text" id="inputDivNom" placeholder="ex. 6eA" maxlength="20" /></div>
         </div>
         <div class="form-group"><label for="inputDivEffectif">Effectif</label><input type="number" id="inputDivEffectif" placeholder="28" min="0" max="99" step="1" /></div>
-        <!-- Options avancÃ©es (dispositif) masquÃ©es par dÃ©faut -->
+        <!-- Options avancées (dispositif) masquées par défaut -->
         <details class="details-avancees" id="divDetailsAvances">
-          <summary>âš™ Options avancÃ©es</summary>
+          <summary>⚙ Options avancées</summary>
           <div class="details-body">
             <div class="form-group"><label for="inputDivDispositif">Dispositif particulier</label>
               <select id="inputDivDispositif">
@@ -468,8 +468,8 @@
           </div>
         </details>
         <div class="form-group dup-group" id="dupGroup">
-          <label>CrÃ©er plusieurs divisions d'un coup</label>
-          <div class="dup-row"><input type="number" id="inputDivDup" min="0" max="9" step="1" value="0" class="dup-input" /><span class="dup-hint">copies supplÃ©mentaires</span></div>
+          <label>Créer plusieurs divisions d'un coup</label>
+          <div class="dup-row"><input type="number" id="inputDivDup" min="0" max="9" step="1" value="0" class="dup-input" /><span class="dup-hint">copies supplémentaires</span></div>
           <div class="dup-preview" id="dupPreview"></div>
         </div>
       </div>
@@ -477,33 +477,33 @@
     </div>
   </div>
 
-  <!-- â•â• MODAL AJOUT / MODIFICATION DISCIPLINE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ MODAL AJOUT / MODIFICATION DISCIPLINE ════════════════════ -->
   <div class="modal-overlay" id="modalDisc" role="dialog" aria-modal="true">
     <div class="modal">
-      <div class="modal-header"><h2 id="modalDiscTitle">Ajouter une discipline</h2><button class="modal-close" id="modalDiscClose">âœ•</button></div>
+      <div class="modal-header"><h2 id="modalDiscTitle">Ajouter une discipline</h2><button class="modal-close" id="modalDiscClose">✕</button></div>
       <div class="modal-body">
         <input type="hidden" id="modalDiscId" />
-        <div class="form-group"><label for="inputDiscNom">Nom <span class="form-required">*</span></label><input type="text" id="inputDiscNom" placeholder="ex. FranÃ§ais, MathÃ©matiquesâ€¦" maxlength="60" /><span class="form-hint">Utilisez le nom exact de la grille MEN pour activer le besoin thÃ©orique.</span></div>
+        <div class="form-group"><label for="inputDiscNom">Nom <span class="form-required">*</span></label><input type="text" id="inputDiscNom" placeholder="ex. Français, Mathématiques…" maxlength="60" /><span class="form-hint">Utilisez le nom exact de la grille MEN pour activer le besoin théorique.</span></div>
         <div class="form-group"><label for="inputDiscCouleur">Couleur</label><div class="color-picker-row"><input type="color" id="inputDiscCouleur" value="#2d6a4f" class="color-input" /><span class="color-hint" id="colorHint">#2d6a4f</span></div></div>
       </div>
       <div class="modal-footer"><button class="btn-secondary" id="modalDiscCancel">Annuler</button><button class="btn-primary" id="modalDiscSave">Enregistrer</button></div>
     </div>
   </div>
 
-  <!-- â•â• MODAL GROUPE DE COURS (sous-ligne discipline) â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ MODAL GROUPE DE COURS (sous-ligne discipline) ════════════ -->
   <div class="modal-overlay" id="modalGC" role="dialog" aria-modal="true">
     <div class="modal modal-lg">
-      <div class="modal-header"><h2 id="modalGCTitle">Ajouter un groupe de cours</h2><button class="modal-close" id="modalGCClose">âœ•</button></div>
+      <div class="modal-header"><h2 id="modalGCTitle">Ajouter un groupe de cours</h2><button class="modal-close" id="modalGCClose">✕</button></div>
       <div class="modal-body">
         <input type="hidden" id="modalGCDiscId" />
         <input type="hidden" id="modalGCId" />
-        <div class="form-group"><label for="inputGCNom">Nom du groupe <span class="form-required">*</span></label><input type="text" id="inputGCNom" placeholder="ex. LV2 Espagnol, LV2 Allemand, Groupe besoin Mathsâ€¦" maxlength="80" /></div>
+        <div class="form-group"><label for="inputGCNom">Nom du groupe <span class="form-required">*</span></label><input type="text" id="inputGCNom" placeholder="ex. LV2 Espagnol, LV2 Allemand, Groupe besoin Maths…" maxlength="80" /></div>
         <div class="form-group">
           <div class="classes-label-row">
-            <label>Classes concernÃ©es</label>
-            <button type="button" class="btn-link btn-select-all-gc" id="btnGCSelectAll">Tout sÃ©lectionner</button>
+            <label>Classes concernées</label>
+            <button type="button" class="btn-link btn-select-all-gc" id="btnGCSelectAll">Tout sélectionner</button>
           </div>
-          <p class="form-hint" style="margin-bottom:.5rem">SÃ©lectionnez les classes qui constituent ce groupe. L'effectif est calculÃ© automatiquement.</p>
+          <p class="form-hint" style="margin-bottom:.5rem">Sélectionnez les classes qui constituent ce groupe. L'effectif est calculé automatiquement.</p>
           <div class="classes-check" id="gcClassesCheck"></div>
           <div class="gc-effectif-auto" id="gcEffectifAuto"></div>
         </div>
@@ -511,102 +511,102 @@
           <input type="number" id="inputGCHeures" placeholder="2.5" min="0" step="0.5" />
           <span class="form-hint" id="inputGCHeuresHint"></span>
         </div>
-        <div class="form-group"><label for="inputGCComment">Commentaire</label><input type="text" id="inputGCComment" placeholder="Notes Ã©ventuellesâ€¦" maxlength="200" /></div>
+        <div class="form-group"><label for="inputGCComment">Commentaire</label><input type="text" id="inputGCComment" placeholder="Notes éventuelles…" maxlength="200" /></div>
       </div>
       <div class="modal-footer"><button class="btn-secondary" id="modalGCCancel">Annuler</button><button class="btn-primary" id="modalGCSave">Enregistrer</button></div>
     </div>
   </div>
 
-  <!-- â•â• MODAL HPC â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ MODAL HPC ════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="modalHPC" role="dialog" aria-modal="true">
     <div class="modal modal-lg">
-      <div class="modal-header"><h2 id="modalHPCTitle">Ajouter des heures complÃ©mentaires</h2><button class="modal-close" id="modalHPCClose">âœ•</button></div>
+      <div class="modal-header"><h2 id="modalHPCTitle">Ajouter des heures complémentaires</h2><button class="modal-close" id="modalHPCClose">✕</button></div>
       <div class="modal-body">
         <input type="hidden" id="modalHPCId" />
-        <div class="form-group"><label for="inputHPCNom">IntitulÃ© <span class="form-required">*</span></label><input type="text" id="inputHPCNom" placeholder="ex. Latin 4e, Labo SVT, Chorale, Savoir nagerâ€¦" maxlength="80" /></div>
+        <div class="form-group"><label for="inputHPCNom">Intitulé <span class="form-required">*</span></label><input type="text" id="inputHPCNom" placeholder="ex. Latin 4e, Labo SVT, Chorale, Savoir nager…" maxlength="80" /></div>
         <div class="form-row-2">
-          <div class="form-group"><label for="inputHPCCategorie">CatÃ©gorie</label><select id="inputHPCCategorie"></select></div>
-          <div class="form-group"><label for="inputHPCDisc">Discipline de rattachement</label><select id="inputHPCDisc"><option value="">â€” Aucune â€”</option></select></div>
+          <div class="form-group"><label for="inputHPCCategorie">Catégorie</label><select id="inputHPCCategorie"></select></div>
+          <div class="form-group"><label for="inputHPCDisc">Discipline de rattachement</label><select id="inputHPCDisc"><option value="">— Aucune —</option></select></div>
         </div>
         <div class="form-group">
           <div class="classes-label-row">
-            <label>Classes concernÃ©es</label>
-            <button type="button" class="btn-link btn-select-all-hpc" id="btnHPCSelectAll">Tout sÃ©lectionner</button>
+            <label>Classes concernées</label>
+            <button type="button" class="btn-link btn-select-all-hpc" id="btnHPCSelectAll">Tout sélectionner</button>
           </div>
           <div class="classes-check" id="hpcClassesCheck"></div>
           <div class="gc-effectif-auto" id="hpcEffectifAuto"></div>
         </div>
         <div class="form-row-2">
           <div class="form-group"><label for="inputHPCHeures">Heures / semaine</label><input type="number" id="inputHPCHeures" placeholder="2" min="0" step="0.5" /></div>
-          <div class="form-group"><label for="inputHPCEffectif">Effectif (si non calculÃ©)</label><input type="number" id="inputHPCEffectif" placeholder="15" min="0" step="1" /></div>
+          <div class="form-group"><label for="inputHPCEffectif">Effectif (si non calculé)</label><input type="number" id="inputHPCEffectif" placeholder="15" min="0" step="1" /></div>
         </div>
         <div class="form-group">
           <label for="inputHPCTypeHeure">Type d'heures</label>
           <select id="inputHPCTypeHeure">
-            <option value="hp">H-Poste (HP) â€” structurelle</option>
-            <option value="hsa">HSA â€” heures supplÃ©mentaires payÃ©es</option>
+            <option value="hp">H-Poste (HP) — structurelle</option>
+            <option value="hsa">HSA — heures supplémentaires payées</option>
           </select>
-          <span class="form-hint">Ce choix se rÃ©percute dans le tableau de bord et le solde HP/HSA.</span>
+          <span class="form-hint">Ce choix se répercute dans le tableau de bord et le solde HP/HSA.</span>
         </div>
-        <div class="form-group"><label for="inputHPCComment">Commentaire</label><input type="text" id="inputHPCComment" placeholder="Notesâ€¦" maxlength="200" /></div>
+        <div class="form-group"><label for="inputHPCComment">Commentaire</label><input type="text" id="inputHPCComment" placeholder="Notes…" maxlength="200" /></div>
       </div>
       <div class="modal-footer"><button class="btn-secondary" id="modalHPCCancel">Annuler</button><button class="btn-primary" id="modalHPCSave">Enregistrer</button></div>
     </div>
   </div>
 
-  <!-- â•â• CONFIRMATIONS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ CONFIRMATIONS ═════════════════════════════════════════════ -->
   <div class="modal-overlay" id="confirmDiv" role="dialog" aria-modal="true">
-    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer cette division ?</h2><button class="modal-close" id="confirmDivCancel">âœ•</button></div>
-    <div class="modal-body"><p class="confirm-msg" id="confirmDivMsg"></p><p class="confirm-sub">Cette action est irrÃ©versible.</p></div>
+    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer cette division ?</h2><button class="modal-close" id="confirmDivCancel">✕</button></div>
+    <div class="modal-body"><p class="confirm-msg" id="confirmDivMsg"></p><p class="confirm-sub">Cette action est irréversible.</p></div>
     <div class="modal-footer"><button class="btn-secondary" id="confirmDivAnnuler">Annuler</button><button class="btn-danger" id="confirmDivOk">Supprimer</button></div></div>
   </div>
 
   <div class="modal-overlay" id="confirmDisc" role="dialog" aria-modal="true">
-    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer cette discipline ?</h2><button class="modal-close" id="confirmDiscCancel">âœ•</button></div>
-    <div class="modal-body"><p class="confirm-msg" id="confirmDiscMsg"></p><p class="confirm-sub">Les heures allouÃ©es et groupes de cours seront Ã©galement supprimÃ©s. IrrÃ©versible.</p></div>
+    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer cette discipline ?</h2><button class="modal-close" id="confirmDiscCancel">✕</button></div>
+    <div class="modal-body"><p class="confirm-msg" id="confirmDiscMsg"></p><p class="confirm-sub">Les heures allouées et groupes de cours seront également supprimés. Irréversible.</p></div>
     <div class="modal-footer"><button class="btn-secondary" id="confirmDiscAnnuler">Annuler</button><button class="btn-danger" id="confirmDiscOk">Supprimer</button></div></div>
   </div>
 
   <div class="modal-overlay" id="confirmGC" role="dialog" aria-modal="true">
-    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer ce groupe de cours ?</h2><button class="modal-close" id="confirmGCCancel">âœ•</button></div>
-    <div class="modal-body"><p class="confirm-msg" id="confirmGCMsg"></p><p class="confirm-sub">Cette action est irrÃ©versible.</p></div>
+    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer ce groupe de cours ?</h2><button class="modal-close" id="confirmGCCancel">✕</button></div>
+    <div class="modal-body"><p class="confirm-msg" id="confirmGCMsg"></p><p class="confirm-sub">Cette action est irréversible.</p></div>
     <div class="modal-footer"><button class="btn-secondary" id="confirmGCAnnuler">Annuler</button><button class="btn-danger" id="confirmGCOk">Supprimer</button></div></div>
   </div>
 
   <div class="modal-overlay" id="confirmHPC" role="dialog" aria-modal="true">
-    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer cette entrÃ©e ?</h2><button class="modal-close" id="confirmHPCCancel">âœ•</button></div>
-    <div class="modal-body"><p class="confirm-msg" id="confirmHPCMsg"></p><p class="confirm-sub">Cette action est irrÃ©versible.</p></div>
+    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer cette entrée ?</h2><button class="modal-close" id="confirmHPCCancel">✕</button></div>
+    <div class="modal-body"><p class="confirm-msg" id="confirmHPCMsg"></p><p class="confirm-sub">Cette action est irréversible.</p></div>
     <div class="modal-footer"><button class="btn-secondary" id="confirmHPCAnnuler">Annuler</button><button class="btn-danger" id="confirmHPCOk">Supprimer</button></div></div>
   </div>
 
   <div class="modal-overlay" id="confirmReset" role="dialog" aria-modal="true">
-    <div class="modal modal-sm"><div class="modal-header"><h2>RÃ©initialiser cette annÃ©e ?</h2><button class="modal-close" id="confirmResetCancel">âœ•</button></div>
-    <div class="modal-body"><p class="confirm-msg" id="confirmResetMsg"></p><p class="confirm-sub">Toutes les structures, la dotation et les enseignants seront effacÃ©s. IrrÃ©versible.</p></div>
-    <div class="modal-footer"><button class="btn-secondary" id="confirmResetAnnuler">Annuler</button><button class="btn-danger" id="confirmResetOk">RÃ©initialiser</button></div></div>
+    <div class="modal modal-sm"><div class="modal-header"><h2>Réinitialiser cette année ?</h2><button class="modal-close" id="confirmResetCancel">✕</button></div>
+    <div class="modal-body"><p class="confirm-msg" id="confirmResetMsg"></p><p class="confirm-sub">Toutes les structures, la dotation et les enseignants seront effacés. Irréversible.</p></div>
+    <div class="modal-footer"><button class="btn-secondary" id="confirmResetAnnuler">Annuler</button><button class="btn-danger" id="confirmResetOk">Réinitialiser</button></div></div>
   </div>
 
   <div class="modal-overlay" id="confirmDeleteAnnee" role="dialog" aria-modal="true">
-    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer cette annÃ©e ?</h2><button class="modal-close" id="confirmDeleteAnneeCancel">âœ•</button></div>
-    <div class="modal-body"><p class="confirm-msg" id="confirmDeleteAnneeMsg"></p><p class="confirm-sub">Toutes les donnÃ©es seront dÃ©finitivement supprimÃ©es. IrrÃ©versible.</p></div>
-    <div class="modal-footer"><button class="btn-secondary" id="confirmDeleteAnneeAnnuler">Annuler</button><button class="btn-danger" id="confirmDeleteAnneeOk">Supprimer dÃ©finitivement</button></div></div>
+    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer cette année ?</h2><button class="modal-close" id="confirmDeleteAnneeCancel">✕</button></div>
+    <div class="modal-body"><p class="confirm-msg" id="confirmDeleteAnneeMsg"></p><p class="confirm-sub">Toutes les données seront définitivement supprimées. Irréversible.</p></div>
+    <div class="modal-footer"><button class="btn-secondary" id="confirmDeleteAnneeAnnuler">Annuler</button><button class="btn-danger" id="confirmDeleteAnneeOk">Supprimer définitivement</button></div></div>
   </div>
 
-  <!-- â•â• MODAL AJOUT / MODIFICATION ENSEIGNANT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ MODAL AJOUT / MODIFICATION ENSEIGNANT ════════════════════ -->
   <div class="modal-overlay" id="modalEns" role="dialog" aria-modal="true">
     <div class="modal modal-lg">
-      <div class="modal-header"><h2 id="modalEnsTitle">Ajouter un enseignant</h2><button class="modal-close" id="modalEnsClose">âœ•</button></div>
+      <div class="modal-header"><h2 id="modalEnsTitle">Ajouter un enseignant</h2><button class="modal-close" id="modalEnsClose">✕</button></div>
       <div class="modal-body">
         <input type="hidden" id="modalEnsId" />
         <div class="form-row-2">
           <div class="form-group"><label for="inputEnsNom">Nom <span class="form-required">*</span></label><input type="text" id="inputEnsNom" placeholder="ex. Dupont" maxlength="60" /></div>
-          <div class="form-group"><label for="inputEnsPrenom">PrÃ©nom</label><input type="text" id="inputEnsPrenom" placeholder="ex. Marie" maxlength="60" /></div>
+          <div class="form-group"><label for="inputEnsPrenom">Prénom</label><input type="text" id="inputEnsPrenom" placeholder="ex. Marie" maxlength="60" /></div>
         </div>
         <div class="form-row-2">
           <div class="form-group">
             <label for="inputEnsGrade">Corps / Grade</label>
             <select id="inputEnsGrade">
-              <option value="certifie">CertifiÃ©</option>
-              <option value="agrege">AgrÃ©gÃ©</option>
+              <option value="certifie">Certifié</option>
+              <option value="agrege">Agrégé</option>
               <option value="plp">PLP</option>
               <option value="eps">Prof. EPS</option>
               <option value="contractuel">Contractuel</option>
@@ -615,49 +615,49 @@
           <div class="form-group">
             <label for="inputEnsStatut">Statut</label>
             <select id="inputEnsStatut">
-              <option value="titulaire">Titulaire (chaire complÃ¨te)</option>
-              <option value="bmp">BMP â€” Bloc de Moyens Provisoire</option>
-              <option value="tzr">TZR â€” Titulaire Zone de Remplacement</option>
+              <option value="titulaire">Titulaire (chaire complète)</option>
+              <option value="bmp">BMP — Bloc de Moyens Provisoire</option>
+              <option value="tzr">TZR — Titulaire Zone de Remplacement</option>
               <option value="contractuel">Contractuel</option>
               <option value="temps-partiel">Temps partiel</option>
             </select>
           </div>
         </div>
-        <div class="form-group"><label for="inputEnsDisc">Discipline principale</label><input type="text" id="inputEnsDisc" placeholder="ex. FranÃ§ais, MathÃ©matiquesâ€¦" maxlength="60" /><span class="form-hint">Saisie libre â€” utilisÃ©e uniquement pour l'affichage</span></div>
+        <div class="form-group"><label for="inputEnsDisc">Discipline principale</label><input type="text" id="inputEnsDisc" placeholder="ex. Français, Mathématiques…" maxlength="60" /><span class="form-hint">Saisie libre — utilisée uniquement pour l'affichage</span></div>
         <div class="form-row-2">
           <div class="form-group">
-            <label for="inputEnsHeures">Heures / semaine dans l'Ã©tablissement <span class="form-required">*</span></label>
+            <label for="inputEnsHeures">Heures / semaine dans l'établissement <span class="form-required">*</span></label>
             <input type="number" id="inputEnsHeures" placeholder="18" min="0" max="40" step="0.5" />
-            <span class="form-hint">Pour les TZR : heures effectuÃ©es ici uniquement</span>
+            <span class="form-hint">Pour les TZR : heures effectuées ici uniquement</span>
           </div>
           <div class="form-group">
             <label for="inputEnsOrsManuel">ORS manuelle (optionnel)</label>
             <input type="number" id="inputEnsOrsManuel" placeholder="laisser vide = ORS du grade" min="0" max="40" step="0.5" />
-            <span class="form-hint">Temps partiel : saisir les heures rÃ©duites directement. RÃ©duction rÃ©glementaire, BMPâ€¦</span>
+            <span class="form-hint">Temps partiel : saisir les heures réduites directement. Réduction réglementaire, BMP…</span>
           </div>
         </div>
         <div class="ens-ors-preview" id="ensOrsPreview"></div>
-        <div class="form-group"><label for="inputEnsComment">Commentaire</label><input type="text" id="inputEnsComment" placeholder="Notes Ã©ventuellesâ€¦" maxlength="200" /></div>
+        <div class="form-group"><label for="inputEnsComment">Commentaire</label><input type="text" id="inputEnsComment" placeholder="Notes éventuelles…" maxlength="200" /></div>
       </div>
       <div class="modal-footer"><button class="btn-secondary" id="modalEnsCancel">Annuler</button><button class="btn-primary" id="modalEnsSave">Enregistrer</button></div>
     </div>
   </div>
 
-  <!-- â•â• MODAL IMPORT CSV PRONOTE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ MODAL IMPORT CSV PRONOTE ═══════════════════════════ -->
   <div class="modal-overlay" id="modalCSV" role="dialog" aria-modal="true">
     <div class="modal modal-lg">
-      <div class="modal-header"><h2>Importer depuis Pronote (CSV)</h2><button class="modal-close" id="modalCSVClose">âœ•</button></div>
+      <div class="modal-header"><h2>Importer depuis Pronote (CSV)</h2><button class="modal-close" id="modalCSVClose">✕</button></div>
       <div class="modal-body">
-        <p class="form-hint" style="margin-bottom:.75rem">Export depuis Pronote : <strong>Ressources &gt; Professeurs &gt; Export tableur</strong>. Formats CSV acceptÃ©s (sÃ©parateur <code>;</code> ou <code>,</code>).</p>
+        <p class="form-hint" style="margin-bottom:.75rem">Export depuis Pronote : <strong>Ressources &gt; Professeurs &gt; Export tableur</strong>. Formats CSV acceptés (séparateur <code>;</code> ou <code>,</code>).</p>
         <div class="csv-drop-zone" id="csvDropZone">
-          <div class="csv-drop-icon">ðŸ“„</div>
+          <div class="csv-drop-icon">📄</div>
           <p class="csv-drop-label">Glissez le fichier CSV ici</p>
           <p class="csv-drop-sub">ou</p>
           <label class="btn-secondary btn-sm csv-file-btn" for="csvFileInput">Choisir un fichier</label>
           <input type="file" id="csvFileInput" accept=".csv,.txt" style="display:none" />
         </div>
         <div id="csvPreview" class="csv-preview">
-          <p class="csv-hint">Glissez un fichier CSV Pronote ou cliquez pour sÃ©lectionner.</p>
+          <p class="csv-hint">Glissez un fichier CSV Pronote ou cliquez pour sélectionner.</p>
         </div>
       </div>
       <div class="modal-footer">
@@ -667,37 +667,37 @@
     </div>
   </div>
 
-  <!-- â•â• MODAL SÃ‰LECTION ENSEIGNANT (affecter Ã  une discipline) â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ MODAL SÉLECTION ENSEIGNANT (affecter à une discipline) ══════════ -->
   <div class="modal-overlay" id="modalSelEns" role="dialog" aria-modal="true">
     <div class="modal modal-lg">
-      <div class="modal-header"><h2 id="modalSelEnsTitle">Affecter un enseignant</h2><button class="modal-close" id="modalSelEnsClose">âœ•</button></div>
+      <div class="modal-header"><h2 id="modalSelEnsTitle">Affecter un enseignant</h2><button class="modal-close" id="modalSelEnsClose">✕</button></div>
       <div class="modal-body">
         <input type="hidden" id="selEnsDiscCible" />
-        <p class="form-hint" style="margin-bottom:.75rem">SÃ©lectionnez un enseignant et saisissez ses heures dans cette discipline. Les heures de sa discipline principale seront ajustÃ©es automatiquement.</p>
+        <p class="form-hint" style="margin-bottom:.75rem">Sélectionnez un enseignant et saisissez ses heures dans cette discipline. Les heures de sa discipline principale seront ajustées automatiquement.</p>
         <div id="selEnsList"></div>
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" id="modalSelEnsCancel">Annuler</button>
-        <button class="btn-primary" id="btnSelEnsConfirm">âœ“ Affecter les enseignants sÃ©lectionnÃ©s</button>
+        <button class="btn-primary" id="btnSelEnsConfirm">✓ Affecter les enseignants sélectionnés</button>
       </div>
     </div>
   </div>
 
-  <!-- â•â• CONFIRMATION SUPPRESSION GLOBALE ENSEIGNANTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ CONFIRMATION SUPPRESSION GLOBALE ENSEIGNANTS ═════════════════ -->
   <div class="modal-overlay" id="confirmEnsAll" role="dialog" aria-modal="true">
-    <div class="modal modal-sm"><div class="modal-header"><h2>Vider la liste ?</h2><button class="modal-close" id="confirmEnsAllCancel">âœ•</button></div>
-    <div class="modal-body"><p class="confirm-msg" id="confirmEnsAllMsg"></p><p class="confirm-sub">Cette action supprime tous les enseignants. IrrÃ©versible.</p></div>
+    <div class="modal modal-sm"><div class="modal-header"><h2>Vider la liste ?</h2><button class="modal-close" id="confirmEnsAllCancel">✕</button></div>
+    <div class="modal-body"><p class="confirm-msg" id="confirmEnsAllMsg"></p><p class="confirm-sub">Cette action supprime tous les enseignants. Irréversible.</p></div>
     <div class="modal-footer"><button class="btn-secondary" id="confirmEnsAllAnnuler">Annuler</button><button class="btn-danger" id="confirmEnsAllOk">Tout supprimer</button></div></div>
   </div>
 
-  <!-- â•â• CONFIRMATION SUPPRESSION ENSEIGNANT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ CONFIRMATION SUPPRESSION ENSEIGNANT ═══════════════════ -->
   <div class="modal-overlay" id="confirmEns" role="dialog" aria-modal="true">
-    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer cet enseignant ?</h2><button class="modal-close" id="confirmEnsCancel">âœ•</button></div>
-    <div class="modal-body"><p class="confirm-msg" id="confirmEnsMsg"></p><p class="confirm-sub">Cette action est irrÃ©versible.</p></div>
+    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer cet enseignant ?</h2><button class="modal-close" id="confirmEnsCancel">✕</button></div>
+    <div class="modal-body"><p class="confirm-msg" id="confirmEnsMsg"></p><p class="confirm-sub">Cette action est irréversible.</p></div>
     <div class="modal-footer"><button class="btn-secondary" id="confirmEnsAnnuler">Annuler</button><button class="btn-danger" id="confirmEnsOk">Supprimer</button></div></div>
   </div>
 
-  <!-- Tooltips flottants fixed â€” gÃ©rÃ©s par JS pour Ã©chapper aux stacking contexts -->
+  <!-- Tooltips flottants fixed — gérés par JS pour échapper aux stacking contexts -->
   <div id="kpiFloatTip"></div>
   <div id="discFloatTip"></div>
 

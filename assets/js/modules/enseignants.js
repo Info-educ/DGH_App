@@ -1,5 +1,5 @@
 /**
- * DGH App — Module Enseignants v3.3.6
+ * DGH App — Module Enseignants v1.2.0
  * v1.0.0 : tableau, KPI, modal saisie, import CSV
  * v1.1.0 : édition inline, vue par discipline, suppression globale
  * v1.2.0 : vue discipline avec en-têtes, inline complet, H.discipline par enseignant,
