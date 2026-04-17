@@ -1,9 +1,8 @@
 {
   "_meta": {
-    "version": "1.2.0",
+    "version": "3.3.0",
     "createdAt": "2025-09-01T00:00:00.000Z",
     "updatedAt": "2025-09-01T00:00:00.000Z",
-    "appName": "DGH App",
     "note": "Fichier d'exemple anonymisé — données fictives pour démonstration"
   },
   "etablissement": {
@@ -18,12 +17,13 @@
       "annee": "2025-2026",
       "createdAt": "2025-09-01T00:00:00.000Z",
       "dotation": {
-        "enveloppe": 450,
-        "commentaire": "Dotation initiale DSDEN"
+        "hPosteEnveloppe": 320,
+        "hsaEnveloppe": 30,
+        "commentaire": "Dotation DSDEN + HSA votées au CA"
       },
       "structures": [
         {
-          "id": "div_6e_a",
+          "id": "div_6ea",
           "niveau": "6e",
           "nom": "6eA",
           "effectif": 28,
@@ -31,7 +31,7 @@
           "dispositif": null
         },
         {
-          "id": "div_6e_b",
+          "id": "div_6eb",
           "niveau": "6e",
           "nom": "6eB",
           "effectif": 27,
@@ -39,37 +39,23 @@
           "dispositif": null
         },
         {
-          "id": "div_6e_c",
-          "niveau": "6e",
-          "nom": "6eC",
-          "effectif": 26,
-          "options": [
-            "Latin"
-          ],
-          "dispositif": null
-        },
-        {
-          "id": "div_5e_a",
+          "id": "div_5ea",
           "niveau": "5e",
           "nom": "5eA",
           "effectif": 29,
-          "options": [
-            "LV2-Espagnol"
-          ],
+          "options": [],
           "dispositif": null
         },
         {
-          "id": "div_5e_b",
+          "id": "div_5eb",
           "niveau": "5e",
           "nom": "5eB",
           "effectif": 28,
-          "options": [
-            "LV2-Allemand"
-          ],
+          "options": [],
           "dispositif": null
         },
         {
-          "id": "div_4e_a",
+          "id": "div_4ea",
           "niveau": "4e",
           "nom": "4eA",
           "effectif": 28,
@@ -77,17 +63,15 @@
           "dispositif": null
         },
         {
-          "id": "div_4e_b",
+          "id": "div_4eb",
           "niveau": "4e",
           "nom": "4eB",
           "effectif": 27,
-          "options": [
-            "Latin"
-          ],
+          "options": [],
           "dispositif": null
         },
         {
-          "id": "div_3e_a",
+          "id": "div_3ea",
           "niveau": "3e",
           "nom": "3eA",
           "effectif": 27,
@@ -95,20 +79,12 @@
           "dispositif": null
         },
         {
-          "id": "div_3e_b",
+          "id": "div_3eb",
           "niveau": "3e",
           "nom": "3eB",
           "effectif": 26,
           "options": [],
           "dispositif": null
-        },
-        {
-          "id": "div_ulis",
-          "niveau": "ULIS",
-          "nom": "ULIS",
-          "effectif": 10,
-          "options": [],
-          "dispositif": "ULIS"
         }
       ],
       "grilles": {},
@@ -132,28 +108,123 @@
           "id": "disc_eps",
           "nom": "EPS",
           "couleur": "#ef4444"
+        },
+        {
+          "id": "disc_lv1",
+          "nom": "LV1",
+          "couleur": "#8b5cf6"
+        },
+        {
+          "id": "disc_lv2",
+          "nom": "LV2",
+          "couleur": "#a78bfa"
         }
       ],
       "repartition": [
         {
           "disciplineId": "disc_fr",
-          "heuresAllouees": 90,
-          "commentaire": ""
+          "hPoste": 72,
+          "hsa": 4,
+          "commentaire": "",
+          "groupesCours": []
         },
         {
           "disciplineId": "disc_math",
-          "heuresAllouees": 85,
-          "commentaire": ""
+          "hPoste": 64,
+          "hsa": 4,
+          "commentaire": "",
+          "groupesCours": []
         },
         {
           "disciplineId": "disc_hg",
-          "heuresAllouees": 60,
-          "commentaire": ""
+          "hPoste": 52,
+          "hsa": 0,
+          "commentaire": "",
+          "groupesCours": []
         },
         {
           "disciplineId": "disc_eps",
-          "heuresAllouees": 75,
+          "hPoste": 48,
+          "hsa": 0,
+          "commentaire": "",
+          "groupesCours": []
+        },
+        {
+          "disciplineId": "disc_lv1",
+          "hPoste": 56,
+          "hsa": 0,
+          "commentaire": "",
+          "groupesCours": []
+        },
+        {
+          "disciplineId": "disc_lv2",
+          "hPoste": 40,
+          "hsa": 0,
+          "commentaire": "",
+          "groupesCours": [
+            {
+              "id": "gc_lv2_esp",
+              "nom": "LV2 Espagnol",
+              "classesIds": [
+                "div_5ea",
+                "div_5eb",
+                "div_4ea"
+              ],
+              "heures": 2.5,
+              "commentaire": ""
+            },
+            {
+              "id": "gc_lv2_all",
+              "nom": "LV2 Allemand",
+              "classesIds": [
+                "div_4eb",
+                "div_3ea"
+              ],
+              "heures": 2.5,
+              "commentaire": ""
+            }
+          ]
+        }
+      ],
+      "heuresPedaComp": [
+        {
+          "id": "hpc_latin",
+          "nom": "Latin 4e-3e",
+          "categorie": "option",
+          "disciplineId": null,
+          "classesIds": [
+            "div_4ea",
+            "div_3ea"
+          ],
+          "typeHeure": "hp",
+          "heures": 3,
+          "effectif": 18,
           "commentaire": ""
+        },
+        {
+          "id": "hpc_choral",
+          "nom": "Chorale",
+          "categorie": "arts",
+          "disciplineId": null,
+          "classesIds": [],
+          "typeHeure": "hsa",
+          "heures": 1,
+          "effectif": 40,
+          "commentaire": ""
+        },
+        {
+          "id": "hpc_devfait",
+          "nom": "Devoirs faits",
+          "categorie": "dispositif",
+          "disciplineId": null,
+          "classesIds": [
+            "div_6ea",
+            "div_6eb"
+          ],
+          "typeHeure": "hp",
+          "heures": 2,
+          "effectif": 55,
+          "commentaire": "Financé sur HP"
         }
       ],
       "enseignants": [
@@ -161,73 +232,95 @@
           "id": "ens_001",
           "nom": "DUPONT",
           "prenom": "Marie",
-          "corps": "PLC",
           "grade": "certifie",
-          "orsManuel": null,
-          "reductions": [],
           "statut": "titulaire",
-          "complement": null,
-          "services": [
+          "disciplines": [
             {
-              "id": "svc_001",
-              "disciplineId": "disc_fr",
-              "classeId": "div_6e_a",
-              "heures": 4.5
-            },
-            {
-              "id": "svc_002",
-              "disciplineId": "disc_fr",
-              "classeId": "div_6e_b",
-              "heures": 4.5
-            },
-            {
-              "id": "svc_003",
-              "disciplineId": "disc_fr",
-              "classeId": "div_5e_a",
-              "heures": 4.5
+              "discNom": "Français",
+              "heures": 18
             }
           ],
-          "pacte": [],
-          "imp": []
+          "disciplinePrincipale": "Français",
+          "heures": 18,
+          "orsManuel": null,
+          "commentaire": ""
         },
         {
           "id": "ens_002",
           "nom": "MARTIN",
           "prenom": "Paul",
-          "corps": "PLC",
           "grade": "certifie",
-          "orsManuel": null,
-          "reductions": [],
           "statut": "tzr",
-          "complement": "Établissement de rattachement : Collège B",
-          "services": [
+          "disciplines": [
             {
-              "id": "svc_004",
-              "disciplineId": "disc_math",
-              "classeId": "div_4e_a",
-              "heures": 3.5
+              "discNom": "Mathématiques",
+              "heures": 12
+            }
+          ],
+          "disciplinePrincipale": "Mathématiques",
+          "heures": 12,
+          "orsManuel": null,
+          "commentaire": "Rattachement : Collège B — complément ici"
+        },
+        {
+          "id": "ens_003",
+          "nom": "BERNARD",
+          "prenom": "Sophie",
+          "grade": "agrege",
+          "statut": "titulaire",
+          "disciplines": [
+            {
+              "discNom": "Histoire-Géographie",
+              "heures": 15
+            }
+          ],
+          "disciplinePrincipale": "Histoire-Géographie",
+          "heures": 15,
+          "orsManuel": null,
+          "commentaire": ""
+        },
+        {
+          "id": "ens_004",
+          "nom": "LECLERC",
+          "prenom": "Thomas",
+          "grade": "eps",
+          "statut": "bmp",
+          "disciplines": [
+            {
+              "discNom": "EPS",
+              "heures": 10
+            }
+          ],
+          "disciplinePrincipale": "EPS",
+          "heures": 10,
+          "orsManuel": null,
+          "commentaire": "BMP — complète un temps partiel"
+        },
+        {
+          "id": "ens_005",
+          "nom": "PETIT",
+          "prenom": "Anne",
+          "grade": "certifie",
+          "statut": "titulaire",
+          "disciplines": [
+            {
+              "discNom": "Mathématiques",
+              "heures": 10
             },
             {
-              "id": "svc_005",
-              "disciplineId": "disc_math",
-              "classeId": "div_3e_a",
-              "heures": 4
+              "discNom": "Physique-Chimie",
+              "heures": 8
             }
           ],
-          "pacte": [
-            {
-              "id": "pct_001",
-              "type": "DNL",
-              "heures": 3
-            }
-          ],
-          "imp": []
+          "disciplinePrincipale": "Mathématiques",
+          "heures": 18,
+          "orsManuel": null,
+          "commentaire": "Bivalent maths / physique-chimie"
         }
       ],
       "simulation": {
         "active": false,
         "nom": "",
-        "createdAt": null,
         "dotation": null,
         "repartition": [],
         "enseignants": []

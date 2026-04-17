@@ -21,9 +21,9 @@ const app = (() => {
   const VIEWS = {
     dashboard:   'Tableau de bord',
     structures:  'Structures',
-    dotation:    'Dotation DGH',
+    dotation:    'DGH + Vol. Horaire',
     hpc:         'H. péda. complémentaires',
-    enseignants: 'Enseignants',
+    enseignants: 'Équipe pédagogique',
     alertes:     'Alertes',
     synthese:    'Synthèses',
     historique:  'Historique'
@@ -34,6 +34,7 @@ const app = (() => {
     _applyTheme(localStorage.getItem('dgh-theme') || 'light');
     DGHData.init();
     _bindEvents();
+    DGHEnseignants.bindDropZone();
     renderAll();
     navigate('dashboard');
   }
@@ -62,6 +63,7 @@ const app = (() => {
     if (viewId === 'structures') DGHStructures.renderStructures();
     if (viewId === 'dotation')   DGHDotation.renderDotation();
     if (viewId === 'hpc')        DGHHPC.renderHPC();
+    if (viewId === 'enseignants') DGHEnseignants.renderEnseignants();
   }
 
   // ── RENDU GLOBAL ─────────────────────────────────────────────────
@@ -92,7 +94,12 @@ const app = (() => {
       confirmGC:          DGHDotation.closeConfirmGC,
       confirmHPC:         DGHHPC.closeConfirmHPC,
       confirmReset:       DGHEtab.closeConfirmReset,
-      confirmDeleteAnnee: DGHEtab.closeConfirmDeleteAnnee
+      confirmDeleteAnnee: DGHEtab.closeConfirmDeleteAnnee,
+      modalEns:           DGHEnseignants.closeModalEns,
+      modalCSV:           DGHEnseignants.closeModalCSV,
+      confirmEns:         DGHEnseignants.closeConfirmEns,
+      confirmEnsAll:      DGHEnseignants.closeConfirmAll,
+      modalSelEns:        DGHEnseignants.closeModalSelEns
     };
     if (M[id]) M[id]();
   }
@@ -118,6 +125,17 @@ const app = (() => {
       if (action==='delete-hpc')      { DGHHPC.confirmDeleteHPC(id);                                                                return; }
       if (action==='toggle-hpc-type') { DGHHPC.toggleHPCType(id);                                                                  return; }
       if (action==='ecart-zero')      { DGHDotation.ecartZero(actionBtn.dataset.discId, parseFloat(actionBtn.dataset.besoin)||0); return; }
+      if (action==='edit-ens')        { DGHEnseignants.openModalEns(id);                                                           return; }
+      if (action==='delete-ens')      { DGHEnseignants.confirmDeleteEns(id);                                                       return; }
+      if (action==='add-ens-disc')    { DGHEnseignants.openModalEnsDisc(actionBtn.dataset.disc);                                   return; }
+      if (action==='retirer-ens-disc'){ DGHEnseignants.retirerEnsDisc(id, actionBtn.dataset.disc);                                 return; }
+      if (action==='toggle-disc')      { DGHEnseignants.toggleDiscBloc(actionBtn.dataset.disc);                                    return; }
+      if (action==='toggle-all-disc')  { DGHEnseignants.toggleAllDiscs(actionBtn.dataset.open==='1');                              return; }
+      if (action==='affecter-ens-hpc') { DGHEnseignants.openModalAffecterHPC(actionBtn.dataset.hpcId);                            return; }
+      if (action==='retirer-ens-hpc')  { DGHEnseignants.retirerEnsHPC(actionBtn.dataset.hpcId, actionBtn.dataset.ensIdx);           return; }
+      if (action==='sel-ens-hpc-direct'){ DGHEnseignants.affecterEnsHPCDirect(actionBtn.dataset.ensId||id);                        return; }
+      if (action==='toggle-hpc-cat')    { DGHEnseignants.toggleHPCCat(actionBtn.dataset.cat);                                     return; }
+      if (action==='toggle-all-hpc')    { DGHEnseignants.toggleAllHPC(actionBtn.dataset.open==='1');                              return; }
     }
 
     // btn-toggle-gc (généré dynamiquement) — délégué ici
@@ -143,11 +161,18 @@ const app = (() => {
     if (e.target.closest('#btnToggleAllGC'))  { DGHDotation.toggleAllGC();            return; }
     if (e.target.closest('#btnGCSelectAll'))  { DGHDotation.gcSelectAllClasses();     return; }
     if (e.target.closest('#btnAddHPC'))       { DGHHPC.openModalHPC(null);            return; }
-    if (e.target.closest('#btnHPCSelectAll')) { DGHHPC.hpcSelectAllClasses();         return; }
-    if (e.target.closest('#btnEtab'))         { DGHEtab.openModal();                  return; }
+    if (e.target.closest('#btnHPCSelectAll')) { DGHHPC.hpcSelectAllClasses();             return; }
+    if (e.target.closest('#btnAddEns'))       { DGHEnseignants.openModalEns(null);        return; }
+    if (e.target.closest('#btnViderEns'))     { DGHEnseignants.confirmDeleteAll();        return; }
+    if (e.target.closest('#btnVueListe'))     { DGHEnseignants.setVueListe();             return; }
+    if (e.target.closest('#btnVueDisc'))      { DGHEnseignants.setVueDisc();              return; }
+    if (e.target.closest('#btnVueHPC'))       { DGHEnseignants.setVueHPC();               return; }
+    if (e.target.closest('#btnImportCSV'))    { DGHEnseignants.openModalCSV();            return; }
+    if (e.target.closest('#btnCSVConfirm'))   { DGHEnseignants.confirmImportCSV();        return; }
+    if (e.target.closest('#btnEtab'))         { DGHEtab.openModal();                      return; }
 
     // Fermeture modales par clic overlay
-    const overlays = ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice','confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee'];
+    const overlays = ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice','confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee','modalEns','modalCSV','confirmEns','confirmEnsAll','modalSelEns'];
     for (const oid of overlays) {
       if (e.target === document.getElementById(oid)) { _closeModalById(oid); return; }
     }
@@ -200,7 +225,26 @@ const app = (() => {
 
     if (e.target.closest('#confirmDeleteAnneeCancel'))  { DGHEtab.closeConfirmDeleteAnnee();  return; }
     if (e.target.closest('#confirmDeleteAnneeAnnuler')) { DGHEtab.closeConfirmDeleteAnnee();  return; }
-    if (e.target.closest('#confirmDeleteAnneeOk'))      { DGHEtab.execDeleteAnnee();           return; }
+    if (e.target.closest('#confirmDeleteAnneeOk'))      { DGHEtab.execDeleteAnnee();             return; }
+
+    if (e.target.closest('#modalEnsClose'))    { DGHEnseignants.closeModalEns();     return; }
+    if (e.target.closest('#modalEnsCancel'))   { DGHEnseignants.closeModalEns();     return; }
+    if (e.target.closest('#modalEnsSave'))     { DGHEnseignants.saveModalEns();      return; }
+
+    if (e.target.closest('#modalCSVClose'))    { DGHEnseignants.closeModalCSV();     return; }
+    if (e.target.closest('#modalCSVCancel'))   { DGHEnseignants.closeModalCSV();     return; }
+
+    if (e.target.closest('#modalSelEnsClose'))    { DGHEnseignants.closeModalSelEns();    return; }
+    if (e.target.closest('#modalSelEnsCancel'))   { DGHEnseignants.closeModalSelEns();    return; }
+    if (e.target.closest('#btnSelEnsConfirm'))    { DGHEnseignants.confirmerSelEns();     return; }
+
+    if (e.target.closest('#confirmEnsAllCancel'))  { DGHEnseignants.closeConfirmAll(); return; }
+    if (e.target.closest('#confirmEnsAllAnnuler')) { DGHEnseignants.closeConfirmAll(); return; }
+    if (e.target.closest('#confirmEnsAllOk'))      { DGHEnseignants.execDeleteAll();   return; }
+
+    if (e.target.closest('#confirmEnsCancel')) { DGHEnseignants.closeConfirmEns();   return; }
+    if (e.target.closest('#confirmEnsAnnuler')){ DGHEnseignants.closeConfirmEns();   return; }
+    if (e.target.closest('#confirmEnsOk'))     { DGHEnseignants.execDeleteEns();     return; }
 
     // Sidebar mobile
     if (window.innerWidth <= 768) {
@@ -217,6 +261,13 @@ const app = (() => {
     if (e.target.id==='modalYearSelect')                  { DGHEtab.onModalYearChange(e.target.value); return; }
     if (e.target.classList.contains('classe-check'))      { DGHDotation.updateGCEffectif();           return; }
     if (e.target.classList.contains('hpc-classe-check'))  { DGHHPC.updateHPCEffectif();               return; }
+    if (e.target.id==='inputEnsGrade'||e.target.id==='inputEnsOrsManuel'||e.target.id==='inputEnsHeures') { DGHEnseignants.updateOrsPreview(); return; }
+    if (e.target.id==='csvFileInput') { DGHEnseignants.handleCSVFile(e.target.files[0]); return; }
+    // Edition inline tableau enseignants (selects -> change immediat)
+    if (e.target.classList.contains('ens-inline-select')) { DGHEnseignants.handleInlineEdit(e.target); return; }
+    if (e.target.classList.contains('ens-inline-num'))    { DGHEnseignants.handleInlineEdit(e.target); return; }
+    // H.discipline dans vue par discipline (field heures-disc)
+    if (e.target.classList.contains('ens-inline-hdisc'))  { DGHEnseignants.handleInlineEdit(e.target); return; }
   }
 
   // ── DÉLÉGATION GLOBALE DBLCLICK ───────────────────────────────────
@@ -227,6 +278,8 @@ const app = (() => {
   // ── DÉLÉGATION GLOBALE BLUR (capture) ────────────────────────────
   function _onGlobalBlur(e) {
     if (e.target.id==='inputEnvHP'||e.target.id==='inputEnvHSA') DGHDotation.saveEnveloppe();
+    // Edition inline texte enseignants (blur = sauvegarde)
+    if (e.target.classList.contains('ens-inline-input')) { DGHEnseignants.handleInlineEdit(e.target); return; }
   }
 
   // ── EVENTS ───────────────────────────────────────────────────────
@@ -283,7 +336,8 @@ const app = (() => {
     document.addEventListener('keydown', e => {
       if (e.key==='Escape') {
         ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice',
-         'confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee']
+         'confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee',
+         'modalEns','modalCSV','confirmEns','confirmEnsAll','modalSelEns']
           .forEach(id => { if(document.getElementById(id)?.classList.contains('modal-open')) _closeModalById(id); });
       }
     });

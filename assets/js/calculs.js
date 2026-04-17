@@ -41,16 +41,56 @@ const Calculs = (() => {
   }
 
   function calcHeuresEnseignant(ens) {
-    return (ens.services||[]).reduce((s,srv) => s + (parseFloat(srv.heures)||0), 0);
+    // Phase 1 : heures est un Number direct
+    // Compatibilité descendante : si services[] existe encore, somme des heures
+    if (Array.isArray(ens.services)) {
+      return ens.services.reduce((s,srv) => s + (parseFloat(srv.heures)||0), 0);
+    }
+    return parseFloat(ens.heures) || 0;
   }
 
   function detailEnseignant(ens) {
+    const heuresFait = Math.round(calcHeuresEnseignant(ens) * 2) / 2;
+    const statut     = ens.statut || 'titulaire';
+    // ORS : toujours calculé si orsManuel renseigné, sinon selon grade pour les titulaires/TZR/BMP
+    // Pour contractuel : ORS = 0 sauf si orsManuel saisi (volume contractuel)
     const ors = getORS(ens.grade, ens.orsManuel);
-    const heuresFait = calcHeuresEnseignant(ens);
-    const ecart = heuresFait - ors;
+    if (ors === 0) {
+      // Pas d'ORS de référence (contractuel sans orsManuel, documentaliste…)
+      return { ors: 0, heuresFait, ecart: 0, hsa: 0, sousService: 0,
+               statut: statut, affichageEcart: 'sans-ors' };
+    }
+    const ecart = Math.round((heuresFait - ors) * 2) / 2;
     return { ors, heuresFait, ecart,
              hsa: Math.max(0, ecart), sousService: Math.max(0, -ecart),
-             statut: ecart > 0 ? 'hsa' : ecart < 0 ? 'sous-service' : 'equilibre' };
+             statut: ecart > 0 ? 'hsa' : ecart < 0 ? 'sous-service' : 'equilibre',
+             affichageEcart: 'normal' };
+  }
+
+  /**
+   * Résumé global du tableau des enseignants.
+   * Fonction pure — zéro DOM, zéro localStorage.
+   * @param {Array} enseignants
+   * @returns {{ nbEnseignants, totalHeures, nbSousService, nbHSA, nbEquilibre }}
+   */
+  function bilanEnseignants(enseignants) {
+    if (!Array.isArray(enseignants) || enseignants.length === 0)
+      return { nbEnseignants:0, totalHeures:0, nbSousService:0, nbHSA:0, nbEquilibre:0 };
+    let totalHeures=0, nbSousService=0, nbHSA=0, nbEquilibre=0;
+    enseignants.forEach(ens => {
+      const d = detailEnseignant(ens);
+      totalHeures += d.heuresFait;
+      // BMP et TZR ne sont pas comptés dans sous-service/HSA (écart non significatif)
+      if (d.affichageEcart !== 'normal') { nbEquilibre++; return; }
+      if (d.statut==='sous-service') nbSousService++;
+      else if (d.statut==='hsa')     nbHSA++;
+      else                           nbEquilibre++;
+    });
+    return {
+      nbEnseignants: enseignants.length,
+      totalHeures:   Math.round(totalHeures*2)/2,
+      nbSousService, nbHSA, nbEquilibre
+    };
   }
 
   function resumeStructures(structures) {
@@ -235,7 +275,8 @@ const Calculs = (() => {
       alertes.push({type:'hsa', severite:'info', message:'Aucune HSA saisie — vérifiez avec votre DSDEN.', ref:'dotation'});
     enseignants.forEach(ens => {
       const d = detailEnseignant(ens), nom = ((ens.prenom||'')+' '+ens.nom).trim();
-      if (d.sousService > 0) alertes.push({type:'sous-service', severite:'warning', message:nom+' : sous-service de '+d.sousService+'h', ref:ens.id});
+      if (d.sousService > 2) alertes.push({type:'sous-service', severite:'warning', message:nom+' : sous-service de '+d.sousService+'h', ref:ens.id});
+      if (d.sousService > 0 && d.sousService <= 2) alertes.push({type:'sous-service', severite:'info', message:nom+' : léger sous-service ('+d.sousService+'h)', ref:ens.id});
       if (d.hsa > 3)         alertes.push({type:'hsa', severite:'warning', message:nom+' : '+d.hsa+'h HSA (> 3h)', ref:ens.id});
     });
     if (enveloppe > 0 && (enveloppe - allouees) > 10)
@@ -243,11 +284,146 @@ const Calculs = (() => {
     return alertes;
   }
 
+  /**
+   * Regroupe les enseignants par discipline en utilisant ens.disciplines[].
+   * Un meme enseignant peut apparaitre dans plusieurs disciplines.
+   * Pour chaque discipline : liste des enseignants + heures dans cette discipline + heures totales etablissement + dotation.
+   */
+  function bilanParDiscipline(enseignants, repartition, disciplines) {
+    // Index dotation par nom de discipline
+    const dotMap = {};
+    (disciplines || []).forEach(d => {
+      const rep = (repartition || []).find(r => r.disciplineId === d.id);
+      dotMap[d.nom] = rep ? Math.round(((rep.hPoste||0) + (rep.hsa||0)) * 2) / 2 : 0;
+    });
+
+    // Regrouper : { discNom -> [{ ens, heuresDisc }] }
+    const groupes = {};
+    (enseignants || []).forEach(ens => {
+      const discs = Array.isArray(ens.disciplines) && ens.disciplines.length > 0
+        ? ens.disciplines
+        : (ens.disciplinePrincipale ? [{ discNom: ens.disciplinePrincipale, heures: ens.heures||0 }] : []);
+      if (discs.length === 0) {
+        if (!groupes['']) groupes[''] = [];
+        groupes[''].push({ ens, heuresDisc: ens.heures || 0 });
+      } else {
+        discs.forEach(da => {
+          const k = (da.discNom || '').trim();
+          if (!groupes[k]) groupes[k] = [];
+          groupes[k].push({ ens, heuresDisc: parseFloat(da.heures) || 0 });
+        });
+      }
+    });
+
+    const result = [];
+    const vus = new Set();
+
+    // D'abord les disciplines presentes dans la dotation (dans l'ordre)
+    (disciplines || []).forEach(d => {
+      const membres = groupes[d.nom] || [];
+      const hDisc  = Math.round(membres.reduce((s,m) => s + m.heuresDisc, 0) * 2) / 2;
+      const hServ  = Math.round(membres.reduce((s,m) => s + (m.ens.heures||0), 0) * 2) / 2;
+      const hDot   = dotMap[d.nom] || 0;
+      result.push({
+        disc: d.nom, couleur: d.couleur || '#6b6860',
+        membres,
+        heuresDisc: hDisc,
+        heuresService: hServ,
+        heuresDotation: hDot,
+        ecart: Math.round((hDisc - hDot) * 2) / 2,
+        dansDotation: true
+      });
+      vus.add(d.nom);
+    });
+
+    // Puis disciplines hors dotation
+    Object.entries(groupes).forEach(([discNom, membres]) => {
+      if (vus.has(discNom)) return;
+      const hDisc = Math.round(membres.reduce((s,m) => s + m.heuresDisc, 0) * 2) / 2;
+      const hServ = Math.round(membres.reduce((s,m) => s + (m.ens.heures||0), 0) * 2) / 2;
+      const label = discNom || '— Sans discipline —';
+      result.push({
+        disc: label, couleur: '#94a3b8',
+        membres,
+        heuresDisc: hDisc,
+        heuresService: hServ,
+        heuresDotation: 0,
+        ecart: hDisc,
+        dansDotation: false
+      });
+    });
+
+    return result;
+  }
+
+  /**
+   * Calcule le service complet d'un enseignant en agrégeant toutes les sources.
+   * Source HP : disciplines (saisies manuellement) + HPC typées 'hp'
+   * Source HSA : HPC typées 'hsa' (extensible Sprint 7 : dédoublements, ventilation)
+   *
+   * L'ORS ne porte que sur les HP — les HSA sont du travail supplémentaire, normal.
+   * detailHSA = liste de toutes les sources HSA (pour tooltip au survol).
+   *
+   * @param {Object} ens   EnseignantObject
+   * @param {Array}  hpcs  DGHData.getHeuresPedaComp()
+   * @returns {{ hpDisc, hpHPC, hpTotal, hsaTotal, totalGeneral,
+   *             detailHSA, ecartORS, ors, statutORS }}
+   */
+  function serviceTotalEnseignant(ens, hpcs) {
+    // 1. HP issues des disciplines (saisie manuelle dans vue "Par discipline")
+    const hpDisc = Math.round(
+      (Array.isArray(ens.disciplines) ? ens.disciplines : [])
+        .reduce((s, d) => s + (parseFloat(d.heures) || 0), 0) * 2
+    ) / 2;
+
+    // 2. Heures HPC affectées → séparées HP / HSA
+    let hpHPC = 0, hsaTotal = 0;
+    const detailHSA   = []; // sources HSA (tooltip)
+    const detailHPCHp = []; // sources HPC-HP (tooltip + déduction ORS)
+    (hpcs || []).forEach(hpc => {
+      const aff = (Array.isArray(hpc.enseignants) ? hpc.enseignants : [])
+                    .find(a => a.ensId === ens.id);
+      if (!aff) return;
+      const h = parseFloat(aff.heures) || 0;
+      if (h <= 0) return;
+      if ((hpc.typeHeure || 'hp') === 'hsa') {
+        hsaTotal += h;
+        detailHSA.push({ source: 'HPC', nom: hpc.nom, heures: h });
+      } else {
+        hpHPC += h;
+        detailHPCHp.push({ source: 'HPC', nom: hpc.nom, heures: h });
+      }
+    });
+
+    hpHPC    = Math.round(hpHPC    * 2) / 2;
+    hsaTotal = Math.round(hsaTotal * 2) / 2;
+    const hpTotal      = Math.round((hpDisc + hpHPC) * 2) / 2;
+    const totalGeneral = Math.round((hpTotal + hsaTotal) * 2) / 2;
+
+    // 3. ORS sur HP — disponible pour TOUS les statuts si orsManuel renseigné ou grade avec ORS
+    //    Contractuel sans orsManuel → ORS=0 → pas d'écart
+    const ors      = getORS(ens.grade, ens.orsManuel);
+    const sansORS  = ors === 0;
+    const ecartORS = sansORS ? null : Math.round((hpTotal - ors) * 2) / 2;
+    const statutORS = sansORS ? 'sans-ors'
+      : ecartORS > 0  ? 'hsa'
+      : ecartORS < 0  ? 'sous-service'
+      : 'equilibre';
+
+    return {
+      hpDisc, hpHPC, hpTotal,
+      hsaTotal, totalGeneral,
+      detailHSA,    // sources HSA pour tooltip
+      detailHPCHp,  // sources HPC-HP pour tooltip + déduction ORS vue discipline
+      ors, ecartORS, statutORS
+    };
+  }
+
   return {
     ORS, GRILLES_MEN, H_THEORIQUES_NIV,
-    getORS, calcHeuresEnseignant, detailEnseignant,
+    getORS, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
     resumeStructures, bilanDotation, besoinsParDiscipline,
-    suggererRepartition, bilanHPC, genererAlertes
+    suggererRepartition, bilanHPC, genererAlertes, serviceTotalEnseignant
   };
 
 })();

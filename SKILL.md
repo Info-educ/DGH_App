@@ -1,153 +1,62 @@
 # SKILL.md — Instructions de développement DGH App
 
-> **À fournir à Claude au début de chaque session de développement.**  
-> Ce fichier garantit la cohérence du code sur plusieurs années d'évolution du projet.  
-> Mis à jour à chaque sprint. Version courante : **3.2.1**
+> **À fournir à Claude au début de chaque session de développement.**
+> Version courante : **3.3.6** — Dernière mise à jour : Sprint 6+
 
 ---
 
 ## Contexte du projet
 
-**DGH App** est une SPA (Single Page Application) de pilotage de la Dotation Globale Horaire pour collège.
+**DGH App** est une SPA de pilotage de la Dotation Globale Horaire pour collège.
 
 - **Stack** : HTML5 + CSS3 + JS Vanilla — zéro framework, zéro build, zéro dépendance externe
-- **Hébergement** : GitHub Pages ou fichier local (ouvrir `index.html` directement)
+- **Hébergement** : GitHub Pages ou fichier local (`index.html`)
 - **Données** : `localStorage` + export/import JSON local — **aucun serveur, 100% RGPD**
 - **Utilisateurs** : équipe de direction (principal + principal adjoint)
-- **Objectif de maintenabilité** : plusieurs années sans refactorisation majeure
 
 ---
 
 ## ⚠️ RÈGLES DE QUALITÉ — NON NÉGOCIABLES
 
 ### 1. Lire avant d'écrire
-Avant toute modification, **lire le fichier entier** avec le `view` tool.  
-Ne jamais modifier sur la base d'un contexte partiel ou supposé.
+Avant toute modification, **lire le fichier entier** avec le `view` tool.
 
 ### 2. Zéro code zombie
-Après chaque modification, vérifier qu'aucun résidu ne subsiste :
-- Aucun `id` HTML référencé dans le JS mais absent du HTML
-- Aucune variable déclarée deux fois dans le même scope
-- Aucun bloc CSS en doublon (une règle = un seul endroit dans `style.css`)
-- Aucune fonction jamais appelée dans un module
+Aucun `id` HTML absent du JS, aucune variable en doublon, aucun bloc CSS en doublon.
 
 ### 3. Zéro onclick inline — UNE SEULE délégation globale
 
-**Règle permanente anti-boutons-muets :**
-- **JAMAIS** de `addEventListener` direct sur un élément dont le rendu est conditionnel ou tardif
-- **TOUJOURS** passer par `_onGlobalClick` / `_onGlobalChange` / `_onGlobalDblClick` / `_onGlobalBlur` dans `app.js`
-- `_bindEvents()` ne lie en direct **que** les éléments garantis dans le DOM au chargement initial :
-  `themeToggle`, `sidebarToggle`, `mobileMenuBtn`, `yearSelect`, `btnExport`, `btnImport`, `btnImportEmpty`, `fileImport`
-
 ```js
-// ✅ Correct — dans _onGlobalClick (app.js)
+// ✅ Correct — dans _onGlobalClick
 if (e.target.closest('#btnAddDiv')) { DGHStructures.openModalDiv(null); return; }
 
-// ✅ Correct — dans _onGlobalChange (app.js)
-if (e.target.classList.contains('dot-input-h')) { DGHDotation.handleDotInput(e.target); return; }
-
-// ❌ Interdit — addEventListener dans un module sur élément conditionnel
-listEl.querySelectorAll('.dot-input-h').forEach(inp => inp.addEventListener('change', ...));
-// Raison : dot-input-h est régénéré à chaque rendu → accumulation de listeners
+// ❌ Interdit
+document.getElementById('btnAddDiv').addEventListener('click', ...);
 ```
 
-Les boutons dans les tableaux générés dynamiquement utilisent `data-action` :
-```html
-<button data-action="edit-div" data-id="div_123">✎</button>
-<button data-action="toggle-hpc-type" data-id="hpc_456">HP</button>
-```
-Captés dans `_onGlobalClick` via `e.target.closest('[data-action]')`.
+Boutons dynamiques → `data-action` capté dans `_onGlobalClick`.
 
 ### 4. Un fichier = une responsabilité stricte
 
 | Fichier | Responsabilité | Interdit |
 |---------|---------------|---------|
-| `data.js` | SEUL fichier qui touche `localStorage` | DOM, calculs métier |
-| `calculs.js` | Fonctions pures uniquement | DOM, `localStorage`, `DGHData.save()` |
-| `app.js` | Noyau : init, navigate, délégations globales, toast | `localStorage` (sauf thème UI — exception documentée) |
-| `modules/*.js` | Rendu et logique d'une vue | `localStorage` direct, accès direct à l'état d'autres modules |
-| `style.css` | SEUL endroit pour les styles | `<style>` injectés en JS |
+| `data.js` | SEUL fichier qui touche `localStorage` | DOM, calculs |
+| `calculs.js` | Fonctions pures uniquement | DOM, `localStorage` |
+| `app.js` | Contrôleur UI | `localStorage` direct |
+| `style.css` | SEUL endroit pour les styles | `<style>` en JS |
 
-**Exception localStorage documentée** : le thème UI (`dgh-theme`) est géré dans `app.js` directement. C'est une préférence interface, pas une donnée métier. Cette exception est la seule autorisée.
-
-### 5. Pattern module IIFE — API publique via `return {}`
-
-Chaque module expose uniquement ses fonctions publiques :
-
-```js
-const DGHDashboard = (() => {
-  // Fonctions privées — préfixe _
-  function _renderDiscResume(bilan) { ... }
-
-  // Fonctions publiques — sans préfixe
-  function renderDashboard() {
-    _renderDiscResume(bilan); // appel interne OK
-    DGHEtab.renderAlertes();  // ❌ INTERDIT — cross-module privé
-  }
-
-  return { renderDashboard, updateBtnEtab }; // seule API exposée
-})();
-```
-
-Règle : **jamais** appeler une fonction `_privée` d'un module depuis un autre module. Tout passe par l'API publique `return {}`.
-
-### 6. Styles — classes CSS plutôt que `.style.*`
-
-Préférer les classes CSS aux injections `.style.*` en JS :
-
-```js
-// ✅ Correct — via classe CSS
-el.classList.toggle('is-hidden', condition);
-el.classList.toggle('solde-danger', bilan.depassement);
-
-// ✅ Acceptable — valeurs calculées dynamiquement (pas de classe possible)
-barHP.style.width = pctHP + '%';
-barHSA.style.marginLeft = pctHP + '%';
-
-// ❌ À éviter — couleurs sémantiques en JS
-el.style.color = hpFree < 0 ? 'var(--c-red)' : 'var(--c-accent)';
-// → utiliser plutôt .solde-danger / .solde-positif
-```
-
-Classes utilitaires disponibles : `.is-hidden`, `.badge-hidden`, `.solde-danger`, `.solde-neutre`, `.solde-positif`, `.solde-hsa`, `.kpi-solde-danger`, `.dot-solde-pos`, `.dot-solde-neg`
-
-### 7. Encodage — CRITIQUE
-Les fichiers JS contiennent des caractères Unicode.  
-**Toujours manipuler en binaire** (`'rb'`/`'wb'`) en Python pour éviter les corruptions.
-
-```python
-# ✅ Correct
-with open('assets/js/modules/dashboard.js', 'rb') as f: content = f.read()
-new = "texte avec accents".encode('utf-8')
-content = content.replace(old, new)
-with open('assets/js/modules/dashboard.js', 'wb') as f: f.write(content)
-```
-
-### 8. HTML tableau — ordre des balises
-Dans un `<table>` : `<thead>` → `<tbody>` → `<tfoot>`.  
-Construire : `html_tbody + '</tbody>' + tfoot + '</table>'`  
-**Jamais** : `html + tfoot + '</tbody></table>'`
-
-### 9. Tooltips et z-index — architecture fixe
-Les tooltips `#kpiFloatTip` et `#discFloatTip` sont en `position: fixed; z-index: 99999` dans le `<body>`.  
-Gérés par JS (mouseenter/mouseleave) pour échapper aux stacking contexts.  
-**Ne jamais** utiliser `position: absolute` pour un tooltip dans un conteneur avec `overflow: hidden`.
-
-### 10. Vérifications avant livraison
+### 5. Vérifications avant livraison
 ```bash
-node --check assets/js/app.js
-node --check assets/js/data.js
-node --check assets/js/calculs.js
-node --check assets/js/modules/dashboard.js
-node --check assets/js/modules/structures.js
-node --check assets/js/modules/dotation.js
-node --check assets/js/modules/hpc.js
-node --check assets/js/modules/etab.js
-grep -n "onclick" index.html                          # → vide
-grep -rn "localStorage" assets/js/modules/            # → vide
-grep -n "localStorage" assets/js/app.js | grep -v "dgh-theme"  # → vide
-grep -n "localStorage" assets/js/calculs.js           # → vide
-grep -rn "\.style\.color\|\.style\.display" assets/js/modules/ # → vide
+grep -n "onclick" index.html              # doit retourner vide
+grep -rn "localStorage" assets/js/app.js # doit retourner vide (sauf thème)
+grep -rn "localStorage" assets/js/calculs.js # doit retourner vide
+```
+
+### 6. Modifications Python — TOUJOURS écrire via .encode('utf-8')
+Les fichiers JS contiennent des caractères Unicode. Toujours tester l'encodage avant écriture :
+```python
+content.encode('utf-8')  # lève UnicodeEncodeError si surrogate → corriger avant d'écrire
+with open(path, 'w', encoding='utf-8') as f: f.write(content)
 ```
 
 ---
@@ -155,115 +64,46 @@ grep -rn "\.style\.color\|\.style\.display" assets/js/modules/ # → vide
 ## Architecture des fichiers
 
 ```
-index.html                    → SPA — toutes les vues dans <section class="view">
-assets/
-  css/
-    style.css                 → Design system complet (light/dark + tous les composants)
-  js/
-    data.js                   → Couche données (localStorage, schéma, migrations, CRUD)
-    calculs.js                → Moteur de calcul pur (zéro DOM, zéro localStorage)
-    modules/
-      dashboard.js            → DGHDashboard : tableau de bord + résumés
-      structures.js           → DGHStructures : divisions, modales div + matrice
-      dotation.js             → DGHDotation : disciplines, groupes cours, enveloppe
-      hpc.js                  → DGHHPC : heures pédagogiques complémentaires
-      etab.js                 → DGHEtab : établissement, années, alertes, init MEN
-    app.js                    → Noyau : init, navigate, délégations globales, toast
-data/
-  exemple.json                → Données fictives anonymisées (schéma v3.1)
-SKILL.md                      → Ce fichier
-CHANGELOG.md                  → Historique des versions
-README.md                     → Documentation utilisateur
-```
-
-### Ordre de chargement dans index.html (obligatoire)
-```html
-<script src="assets/js/data.js"></script>
-<script src="assets/js/calculs.js"></script>
-<script src="assets/js/modules/dashboard.js"></script>
-<script src="assets/js/modules/structures.js"></script>
-<script src="assets/js/modules/dotation.js"></script>
-<script src="assets/js/modules/hpc.js"></script>
-<script src="assets/js/modules/etab.js"></script>
-<script src="assets/js/app.js"></script>  <!-- TOUJOURS EN DERNIER -->
-```
-
-### Structure interne d'app.js (noyau)
-```
-// ── INIT
-// ── NAVIGATION
-// ── RENDU GLOBAL (_renderAll, _renderYearSelect)
-// ── FERMETURE MODALE (_closeModalById)
-// ── DÉLÉGATION GLOBALE CLICK (_onGlobalClick)
-// ── DÉLÉGATION GLOBALE CHANGE (_onGlobalChange)
-// ── DÉLÉGATION GLOBALE DBLCLICK (_onGlobalDblClick)
-// ── DÉLÉGATION GLOBALE BLUR (_onGlobalBlur)
-// ── EVENTS (_bindEvents)
-// ── TOAST
+index.html              → SPA — toutes les vues dans des <section class="view">
+assets/css/style.css    → Design system (variables CSS light/dark + tous les composants)
+assets/js/data.js       → Couche données (localStorage, schéma, migrations, CRUD)
+assets/js/calculs.js    → Moteur de calcul pur (ORS, DGH, besoins MEN, service enseignant)
+assets/js/app.js        → Contrôleur UI (navigation, rendu vues, délégation événements)
+assets/js/modules/
+  dashboard.js          → DGHDashboard
+  structures.js         → DGHStructures
+  dotation.js           → DGHDotation
+  hpc.js                → DGHHPC
+  etab.js               → DGHEtab
+  enseignants.js        → DGHEnseignants (3 vues : liste / par discipline / HPC)
+data/exemple.json       → Données fictives anonymisées (schéma v3.3)
 ```
 
 ---
 
-## Modèle de données — Schéma v3.1
+## Modèle de données — Schéma v3.3
 
 ```js
-// Racine
+// HPCObject — clé : enseignants[] remplace enseignantId depuis v3.3
 {
-  _meta: { version: '3.1.0', createdAt, updatedAt },
-  etablissement: { nom, uai, academie, commune },
-  annees: { '2025-2026': AnneeObject },
-  anneeActive: '2025-2026'
-}
-
-// AnneeObject
-{
-  annee: '2025-2026',
-  dotation: {
-    hPosteEnveloppe: Number,  // HP reçues de la DSDEN
-    hsaEnveloppe:    Number,  // HSA autorisées
-    commentaire:     String
-  },
-  structures:     [DivisionObject],
-  disciplines:    [DisciplineObject],
-  repartition:    [RepartitionObject],
-  heuresPedaComp: [HPCObject],
-  grilles:        Object,   // { [discNom]: { '6e': h, '5e': h, ... } }
-  enseignants:    [],       // Sprint 6
-  alertes:        []
-}
-
-// DivisionObject
-{ id, niveau: '6e'|'5e'|'4e'|'3e'|'SEGPA'|'ULIS'|'UPE2A', nom, effectif, dispositif }
-
-// DisciplineObject
-{ id, nom, couleur }
-
-// RepartitionObject
-{ disciplineId, hPoste, hsa, commentaire, groupesCours: [GroupeCoursObject] }
-
-// GroupeCoursObject
-{
-  id, nom,
-  classesIds: [divisionId],   // sélection par classes (pas par niveau)
-  heures,                     // heures prof / semaine
+  id, nom, categorie, disciplineId, classesIds,
+  heures, effectif, typeHeure: 'hp'|'hsa',
+  enseignants: [{ ensId: string, heures: number }],  // multi-affectation avec quotités
   commentaire
-  // effectif calculé = somme effectifs des classes
-  // coût DGH = heures × nb_classes (pas nb_élèves)
 }
 
-// HPCObject
+// EnseignantObject — clé : disciplines[] est la source de vérité
 {
-  id, nom,
-  categorie: 'option'|'labo'|'dispositif'|'vie-classe'|'arts'|'sport'|'accompagnement'|'autre',
-  disciplineId,               // null si hors discipline
-  classesIds: [divisionId],
-  typeHeure: 'hp'|'hsa',
-  heures, effectif, commentaire
+  id, nom, prenom, grade, statut,
+  disciplines: [{ discNom: string, heures: number }], // heures par discipline
+  disciplinePrincipale,  // = disciplines[0].discNom (compat)
+  heures,                // = somme disciplines (calculé, maintenu par cohérence)
+  orsManuel,             // null = utiliser ORS du grade; nombre = override
+  commentaire            // spécificité ORS (décharge, temps partiel thérapeutique…)
 }
 ```
 
-### Règle de migration
-Toute modification du schéma implique :
+### Migration obligatoire si schéma modifié
 1. Ajouter le champ dans `_annee()` dans `data.js`
 2. Ajouter la migration dans `_migrate()` avec vérification `=== undefined`
 3. Incrémenter `VERSION` dans `data.js`
@@ -273,325 +113,239 @@ Toute modification du schéma implique :
 
 ## Concepts métier — À connaître absolument
 
-### Référence réglementaire
-Les volumes horaires sont fixés par l'**arrêté du 19 mai 2015 relatif à l'organisation des enseignements dans les classes de collège** (J.O. du 20 mai 2015, modifié).  
-⚠️ Ne jamais citer « BO spécial n°11 du 26 novembre 2015 » pour les grilles horaires — ce numéro désigne les *programmes*, pas les volumes.
-
 ### HP vs HSA — distinction fondamentale
-- **H-Poste** : constituent les postes d'enseignants. Décidées par la DSDEN.
+- **H-Poste (HP)** : constituent les postes. Décidées par la DSDEN.
 - **HSA** : heures supplémentaires payées. Budget CA. Ne constituent pas de postes.
-- Les HPC ont aussi un type HP/HSA (`typeHeure`), intégré dans `bilanDotation`.
 
-### Besoin réel — logique de priorité
-1. Si la discipline a des **groupes de cours** → besoin = `sum(gc.heures × gc.classesIds.length)`
-2. Sinon → besoin = `sum sur niveaux de (grille[discNom][niv] × nbDivisions[niv])`
-3. Grille utilisée : `annee.grilles[discNom][niv]` si override, sinon `GRILLES_MEN[niv][discNom]`
+### Service enseignant — modèle Option B (v3.3)
 
-### Groupes de cours — coût DGH réel
-Un groupe coûte **heures × nb_classes** (pas nb_élèves).  
-Une classe peut être dans plusieurs groupes simultanément (5eC → Espagnol ET Allemand).  
-L'impact par créneau sera géré en Sprint 7.
+```
+ORS (grade ou orsManuel)
+  ├── HPC-HP  = heures HPC typées HP affectées à cet enseignant
+  ├── H.dispo = ORS − HPC-HP   ← heures disponibles pour disciplines
+  └── HP disc.= heures saisies "Par discipline" (doit rester ≤ H.dispo)
 
-### TRM (Tableau de Répartition des Moyens)
-Document DSDEN. **Sprint 6** : import TRM → pré-remplissage HP/HSA dans Dotation.
+HSA = heures HPC typées HSA  (hors ORS)
+Total = HP disc. + HPC-HP + HSA
+```
+
+**Implication** : les HPC-HP sont déduites de l'ORS avant les disciplines.
+Un certifié (18h ORS) affecté à une Chorale HP 2h → 16h disponibles pour ses disciplines.
+
+### `serviceTotalEnseignant(ens, hpcs)` — API publique de calculs.js
+
+```js
+// Retourne :
+{
+  hpDisc,      // HP disciplines (somme ens.disciplines[].heures)
+  hpHPC,       // HP depuis HPC typées HP
+  hpTotal,     // hpDisc + hpHPC
+  hsaTotal,    // HSA depuis HPC typées HSA
+  totalGeneral,// hpTotal + hsaTotal
+  detailHSA,   // [{source, nom, heures}] — tooltip HSA
+  detailHPCHp, // [{source, nom, heures}] — tooltip HPC-HP + déduction ORS vue discipline
+  ors,         // ORS effectif (manuel ou grade)
+  ecartORS,    // hpTotal - ors (null si sans-ors)
+  statutORS    // 'sans-ors'|'hsa'|'sous-service'|'equilibre'
+}
+```
+
+**Règle ORS** : tous les statuts peuvent avoir un ORS (BMP, TZR, temps-partiel avec orsManuel). Contractuel sans orsManuel → ORS=0 → pas d'écart.
+
+### Vue liste — colonnes (v3.3)
+`Nom | Prénom | Grade | Statut | Discipline(s) | ORS | HP disc. | HPC-HP | HSA | Dispo. | Actions`
+
+- **ORS** : input inline éditable pour tous les statuts. Placeholder = ORS du grade. Vide = grade par défaut.
+- **HP disc.** : heures disciplines (vert)
+- **HPC-HP** : heures HPC-HP (orange/amber) — tooltip au survol liste les HPC concernées
+- **HSA** : heures HSA (indigo) — tooltip au survol liste les sources
+- **Dispo.** : ORS − HPC-HP (vert si positif, rouge si négatif)
+- **Icône 💬** : apparaît si `ens.commentaire` renseigné — tooltip + clic → modal détail
+
+### Vue Par discipline — colonnes (v3.3)
+`Nom | Prénom | Grade | Statut | H.établ. | H.discipline | H.dispo. | Actions`
+
+- **H.dispo.** = ORS − HPC-HP − somme toutes disciplines (ou H.établ. − disciplines si pas d'ORS)
+- **⚡Xh HPC** : badge orange si HPC-HP présentes, tooltip liste les HPC
+
+### Vue HPC (onglet H. Péda. Comp.) — colonnes (v3.3)
+`Intitulé | Classe(s) | Discipline | Type | H/sem | Effectif | Enseignant(s)`
+
+- Colonne Enseignant(s) toujours en DERNIÈRE position, alignée à droite
+- Plusieurs enseignants par HPC avec quotités différentes
+- Bouton + pour ajouter, ✕ individuel pour retirer
+
+### HPC — schéma enseignants[]
+```js
+hpc.enseignants = [{ ensId: 'ens_xxx', heures: 2 }, { ensId: 'ens_yyy', heures: 1 }]
+// Migration automatique : hpc.enseignantId (v3.2) → hpc.enseignants[] (v3.3)
+```
+
+### ORS — règles par statut
+- Titulaire → ORS grade, modifiable
+- BMP / TZR → ORS grade, modifiable (service partiel/complément)
+- Temps partiel → orsManuel obligatoire
+- Contractuel → orsManuel si renseigné, sinon ORS=0 → pas d'écart
 
 ---
 
 ## Design System
 
-### Variables CSS (ne jamais hardcoder de couleurs)
+### Variables CSS
 ```css
---c-bg, --c-surface, --c-surface2, --c-surface3
---c-border, --c-border2
---c-text, --c-text-muted, --c-text-dim
---c-accent, --c-accent-hover, --c-accent-light   /* vert sauge — HP */
---c-green, --c-green-bg
---c-amber, --c-amber-bg
---c-red, --c-red-bg
---c-blue, --c-blue-bg
+--c-accent, --c-accent-hover, --c-accent-light   /* vert sauge — HP disc. */
+--c-amber, --c-amber-bg                          /* orange — HPC-HP */
 --c-indigo, --c-indigo-bg                        /* HSA */
---c-sb-bg, --c-sb-text, --c-sb-muted, --c-sb-border, --c-sb-hover, --c-sb-active, --c-sb-active-t
+--c-blue, --c-blue-bg                            /* info */
+--c-green, --c-green-bg                          /* validation */
+--c-red, --c-red-bg                              /* erreur */
+--c-text, --c-text-muted, --c-text-dim
+--c-surface, --c-surface2, --c-surface3
+--c-border, --c-border2
+```
+
+### Classes CSS enseignants (v3.3)
+```css
+/* Vue liste */
+.ens-service-hp          /* HP disc. — vert */
+.ens-service-hpc-hp      /* HPC-HP — orange, cursor:help */
+.ens-service-hsa-nonzero /* HSA non-zéro — indigo, cursor:help */
+.ens-service-hsa-zero    /* HSA zéro — gris */
+.ens-dispo-ok            /* Dispo positive — vert */
+.ens-inline-ors          /* Input ORS inline */
+.ens-ors-wrap            /* Wrapper ORS + icône 💬 */
+.ens-comment-btn         /* Bouton icône 💬 */
+.ens-ecart-hsa           /* Info HSA dans l'écart */
+
+/* Vue HPC */
+.ens-disc-table-hpc      /* Table 7 colonnes */
+.hpc-col-ens             /* Dernière colonne enseignant, align right */
+.hpc-ens-wrap            /* Flex wrapper, justify-content: flex-end */
+.hpc-ens-tag             /* Tag individuel enseignant */
+.hpc-ens-h               /* Quotité horaire dans le tag */
+.hpc-ens-retirer         /* Bouton ✕ dans le tag */
+.ens-disc-hpchp-info     /* Badge ⚡Xh HPC dans vue discipline */
+
+/* Modal sélection enseignant */
+.sel-ens-deja            /* "Actuel : Xh" dans la modal HPC */
+.sel-ens-ors             /* Info ORS dans la modal */
 ```
 
 ### Typographie
-- **UI** : `font-family: 'Outfit', sans-serif`
-- **Données chiffrées** : `font-family: 'JetBrains Mono', monospace`
-- Polices via `@import` dans `style.css` uniquement
-
-### Classes utilitaires CSS (v3.2)
-```css
-.is-hidden           /* display:none — remplace style.display='none' */
-.badge-hidden        /* badge alertes masqué */
-.solde-danger        /* color: var(--c-red) */
-.solde-neutre        /* color: var(--c-text-muted) */
-.solde-positif       /* color: var(--c-accent) */
-.solde-hsa           /* color: var(--c-indigo) */
-.kpi-solde-danger    /* KPI solde en dépassement */
-.dot-solde-pos       /* solde positif dotation */
-.dot-solde-neg       /* solde négatif dotation */
-```
-
-### Composants réutilisables clés
-```
-.kpi-card[data-color="blue|green|amber|red|indigo|teal"]
-.kpi-tooltip-card      → source de données pour #kpiFloatTip (JS)
-.disc-tip-wrap         → source de données pour #discFloatTip (JS)
-.section-card          → overflow:visible (jamais hidden — couperait tableaux)
-  → les tableaux enfants ont leur overflow clip via #dot-list, #struct-list, #hpc-list
-.dot-table.dot-table-grille  → tableau dotation avec colonnes niveaux dynamiques
-.col-grille            → colonne niveau (input + total sous l'input)
-.grille-input          → input h/div MEN éditable (amber si override)
-.grille-input-modifie  → override utilisateur signalé visuellement
-.dot-ecart-btn         → écart cliquable (action ecart-zero)
-.hpc-type-toggle       → badge HP/HSA cliquable (action toggle-hpc-type)
-.div-tag-struct        → badge bleu (groupes/HPC associés à une classe)
-#kpiFloatTip           → tooltip KPI fixe (z-index:99999)
-#discFloatTip          → tooltip disciplines dashboard fixe (z-index:99999)
-app.toast(msg, 'success|error|info|warning', duration?)
-```
+- UI, titres, labels : `font-family: 'Outfit', sans-serif`
+- Données chiffrées, valeurs DGH : `font-family: 'JetBrains Mono', monospace`
 
 ---
 
-## Moteur de calcul — API publique de calculs.js
+## API publique — data.js (v3.3)
 
 ```js
-// Constantes
-Calculs.ORS               // { certifie: { label, ors }, ... }
-Calculs.GRILLES_MEN       // { '6e': { 'Français': 4.5, ... }, ... }
-Calculs.H_THEORIQUES_NIV  // { '6e': 26, '5e': 26, '4e': 26, '3e': 26.5 }
-
-// Calculs principaux
-Calculs.bilanDotation(anneeData)
-  → { enveloppe, hPosteEnv, hsaEnv, totalHP, totalHSA, totalAlloue, solde,
-      pctConsomme, nbDisciplines, depassement,
-      totalHPDisc, totalHSADisc, totalHPHPC, totalHSAHPC }
-
-Calculs.resumeStructures(structures)
-  → { nbDivisions, effectifTotal, parNiveau[...], niveauxPresents, hTheoriqueTotal }
-
-Calculs.besoinsParDiscipline(structures, disciplines, repartition, grilles)
-  → [{ disciplineId, nom, couleur,
-       besoinTheorique, besoinMEN, hPoste, hsa, total,
-       heuresGroupes, heuresGroupesReel, hasGroupes,
-       ecart, commentaire, groupesCours,
-       grilleLignes  // { '6e': { men, valeur, modifie }, ... }
-     }]
-
-Calculs.suggererRepartition(anneeData)
-  → [{ disciplineId, nom, suggested }]
-
-Calculs.bilanHPC(heuresPedaComp, disciplines)
-  → { totalHeures, nbHeures, parCategorie, parDiscipline }
-
-Calculs.genererAlertes(anneeData)
-  → [{ type, severite: 'error'|'warning'|'info', message, ref }]
-
-// Enseignants (Sprint 6)
-Calculs.detailEnseignant(ens)
-  → { ors, heuresFait, ecart, hsa, sousService, statut }
-```
-
----
-
-## API publique de data.js
-
-```js
-DGHData.init()
-DGHData.get() / getEtab() / getAnneeActive() / getAnnees() / getAnnee(annee?)
-DGHData.getNiveaux() / getCategoriesHPC() / getDisciplinesMEN()
-
-// Structures
-DGHData.getStructures(annee?) / getDivision(id, annee?)
-DGHData.addDivision(fields) / updateDivision(id, fields) / deleteDivision(id)
-DGHData.duplicateDivisions(id, count) / appliquerMatrice(matrice, remplacer)
-
-// Disciplines & répartition
-DGHData.getDisciplines(annee?) / getDiscipline(id, annee?)
-DGHData.getRepartition(annee?)
-DGHData.addDiscipline(fields) / updateDiscipline(id, fields) / deleteDiscipline(id)
-DGHData.setRepartition(disciplineId, fields)  // { hPoste?, hsa?, commentaire? }
-DGHData.initDisciplinesMEN()  → nb ajoutées
-
-// Groupes de cours
-DGHData.getGroupeCours(disciplineId, gcId, annee?)
-DGHData.addGroupeCours(disciplineId, fields) / updateGroupeCours(...) / deleteGroupeCours(...)
-
 // HPC
-DGHData.getHeuresPedaComp(annee?) / getHPC(id, annee?)
-DGHData.addHPC(fields) / updateHPC(id, fields) / deleteHPC(id)
+DGHData.getHeuresPedaComp()     → [HPCObject]
+DGHData.getHPC(id)              → HPCObject | null
+DGHData.addHPC(fields)          → HPCObject  // fields.enseignants = [{ensId, heures}]
+DGHData.updateHPC(id, fields)   → Boolean    // fields.enseignants = [{ensId, heures}]
+DGHData.deleteHPC(id)           → Boolean
 
-// Grilles horaires (overrides MEN)
-DGHData.getGrilles(annee?)  → { [discNom]: { '6e': h, ... } }
-DGHData.setGrille(discNom, niveau, heures)
-  // heures=null → supprime l'override (retour MEN)
-  // Double-clic sur grille-input → setGrille(discNom, niv, null)
-
-// Setters
-DGHData.setEtab(fields) / setAnneeActive(annee) / setDotation(hp, hsa, commentaire?)
-DGHData.resetAnnee(annee?) / deleteAnnee(annee) → { ok, message? }
-
-// Persistance
-DGHData.save() / exportJSON() → filename / importJSON(file) → Promise
-DGHData.genId(prefix) / isEmpty()
+// Enseignants
+DGHData.getEnseignants()        → [EnseignantObject] triés
+DGHData.getEnseignant(id)       → EnseignantObject | null
+DGHData.addEnseignant(fields)   → EnseignantObject
+DGHData.updateEnseignant(id, fields) → Boolean
+DGHData.deleteEnseignant(id)    → Boolean
+DGHData.deleteAllEnseignants()  → number
+DGHData.findEnseignantByNomPrenom(nom, prenom) → EnseignantObject | null
 ```
 
----
+## API publique — calculs.js (v3.3)
 
-## Namespaces des modules (v3.2)
-
-| Namespace | Fichier | Fonctions publiques principales |
-|-----------|---------|--------------------------------|
-| `DGHDashboard` | `modules/dashboard.js` | `renderDashboard()`, `updateBtnEtab()` |
-| `DGHStructures` | `modules/structures.js` | `renderStructures()`, `openModalDiv(id)`, `openModalMatrice()`, `confirmDeleteDiv(id)`, `updateDupPreview()` |
-| `DGHDotation` | `modules/dotation.js` | `renderDotation()`, `saveEnveloppe()`, `handleToggleGC(discId)`, `handleDotInput(target)`, `handleGrilleInput(target)`, `handleGrilleReset(target)`, `openModalDisc(id)`, `openModalGC(discId, gcId)`, `suggererHP()`, `ecartZero(discId, besoin)`, `gcSelectAllClasses()`, `toggleAllGC()`, `updateColorHint(v)`, `updateGCEffectif()` |
-| `DGHHPC` | `modules/hpc.js` | `renderHPC()`, `openModalHPC(id)`, `toggleHPCType(id)`, `hpcSelectAllClasses()`, `updateHPCEffectif()` |
-| `DGHEtab` | `modules/etab.js` | `openModal()`, `saveModal()`, `switchModalTab(tab)`, `addModalYear()`, `onModalYearChange(val)`, `renderAlertes()`, `initDisciplinesMEN()`, `openConfirmReset()`, `openConfirmDeleteAnnee(annee)`, `updateModalDotTotal()` |
-| `app` | `app.js` | `navigate(viewId)`, `toast(msg, type, duration?)`, `renderAll()`, `renderYearSelect()` |
-
----
-
-## Ajouter un nouveau module (checklist)
-
-1. **`data.js`** : champ dans `_annee()` + migration dans `_migrate()` + incrémenter `VERSION`
-2. **`index.html`** : `<section class="view" id="view-monmodule">` + nav item sidebar
-3. **Créer `assets/js/modules/monmodule.js`** avec pattern IIFE :
-   ```js
-   const DGHMonModule = (() => {
-     function renderMonModule() { ... }
-     return { renderMonModule };
-   })();
-   ```
-4. **`index.html`** : ajouter `<script src="assets/js/modules/monmodule.js"></script>` avant `app.js`
-5. **`app.js`** :
-   - Entrée dans `VIEWS`
-   - `if (viewId === 'monmodule') DGHMonModule.renderMonModule()` dans `navigate()`
-   - Tous les clics dans `_onGlobalClick`, tous les inputs dans `_onGlobalChange`
-6. **`style.css`** : uniquement via variables CSS existantes, jamais de couleur hardcodée
-7. **`calculs.js`** : fonctions pures nécessaires
-8. Mettre à jour `SKILL.md`, `README.md`, `CHANGELOG.md`
-
----
-
-## Pièges connus — à éviter absolument
-
-### Listeners dynamiques
-- **Ne jamais** appeler `addEventListener` dans un module sur un élément régénéré à chaque rendu
-- Tous les inputs/boutons dynamiques passent par `_onGlobalChange` ou `_onGlobalClick` dans `app.js`
-- La garde `_bound` (anciennement sur les inputs enveloppe) est **supprimée** — elle masquait le problème
-
-### HTML tableau
-- `<tfoot>` doit être **après** `</tbody>` : `html + '</tbody>' + tfoot + '</table>'`
-- Le `colspan` des sous-lignes doit correspondre au nombre réel de colonnes (variable `nbCols`)
-
-### CSS stacking context
-- `transform` sur `:hover` crée un stacking context → tooltips absolute prisonniers
-- `overflow: hidden` sur un conteneur coupe les enfants absolute/fixed
-- Solution : tooltips `position: fixed` dans le `<body>`, gérés par JS
-
-### Encodage Python
-- Toujours `rb`/`wb` pour les fichiers JS contenant des caractères Unicode
-- Les `replace()` peuvent échouer silencieusement sur des chaînes multi-octets en mode texte
-
-### Attributs HTML — jamais deux `class=` sur le même élément
-Un élément HTML ne peut avoir qu'**un seul** attribut `class`. Quand on passe de
-`style="display:none"` à `class="is-hidden"` sur un élément qui a déjà une classe,
-il faut **fusionner** — pas ajouter un second attribut :
-```html
-<!-- ❌ Invalide — le navigateur ignore le second class= -->
-<div class="section-card" id="monEl" class="is-hidden">
-
-<!-- ✅ Correct — une seule valeur d'attribut class -->
-<div class="section-card is-hidden" id="monEl">
-```
-
-### Tooltips flottants — exception `style.display`
-`#kpiFloatTip` et `#discFloatTip` ont `display: none` dans leur **règle CSS propre** (pas via `.is-hidden`).
-Pour les afficher, il faut `style.display = 'block'` — `classList.remove('is-hidden')` ne suffit pas
-car une règle CSS directe sur l'id ne peut pas être annulée par le retrait d'une classe.
 ```js
-// ✅ Correct pour ces deux tooltips spécifiques
-tipEl.style.display = 'block';   // afficher
-tipEl.style.display = 'none';    // cacher
+Calculs.serviceTotalEnseignant(ens, hpcs)
+  → { hpDisc, hpHPC, hpTotal, hsaTotal, totalGeneral,
+      detailHSA, detailHPCHp, ors, ecartORS, statutORS }
 
-// ❌ Ne fonctionne pas ici (la règle #kpiFloatTip { display:none } reste active)
-tipEl.classList.remove('is-hidden');
+Calculs.detailEnseignant(ens)
+  → { ors, heuresFait, ecart, hsa, sousService, statut, affichageEcart }
+
+Calculs.bilanEnseignants(enseignants)
+  → { nbEnseignants, totalHeures, nbSousService, nbHSA, nbEquilibre }
+
+Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
+  → [{ disc, couleur, membres, heuresDisc, heuresDotation, ecart, dansDotation }]
 ```
-Cette exception est **limitée** à `#kpiFloatTip` et `#discFloatTip`. Tous les autres
-éléments masqués/affichés utilisent `.is-hidden`.
 
-### Tooltip disciplines — `mouseover` clignotant
-Le tooltip `.disc-tip-wrap` / `#discFloatTip` ne doit pas utiliser `mouseover` naïvement :
-l'événement se déclenche sur chaque enfant du wrapper, provoquant des clignotements.
-Solution : tracker l'élément wrapper actif avec `_activeWrap` pour ne réagir qu'au
-**changement de wrapper**, pas aux transitions entre enfants du même wrapper.
+---
 
-### Suppression CSS — vérifier l'unicité des règles avant de supprimer
-Avant de supprimer un bloc CSS considéré comme "doublon", vérifier que **chaque règle**
-de ce bloc existe aussi dans le bloc conservé. Deux blocs peuvent sembler dupliquer
-les déclarations de base (`.dot-table`, `.dot-kpi-bar`) mais l'un contient
-des règles de couleur uniques (`.dot-ecart-ok`, `.dot-col-badge`) absentes de l'autre.
-Supprimer le "doublon" efface silencieusement ces règles uniques.
+## Délégation globale — actions liées aux enseignants (app.js)
+
+```js
+// Dans _onGlobalClick
+'edit-ens'           → DGHEnseignants.openModalEns(id)
+'delete-ens'         → DGHEnseignants.confirmDeleteEns(id)
+'add-ens-disc'       → DGHEnseignants.openModalEnsDisc(disc)
+'retirer-ens-disc'   → DGHEnseignants.retirerEnsDisc(id, disc)
+'toggle-disc'        → DGHEnseignants.toggleDiscBloc(disc)
+'toggle-all-disc'    → DGHEnseignants.toggleAllDiscs(open)
+'affecter-ens-hpc'   → DGHEnseignants.openModalAffecterHPC(hpcId)
+'retirer-ens-hpc'    → DGHEnseignants.retirerEnsHPC(hpcId, ensIdx)  // ensIdx = index dans enseignants[]
+'toggle-hpc-cat'     → DGHEnseignants.toggleHPCCat(cat)
+'toggle-all-hpc'     → DGHEnseignants.toggleAllHPC(open)
+
+// Dans _onGlobalChange
+'.ens-inline-select' → DGHEnseignants.handleInlineEdit(el)
+'.ens-inline-num'    → DGHEnseignants.handleInlineEdit(el)  // inclut orsManuel
+'.ens-inline-hdisc'  → DGHEnseignants.handleInlineEdit(el)
+
+// Dans _onGlobalBlur (capture)
+'.ens-inline-input'  → DGHEnseignants.handleInlineEdit(el)  // texte (nom, prenom)
+```
 
 ---
 
 ## Prochains sprints — Conception validée
 
-### Sprint 6 — Enseignants & TRM
-- Créer `assets/js/modules/enseignants.js` (namespace `DGHEnseignants`)
-- Fiche enseignant : nom, prénom, grade (→ ORS auto), matière, statut
-- Services affectés : disciplines/groupes avec heures → total vs ORS
-- Import TRM DSDEN (CSV/texte tabulé) → pré-remplissage HP/HSA
-- Flux guidé : Structures → TRM → Dotation → HPC → Enseignants
-
 ### Sprint 7 — Pilotage pédagogique
-- Créer `assets/js/modules/pilotage.js` (namespace `DGHPilotage`)
-- Dédoublements : une classe → deux groupes simultanés sur un créneau
-- Co-enseignement
+- Dédoublements : 1 classe → 2 groupes simultanés = 2h prof au lieu de 1h
+- Co-enseignement : 2 profs dans la même classe
+- Ventilation HP/HSA par enseignant depuis la dotation discipline (3e source de HSA après HPC)
 - Simulation : "si je supprime ce dédoublement → économie de Xh"
+- `serviceTotalEnseignant` est extensible : ajouter une 3e source dans `detailHSA`
 
 ### Sprint 8 — Synthèses & exports
-- Créer `assets/js/modules/syntheses.js` (namespace `DGHSyntheses`)
-- Document PDF imprimable pour CA (via `window.print()` + CSS @media print)
-- Tableaux HTML copiables pour Excel / Word
+- Tableau de synthèse DGH pour le CA (format A4)
+- Rapport par discipline : besoin / HP / HSA / enseignants
+- Rapport par enseignant : service complet avec décomposition HP disc. / HPC-HP / HSA
 
 ### Sprint 9 — Historique pluriannuel
-- Créer `assets/js/modules/historique.js` (namespace `DGHHistorique`)
-- Comparaison DGH N vs N-1, graphiques SVG inline (sans bibliothèque)
-
----
-
-## RGPD — Rappels permanents
-
-- ❌ Jamais d'appel API externe avec données nominatives
-- ❌ Jamais de `console.log` avec noms/données personnelles en production
-- ✅ Données : `localStorage` + JSON local uniquement
-- ✅ `.gitignore` exclut `data/` sauf `data/exemple.json`
-- ✅ Toute future fonctionnalité IA : anonymiser avant envoi API
+- Comparaison N vs N-1
+- Graphiques SVG inline (sans bibliothèque)
 
 ---
 
 ## Checklist avant chaque livraison
 
-- [ ] Tous les fichiers modifiés lus en entier avant modification (`view` tool)
-- [ ] `node --check` sur **tous** les fichiers JS → aucune erreur
+- [ ] Tous les fichiers modifiés ont été **lus en entier** avant modification
 - [ ] `grep -n "onclick" index.html` → vide
-- [ ] `grep -rn "localStorage" assets/js/modules/` → vide
-- [ ] `grep -n "localStorage" assets/js/app.js` → seulement `dgh-theme`
+- [ ] `grep -n "localStorage" assets/js/app.js` → vide (sauf thème)
 - [ ] `grep -n "localStorage" assets/js/calculs.js` → vide
-- [ ] `grep -rn "\.style\.color\|\.style\.display" assets/js/modules/` → vide
 - [ ] Aucun `id` JS sans équivalent HTML
-- [ ] Aucun double attribut `class=` dans index.html (fusionner en `class="a b"`)
-- [ ] Tooltips `#kpiFloatTip`/`#discFloatTip` gérés via `style.display` (pas classList)
 - [ ] Aucune couleur hardcodée dans le CSS
-- [ ] Aucun style injecté en JS (sauf `width`, `marginLeft`, `left`, `top` calculés)
 - [ ] `data/exemple.json` mis à jour si schéma modifié
 - [ ] `CHANGELOG.md` mis à jour
 - [ ] `VERSION` dans `data.js` incrémentée si schéma modifié
 - [ ] Aucune donnée réelle committée
-- [ ] Migrations testées (import d'un fichier v2 dans une app v3)
+- [ ] **Encodage Python** : tester `.encode('utf-8')` avant écriture
 
 ---
 
-*Ce fichier fait partie intégrante du projet DGH App.*  
-*Le mettre à jour à chaque évolution structurelle ou décision de conception.*  
-*Version : 3.2.1 — Dernière mise à jour : corrections post-refactorisation*
+## RGPD — Rappels permanents
+
+- ❌ Jamais d'appel API externe avec des données nominatives
+- ❌ Jamais de `console.log` avec des noms/données personnelles en production
+- ✅ Données nominatives : `localStorage` + fichier JSON local uniquement
+
+---
+
+*Ce fichier fait partie intégrante du projet DGH App.*
+*Le mettre à jour à chaque évolution structurelle.*
+*Version : 3.3.6 — Dernière mise à jour : Sprint 6+*

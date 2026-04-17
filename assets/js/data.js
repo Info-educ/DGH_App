@@ -1,19 +1,16 @@
 /**
- * DGH App — Couche données v3.0.0
+ * DGH App — Couche données v3.2.0
  * SEUL fichier qui touche localStorage
  *
- * v3.0.0 — Sprint 5 :
- *   - Enveloppe scindée : hPosteEnveloppe + hsaEnveloppe
- *   - groupesCours intégrés dans chaque ligne de répartition
- *   - groupes → heuresPedaComp avec catégorie
- *   - Sélection par classes (pas seulement niveaux)
- *   - Migration depuis v2
+ * v3.0.0 — Sprint 5 : enveloppe HP/HSA, groupesCours, heuresPedaComp, sélection classes
+ * v3.1.0 — Sprint 5+ : typeHeure HP/HSA sur HPC, grilles horaires overrides
+ * v3.2.0 — Sprint 6 : CRUD enseignants, migration services→heures, import CSV
  */
 
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '3.1.0';
+  const VERSION = '3.3.2';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   const DISCIPLINES_MEN = [
@@ -131,7 +128,45 @@ const DGHData = (() => {
           if (typeof h.heures   !== 'number') h.heures   = 0;
           if (typeof h.effectif !== 'number') h.effectif = 0;
           if (!h.commentaire) h.commentaire = '';
-          if (!h.typeHeure) h.typeHeure = 'hp';  // migration v3.1 : HP par défaut
+          if (!h.typeHeure) h.typeHeure = 'hp';
+          // migration v3.3.3 : enseignantId → enseignants[] (multi-affectation)
+          if (!Array.isArray(h.enseignants)) {
+            if (h.enseignantId) {
+              h.enseignants = [{ ensId: h.enseignantId, heures: h.heures || 0 }];
+            } else {
+              h.enseignants = [];
+            }
+            delete h.enseignantId;
+          }
+        });
+        // — Migration v3.2 : enseignants
+        if (!Array.isArray(ann.enseignants)) ann.enseignants = [];
+        ann.enseignants.forEach(ens => {
+          if (!ens.grade)                       ens.grade               = 'certifie';
+          if (!ens.statut)                      ens.statut              = 'titulaire';
+          // Migration : 'temps-partiel' est un statut valide (v3.3.2)
+          const statutsValides = ['titulaire','bmp','tzr','contractuel','temps-partiel'];
+          if (!statutsValides.includes(ens.statut)) ens.statut = 'titulaire';
+          if (ens.disciplinePrincipale === undefined) ens.disciplinePrincipale = '';
+          if (ens.heures === undefined) {
+            // Compatibilité : ancienne structure services[]
+            ens.heures = Array.isArray(ens.services)
+              ? Math.round(ens.services.reduce((s,srv)=>s+(parseFloat(srv.heures)||0),0)*2)/2
+              : 0;
+          }
+          if (Array.isArray(ens.services)) delete ens.services;
+          if (ens.commentaire === undefined)    ens.commentaire         = '';
+          if (ens.orsManuel   === undefined)    ens.orsManuel           = null;
+          // Migration v3.3 : disciplines[] multi-matieres
+          if (!Array.isArray(ens.disciplines)) {
+            ens.disciplines = (ens.disciplinePrincipale && ens.heures > 0)
+              ? [{ discNom: ens.disciplinePrincipale, heures: ens.heures }]
+              : (ens.disciplinePrincipale ? [{ discNom: ens.disciplinePrincipale, heures: 0 }] : []);
+          }
+          // Synchroniser heures total = somme disciplines
+          ens.heures = Math.round(ens.disciplines.reduce((s,d)=>s+(parseFloat(d.heures)||0),0)*2)/2;
+          // disciplinePrincipale = premiere discipline (compat affichage)
+          ens.disciplinePrincipale = ens.disciplines.length > 0 ? ens.disciplines[0].discNom : '';
         });
       });
     }
@@ -379,6 +414,7 @@ const DGHData = (() => {
                 classesIds: Array.isArray(fields.classesIds)?fields.classesIds.slice():[],
                 heures: parseFloat(fields.heures)||0, effectif: parseInt(fields.effectif,10)||0,
                 typeHeure: fields.typeHeure||'hp',
+                enseignants: Array.isArray(fields.enseignants) ? fields.enseignants.slice() : [],
                 commentaire: fields.commentaire||'' };
     ann.heuresPedaComp.push(h); save(); return h;
   }
@@ -394,6 +430,7 @@ const DGHData = (() => {
     if (fields.heures!==undefined)       h.heures       = parseFloat(fields.heures)||0;
     if (fields.effectif!==undefined)     h.effectif     = parseInt(fields.effectif,10)||0;
     if (fields.typeHeure!==undefined)     h.typeHeure    = fields.typeHeure||'hp';
+    if (fields.enseignants!==undefined)   h.enseignants  = Array.isArray(fields.enseignants) ? fields.enseignants.slice() : [];
     if (fields.commentaire!==undefined)  h.commentaire  = fields.commentaire||'';
     save(); return true;
   }
@@ -402,6 +439,118 @@ const DGHData = (() => {
     const ann = getAnnee(); const before = ann.heuresPedaComp.length;
     ann.heuresPedaComp = ann.heuresPedaComp.filter(h=>h.id!==id);
     if (ann.heuresPedaComp.length<before){save();return true;} return false;
+  }
+
+  // ── CRUD ENSEIGNANTS ──────────────────────────────────────────────────
+  /**
+   * @returns {Array} enseignants triés nom / prénom
+   */
+  function getEnseignants(annee) {
+    return (getAnnee(annee).enseignants || []).slice().sort((a,b)=>{
+      const na=(a.nom||'').localeCompare(b.nom||'','fr');
+      return na!==0 ? na : (a.prenom||'').localeCompare(b.prenom||'','fr');
+    });
+  }
+
+  /** @returns {Object|null} */
+  function getEnseignant(id, annee) {
+    return (getAnnee(annee).enseignants||[]).find(e=>e.id===id)||null;
+  }
+
+  /**
+   * @param {Object} fields - { nom, prenom, grade, statut, disciplinePrincipale, heures, orsManuel?, commentaire? }
+   * @returns {Object} EnseignantObject créé
+   */
+  function addEnseignant(fields) {
+    const ann = getAnnee();
+    // disciplines[] : tableau des affectations par matiere
+    const discs = Array.isArray(fields.disciplines) ? fields.disciplines.map(d => ({
+      discNom: (d.discNom||'').trim(), heures: parseFloat(d.heures)||0
+    })) : (fields.disciplinePrincipale
+      ? [{ discNom: (fields.disciplinePrincipale||'').trim(), heures: parseFloat(fields.heures)||0 }]
+      : []);
+    const totalH = Math.round(discs.reduce((s,d)=>s+(d.heures||0),0)*2)/2;
+    const ens = {
+      id:                   genId('ens'),
+      nom:                  (fields.nom||'').trim(),
+      prenom:               (fields.prenom||'').trim(),
+      grade:                fields.grade||'certifie',
+      statut:               fields.statut||'titulaire',
+      disciplines:          discs,
+      disciplinePrincipale: discs.length > 0 ? discs[0].discNom : '',
+      heures:               totalH,
+      orsManuel:            (fields.orsManuel!==undefined&&fields.orsManuel!==''&&fields.orsManuel!==null)
+                              ? parseFloat(fields.orsManuel) : null,
+      commentaire:          fields.commentaire||''
+    };
+    ann.enseignants.push(ens); save(); return ens;
+  }
+
+  /**
+   * @param {string} id
+   * @param {Object} fields
+   * @returns {boolean}
+   */
+  function updateEnseignant(id, fields) {
+    const ann = getAnnee(); const idx = ann.enseignants.findIndex(e=>e.id===id);
+    if (idx===-1) return false;
+    const ens = ann.enseignants[idx];
+    if (fields.nom!==undefined)       ens.nom       = (fields.nom||'').trim();
+    if (fields.prenom!==undefined)    ens.prenom    = (fields.prenom||'').trim();
+    if (fields.grade!==undefined)     ens.grade     = fields.grade||'certifie';
+    if (fields.statut!==undefined)    ens.statut    = fields.statut||'titulaire';
+    if (fields.commentaire!==undefined) ens.commentaire = fields.commentaire||'';
+    if (fields.orsManuel!==undefined) ens.orsManuel = (fields.orsManuel!==''&&fields.orsManuel!==null)
+                                                        ? parseFloat(fields.orsManuel) : null;
+    // Mise a jour des disciplines par matiere
+    if (Array.isArray(fields.disciplines)) {
+      ens.disciplines = fields.disciplines.map(d => ({ discNom:(d.discNom||'').trim(), heures:parseFloat(d.heures)||0 }));
+      ens.heures = Math.round(ens.disciplines.reduce((s,d)=>s+(d.heures||0),0)*2)/2;
+      ens.disciplinePrincipale = ens.disciplines.length > 0 ? ens.disciplines[0].discNom : '';
+    } else {
+      // Compat : mise a jour d'un champ isole (inline edit heures ou disc principale)
+      if (fields.disciplinePrincipale!==undefined) {
+        if (!Array.isArray(ens.disciplines)) ens.disciplines = [];
+        ens.disciplinePrincipale = (fields.disciplinePrincipale||'').trim();
+        if (ens.disciplines.length > 0) ens.disciplines[0].discNom = ens.disciplinePrincipale;
+        else if (ens.disciplinePrincipale) ens.disciplines = [{ discNom: ens.disciplinePrincipale, heures: ens.heures||0 }];
+      }
+      if (fields.heures!==undefined) {
+        if (!Array.isArray(ens.disciplines)) ens.disciplines = [];
+        ens.heures = parseFloat(fields.heures)||0;
+        if (ens.disciplines.length === 1) ens.disciplines[0].heures = ens.heures;
+      }
+    }
+    save(); return true;
+  }
+
+  /**
+   * @param {string} id
+   * @returns {boolean}
+   */
+  function deleteEnseignant(id) {
+    const ann = getAnnee(); const before = ann.enseignants.length;
+    ann.enseignants = ann.enseignants.filter(e=>e.id!==id);
+    if (ann.enseignants.length<before){save();return true;} return false;
+  }
+
+  /**
+   * Vérifie si un enseignant existe déjà par nom+prénom (insensible casse).
+   * @returns {Object|null} l'enseignant trouvé ou null
+   */
+  function deleteAllEnseignants() {
+    const ann = getAnnee();
+    const nb  = ann.enseignants.length;
+    ann.enseignants = [];
+    if (nb > 0) { save(); return nb; }
+    return 0;
+  }
+
+  function findEnseignantByNomPrenom(nom, prenom, annee) {
+    const n = (nom||'').trim().toLowerCase(), p = (prenom||'').trim().toLowerCase();
+    return (getAnnee(annee).enseignants||[]).find(e=>
+      (e.nom||'').toLowerCase()===n && (e.prenom||'').toLowerCase()===p
+    ) || null;
   }
 
   // ── ANNÉES ───────────────────────────────────────────────────────
@@ -478,6 +627,7 @@ const DGHData = (() => {
     getGrilles,setGrille,
     addGroupeCours,updateGroupeCours,deleteGroupeCours,
     addHPC,updateHPC,deleteHPC,
+    getEnseignants,getEnseignant,addEnseignant,updateEnseignant,deleteEnseignant,deleteAllEnseignants,findEnseignantByNomPrenom,
     resetAnnee,deleteAnnee,
     save,exportJSON,importJSON,genId,isEmpty
   };
