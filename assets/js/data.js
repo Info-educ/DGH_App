@@ -10,7 +10,7 @@
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '3.3.2';
+  const VERSION = '3.4.0';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   const DISCIPLINES_MEN = [
@@ -47,7 +47,7 @@ const DGHData = (() => {
   function _schema() {
     return {
       _meta: { version: VERSION, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-      etablissement: { nom: '', uai: '', academie: '', commune: '' },
+      etablissement: { nom: '', uai: '', academie: '', commune: '', typeEtab: 'college' },
       annees: { '2025-2026': _annee('2025-2026') },
       anneeActive: '2025-2026'
     };
@@ -169,6 +169,10 @@ const DGHData = (() => {
           ens.disciplinePrincipale = ens.disciplines.length > 0 ? ens.disciplines[0].discNom : '';
         });
       });
+    }
+    // Migration v3.4 : typeEtab
+    if (!_data.etablissement.typeEtab) {
+      _data.etablissement.typeEtab = 'college';
     }
     _data._meta.version = VERSION;
     save();

@@ -5,6 +5,27 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v3.4.0 — Sprint 7 : Stabilisation & Fondations (2026-04-17)
+
+### Bugs corrigés
+- **`affecterEnsHPCDirect`** : le paramètre `ensId` était ignoré — corrigé (S7-01)
+- **`_refreshKPI`** : déclenchait un re-render complet du tableau après chaque édition inline — corrigé, seule la KPI strip est mise à jour (S7-02)
+- **`confirmerSelEns` (branche discipline)** : doublon de discipline et risque d’heures négatives — corrigé (S7-03)
+
+### Nettoyage
+- 13 occurrences de `style="font-family:'JetBrains Mono'"` remplacées par `.font-mono` dans `dotation.js`, `hpc.js`, `structures.js` (S7-04)
+- Classe utilitaire `.font-mono` ajoutée dans `style.css` (S7-04)
+- `data.js.bak` supprimé du dépôt (S7-06)
+- `.gitignore` complété : `*.bak`, `data/*.json` sauf exemple (S7-06)
+
+### Fondations
+- `typeEtab: 'college'` ajouté dans le schéma `etablissement` (migration automatique) (S7-05)
+- `data/exemple.json` mis à jour au schéma v3.4 (S7-07)
+- `SKILL.md` v3.4 : règle `.font-mono`, `EtablissementObject` mis à jour, checklist complétée (S7-08)
+
+---
+
+
 ## [3.2.0] — Sprint 6 — Module Enseignants & Import CSV Pronote
 
 ### Ajouté

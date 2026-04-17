@@ -45,7 +45,7 @@ const DGHHPC = (() => {
           + '<td><span class="grp-type-badge">' + _esc(catLabel) + '</span></td>'
           + '<td>' + _esc(discNom) + '</td>'
           + '<td><span class="grp-niveaux">' + _esc(classesNoms) + '</span></td>'
-          + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + (h.heures||0) + ' h</strong></td>'
+          + '<td class="col-num"><strong class="font-mono">' + (h.heures||0) + ' h</strong></td>'
           + '<td class="col-num">' + typeBadge + '</td>'
           + '<td class="col-num">' + effectif + '</td>'
           + '<td class="col-actions"><button class="btn-icon-sm" data-action="edit-hpc" data-id="' + h.id + '" title="Modifier">✎</button><button class="btn-icon-sm btn-icon-danger" data-action="delete-hpc" data-id="' + h.id + '" title="Supprimer">✕</button></td>'
@@ -53,7 +53,7 @@ const DGHHPC = (() => {
       });
       if (hpcs.length > 0) {
         html += '<tr class="struct-total-row"><td colspan="4"><strong>Total H. péda. complémentaires</strong></td>'
-          + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + Math.round((totalHPCHp+totalHPCHsa)*2)/2 + ' h</strong></td>'
+          + '<td class="col-num"><strong class="font-mono">' + Math.round((totalHPCHp+totalHPCHsa)*2)/2 + ' h</strong></td>'
           + '<td class="col-num"><span class="dot-col-badge dot-col-hp" title="HP">' + totalHPCHp + '</span> <span class="dot-col-badge dot-col-hsa" title="HSA">' + totalHPCHsa + '</span></td>'
           + '<td colspan="2"></td></tr>';
       }

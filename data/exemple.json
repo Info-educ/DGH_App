@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "version": "3.3.0",
+    "version": "3.4.0",
     "createdAt": "2025-09-01T00:00:00.000Z",
     "updatedAt": "2025-09-01T00:00:00.000Z",
     "note": "Fichier d'exemple anonymisé — données fictives pour démonstration"
@@ -9,7 +9,8 @@
     "nom": "Collège Exemple",
     "uai": "0000000A",
     "academie": "Exemple",
-    "commune": "Ville"
+    "commune": "Ville",
+    "typeEtab": "college"
   },
   "anneeActive": "2025-2026",
   "annees": {
@@ -199,7 +200,8 @@
           "typeHeure": "hp",
           "heures": 3,
           "effectif": 18,
-          "commentaire": ""
+          "commentaire": "",
+          "enseignants": []
         },
         {
           "id": "hpc_choral",
@@ -210,7 +212,8 @@
           "typeHeure": "hsa",
           "heures": 1,
           "effectif": 40,
-          "commentaire": ""
+          "commentaire": "",
+          "enseignants": []
         },
         {
           "id": "hpc_devfait",
@@ -224,7 +227,8 @@
           "typeHeure": "hp",
           "heures": 2,
           "effectif": 55,
-          "commentaire": "Financé sur HP"
+          "commentaire": "Financé sur HP",
+          "enseignants": []
         }
       ],
       "enseignants": [

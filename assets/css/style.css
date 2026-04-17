@@ -1394,6 +1394,9 @@ td.col-grille {
 /* Masquage — remplace style.display = 'none' / '' */
 .is-hidden { display: none !important; }
 
+/* Utilitaire typographie données chiffrées */
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+
 /* Badge alertes sidebar masqué par défaut */
 .badge-hidden { display: none; }
 

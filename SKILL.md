@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **3.3.6** — Dernière mise à jour : Sprint 6+
+> Version courante : **3.4.0** — Dernière mise à jour : Sprint 7
 
 ---
 
@@ -59,6 +59,10 @@ content.encode('utf-8')  # lève UnicodeEncodeError si surrogate → corriger av
 with open(path, 'w', encoding='utf-8') as f: f.write(content)
 ```
 
+### 7. Jamais de `style="font-family:..."` inline dans les modules JS
+Utiliser uniquement la classe CSS `.font-mono` pour la police monospace (définie dans `style.css`).
+Toute valeur numérique DGH doit utiliser `.font-mono` — jamais d'attribut `style` pour la typographie.
+
 ---
 
 ## Architecture des fichiers
@@ -81,9 +85,15 @@ data/exemple.json       → Données fictives anonymisées (schéma v3.3)
 
 ---
 
-## Modèle de données — Schéma v3.3
+## Modèle de données — Schéma v3.4
 
 ```js
+// EtablissementObject — v3.4
+{
+  nom, uai, academie, commune,
+  typeEtab: 'college' | 'lycee'  // ← ajouté v3.4 (migration automatique)
+}
+
 // HPCObject — clé : enseignants[] remplace enseignantId depuis v3.3
 {
   id, nom, categorie, disciplineId, classesIds,
@@ -328,6 +338,8 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 - [ ] `grep -n "onclick" index.html` → vide
 - [ ] `grep -n "localStorage" assets/js/app.js` → vide (sauf thème)
 - [ ] `grep -n "localStorage" assets/js/calculs.js` → vide
+- [ ] `grep -rn "font-family" assets/js/modules/` → vide
+- [ ] `data/exemple.json` version = VERSION dans `data.js`
 - [ ] Aucun `id` JS sans équivalent HTML
 - [ ] Aucune couleur hardcodée dans le CSS
 - [ ] `data/exemple.json` mis à jour si schéma modifié
