@@ -28,9 +28,9 @@
       <li class="nav-section-label">Pilotage</li>
       <li class="nav-item active" data-view="dashboard"><span class="nav-icon">⬡</span><span class="nav-label">Tableau de bord</span></li>
       <li class="nav-item" data-view="structures"><span class="nav-icon">⊞</span><span class="nav-label">Structures</span></li>
-      <li class="nav-item" data-view="dotation"><span class="nav-icon">◎</span><span class="nav-label">Dotation DGH</span></li>
+      <li class="nav-item" data-view="dotation"><span class="nav-icon">◎</span><span class="nav-label">DGH + Vol. Horaire</span></li>
       <li class="nav-item" data-view="hpc"><span class="nav-icon">◈</span><span class="nav-label">H. péda. complémentaires</span></li>
-      <li class="nav-item" data-view="enseignants"><span class="nav-icon">◉</span><span class="nav-label">Enseignants</span></li>
+      <li class="nav-item" data-view="enseignants"><span class="nav-icon">◉</span><span class="nav-label">Équipe pédagogique</span></li>
       <li class="nav-section-label">Analyse</li>
       <li class="nav-item" data-view="alertes"><span class="nav-icon">◬</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
       <li class="nav-section-label">Restitution</li>
@@ -176,8 +176,8 @@
         <div class="view-header">
           <div class="view-header-row">
             <div>
-              <h1 class="view-title">Dotation DGH</h1>
-              <p class="view-subtitle">Enveloppe · répartition par discipline · groupes de cours</p>
+              <h1 class="view-title">DGH + Vol. Horaire</h1>
+              <p class="view-subtitle">Enveloppe HP/HSA · répartition par discipline · groupes de cours</p>
             </div>
             <div class="view-header-actions">
               <button class="btn-secondary" id="btnSuggerer">💡 Suggérer HP</button>
@@ -187,32 +187,35 @@
           </div>
         </div>
 
-        <!-- Enveloppe HP / HSA -->
-        <div class="section-card dot-envelope-card">
-          <div class="section-card-header"><h2>Enveloppe annuelle</h2><span class="form-hint">Renseignée par la DSDEN</span></div>
-          <div class="dot-envelope-grid">
-            <div class="dot-env-block dot-env-hp">
-              <label class="dot-env-label" for="inputEnvHP">Heures-Poste (HP)</label>
-              <div class="dot-env-input-row">
-                <input type="number" id="inputEnvHP" class="dot-env-input" placeholder="320" min="0" step="0.5" />
-                <span class="dot-env-unit">h</span>
+        <!-- Enveloppe HP / HSA — style dark card -->
+        <div class="dot-env-card">
+          <div class="dot-env-card-header">
+            <span class="dot-env-card-title">Enveloppe annuelle</span>
+            <span class="dot-env-card-hint">Renseignée par la DSDEN</span>
+          </div>
+          <div class="dot-env-card-body">
+            <div class="dot-env-card-field dot-env-card-hp">
+              <label class="dot-env-card-label" for="inputEnvHP">HEURES-POSTE (HP)</label>
+              <div class="dot-env-card-input-row">
+                <input type="number" id="inputEnvHP" class="dot-env-card-input" placeholder="320" min="0" step="0.5" />
+                <span class="dot-env-card-unit">h</span>
               </div>
-              <span class="dot-env-hint">Constituent les postes — décidées par la DSDEN</span>
+              <span class="dot-env-card-sub">Constituent les postes — décidées par la DSDEN</span>
             </div>
-            <div class="dot-env-plus">+</div>
-            <div class="dot-env-block dot-env-hsa">
-              <label class="dot-env-label" for="inputEnvHSA">HSA autorisées</label>
-              <div class="dot-env-input-row">
-                <input type="number" id="inputEnvHSA" class="dot-env-input" placeholder="30" min="0" step="0.5" />
-                <span class="dot-env-unit">h</span>
+            <div class="dot-env-card-op">+</div>
+            <div class="dot-env-card-field dot-env-card-hsa">
+              <label class="dot-env-card-label" for="inputEnvHSA">HSA AUTORISÉES</label>
+              <div class="dot-env-card-input-row">
+                <input type="number" id="inputEnvHSA" class="dot-env-card-input" placeholder="30" min="0" step="0.5" />
+                <span class="dot-env-card-unit">h</span>
               </div>
-              <span class="dot-env-hint">Budget établissement</span>
+              <span class="dot-env-card-sub">Budget établissement</span>
             </div>
-            <div class="dot-env-equals">=</div>
-            <div class="dot-env-block dot-env-total">
-              <div class="dot-env-label">Total enveloppe</div>
-              <div class="dot-env-total-val" id="dot-env-total">— h</div>
-              <span class="dot-env-hint">HP + HSA</span>
+            <div class="dot-env-card-op">=</div>
+            <div class="dot-env-card-total">
+              <div class="dot-env-card-total-label">TOTAL ENVELOPPE</div>
+              <div class="dot-env-card-total-val" id="dot-env-total">— h</div>
+              <span class="dot-env-card-sub">HP + HSA</span>
             </div>
           </div>
         </div>
@@ -278,10 +281,49 @@
         <div class="section-card"><div class="section-card-header"><h2>Liste</h2></div><div id="hpc-list"></div></div>
       </section>
 
-      <!-- ══ ENSEIGNANTS ══════════════════════════════════════════════ -->
+      <!-- ══ ÉQUIPE PÉDAGOGIQUE ══════════════════════════════════════════ -->
       <section class="view" id="view-enseignants">
-        <div class="view-header"><h1 class="view-title">Enseignants</h1><p class="view-subtitle">Services individuels, ORS, HSA, Pacte, IMP</p></div>
-        <div class="placeholder-view"><div class="placeholder-icon">◉</div><p><strong>Module Enseignants</strong> — Sprint 6</p><p class="placeholder-sub">Fiche par enseignant : corps/grade → ORS auto, heures affectées, HSA, TZR, compléments</p></div>
+        <div class="view-header">
+          <div class="view-header-row">
+            <div>
+              <h1 class="view-title">Équipe pédagogique</h1>
+              <p class="view-subtitle">Enseignants · disciplines · heures pédagogiques complémentaires</p>
+            </div>
+            <div class="view-header-actions">
+              <button class="btn-secondary btn-danger-soft" id="btnViderEns">🗑 Vider</button>
+              <button class="btn-secondary" id="btnImportCSV">📥 Importer CSV</button>
+              <button class="btn-primary" id="btnAddEns">+ Ajouter</button>
+            </div>
+          </div>
+        </div>
+        <!-- Onglets statiques — toujours dans le DOM, jamais réécrits -->
+        <div class="ens-onglets-wrap">
+          <div class="ens-onglets">
+            <button class="ens-onglet ens-onglet-active" id="btnVueListe">
+              <span class="ens-onglet-num" id="badgeOngletEns">0</span>
+              <span class="ens-onglet-content">
+                <span class="ens-onglet-label">Enseignants</span>
+                <span class="ens-onglet-sub">liste &amp; services</span>
+              </span>
+            </button>
+            <button class="ens-onglet" id="btnVueDisc">
+              <span class="ens-onglet-num" id="badgeOngletDisc">0</span>
+              <span class="ens-onglet-content">
+                <span class="ens-onglet-label">Par discipline</span>
+                <span class="ens-onglet-sub">répartition des services</span>
+              </span>
+            </button>
+            <button class="ens-onglet" id="btnVueHPC">
+              <span class="ens-onglet-num" id="badgeOngletHPC">0</span>
+              <span class="ens-onglet-content">
+                <span class="ens-onglet-label">H. Péda. Comp.</span>
+                <span class="ens-onglet-sub">affectation enseignants</span>
+              </span>
+            </button>
+          </div>
+          <div class="ens-kpi-strip" id="ens-kpi-strip"></div>
+        </div>
+        <div id="ens-list"></div>
       </section>
 
       <!-- ══ ALERTES ══════════════════════════════════════════════════ -->
@@ -549,6 +591,112 @@
     <div class="modal-footer"><button class="btn-secondary" id="confirmDeleteAnneeAnnuler">Annuler</button><button class="btn-danger" id="confirmDeleteAnneeOk">Supprimer définitivement</button></div></div>
   </div>
 
+  <!-- ══ MODAL AJOUT / MODIFICATION ENSEIGNANT ════════════════════ -->
+  <div class="modal-overlay" id="modalEns" role="dialog" aria-modal="true">
+    <div class="modal modal-lg">
+      <div class="modal-header"><h2 id="modalEnsTitle">Ajouter un enseignant</h2><button class="modal-close" id="modalEnsClose">✕</button></div>
+      <div class="modal-body">
+        <input type="hidden" id="modalEnsId" />
+        <div class="form-row-2">
+          <div class="form-group"><label for="inputEnsNom">Nom <span class="form-required">*</span></label><input type="text" id="inputEnsNom" placeholder="ex. Dupont" maxlength="60" /></div>
+          <div class="form-group"><label for="inputEnsPrenom">Prénom</label><input type="text" id="inputEnsPrenom" placeholder="ex. Marie" maxlength="60" /></div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="inputEnsGrade">Corps / Grade</label>
+            <select id="inputEnsGrade">
+              <option value="certifie">Certifié</option>
+              <option value="agrege">Agrégé</option>
+              <option value="plp">PLP</option>
+              <option value="eps">Prof. EPS</option>
+              <option value="contractuel">Contractuel</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="inputEnsStatut">Statut</label>
+            <select id="inputEnsStatut">
+              <option value="titulaire">Titulaire (chaire complète)</option>
+              <option value="bmp">BMP — Bloc de Moyens Provisoire</option>
+              <option value="tzr">TZR — Titulaire Zone de Remplacement</option>
+              <option value="contractuel">Contractuel</option>
+              <option value="temps-partiel">Temps partiel</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label for="inputEnsDisc">Discipline principale</label><input type="text" id="inputEnsDisc" placeholder="ex. Français, Mathématiques…" maxlength="60" /><span class="form-hint">Saisie libre — utilisée uniquement pour l'affichage</span></div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="inputEnsHeures">Heures / semaine dans l'établissement <span class="form-required">*</span></label>
+            <input type="number" id="inputEnsHeures" placeholder="18" min="0" max="40" step="0.5" />
+            <span class="form-hint">Pour les TZR : heures effectuées ici uniquement</span>
+          </div>
+          <div class="form-group">
+            <label for="inputEnsOrsManuel">ORS manuelle (optionnel)</label>
+            <input type="number" id="inputEnsOrsManuel" placeholder="laisser vide = ORS du grade" min="0" max="40" step="0.5" />
+            <span class="form-hint">Temps partiel�: saisir les heures réduites directement. Réduction réglementaire, BMP…</span>
+          </div>
+        </div>
+        <div class="ens-ors-preview" id="ensOrsPreview"></div>
+        <div class="form-group"><label for="inputEnsComment">Commentaire</label><input type="text" id="inputEnsComment" placeholder="Notes éventuelles…" maxlength="200" /></div>
+      </div>
+      <div class="modal-footer"><button class="btn-secondary" id="modalEnsCancel">Annuler</button><button class="btn-primary" id="modalEnsSave">Enregistrer</button></div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL IMPORT CSV PRONOTE ═══════════════════════════ -->
+  <div class="modal-overlay" id="modalCSV" role="dialog" aria-modal="true">
+    <div class="modal modal-lg">
+      <div class="modal-header"><h2>Importer depuis Pronote (CSV)</h2><button class="modal-close" id="modalCSVClose">✕</button></div>
+      <div class="modal-body">
+        <p class="form-hint" style="margin-bottom:.75rem">Export depuis Pronote�: <strong>Ressources &gt; Professeurs &gt; Export tableur</strong>. Formats CSV acceptés (séparateur <code>;</code> ou <code>,</code>).</p>
+        <div class="csv-drop-zone" id="csvDropZone">
+          <div class="csv-drop-icon">📄</div>
+          <p class="csv-drop-label">Glissez le fichier CSV ici</p>
+          <p class="csv-drop-sub">ou</p>
+          <label class="btn-secondary btn-sm csv-file-btn" for="csvFileInput">Choisir un fichier</label>
+          <input type="file" id="csvFileInput" accept=".csv,.txt" style="display:none" />
+        </div>
+        <div id="csvPreview" class="csv-preview">
+          <p class="csv-hint">Glissez un fichier CSV Pronote ou cliquez pour sélectionner.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="modalCSVCancel">Annuler</button>
+        <button class="btn-primary is-hidden" id="btnCSVConfirm">Importer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL SÉLECTION ENSEIGNANT (affecter à une discipline) ══════════ -->
+  <div class="modal-overlay" id="modalSelEns" role="dialog" aria-modal="true">
+    <div class="modal modal-lg">
+      <div class="modal-header"><h2 id="modalSelEnsTitle">Affecter un enseignant</h2><button class="modal-close" id="modalSelEnsClose">✕</button></div>
+      <div class="modal-body">
+        <input type="hidden" id="selEnsDiscCible" />
+        <p class="form-hint" style="margin-bottom:.75rem">Sélectionnez un enseignant et saisissez ses heures dans cette discipline. Les heures de sa discipline principale seront ajustées automatiquement.</p>
+        <div id="selEnsList"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="modalSelEnsCancel">Annuler</button>
+        <button class="btn-primary" id="btnSelEnsConfirm">✓ Affecter les enseignants sélectionnés</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CONFIRMATION SUPPRESSION GLOBALE ENSEIGNANTS ═════════════════ -->
+  <div class="modal-overlay" id="confirmEnsAll" role="dialog" aria-modal="true">
+    <div class="modal modal-sm"><div class="modal-header"><h2>Vider la liste�?</h2><button class="modal-close" id="confirmEnsAllCancel">✕</button></div>
+    <div class="modal-body"><p class="confirm-msg" id="confirmEnsAllMsg"></p><p class="confirm-sub">Cette action supprime tous les enseignants. Irréversible.</p></div>
+    <div class="modal-footer"><button class="btn-secondary" id="confirmEnsAllAnnuler">Annuler</button><button class="btn-danger" id="confirmEnsAllOk">Tout supprimer</button></div></div>
+  </div>
+
+  <!-- ══ CONFIRMATION SUPPRESSION ENSEIGNANT ═══════════════════ -->
+  <div class="modal-overlay" id="confirmEns" role="dialog" aria-modal="true">
+    <div class="modal modal-sm"><div class="modal-header"><h2>Supprimer cet enseignant�?</h2><button class="modal-close" id="confirmEnsCancel">✕</button></div>
+    <div class="modal-body"><p class="confirm-msg" id="confirmEnsMsg"></p><p class="confirm-sub">Cette action est irréversible.</p></div>
+    <div class="modal-footer"><button class="btn-secondary" id="confirmEnsAnnuler">Annuler</button><button class="btn-danger" id="confirmEnsOk">Supprimer</button></div></div>
+  </div>
+
   <!-- Tooltips flottants fixed — gérés par JS pour échapper aux stacking contexts -->
   <div id="kpiFloatTip"></div>
   <div id="discFloatTip"></div>
@@ -560,6 +708,7 @@
   <script src="assets/js/modules/dotation.js"></script>
   <script src="assets/js/modules/hpc.js"></script>
   <script src="assets/js/modules/etab.js"></script>
+  <script src="assets/js/modules/enseignants.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

@@ -1,9 +1,9 @@
-# ◈ DGH App — v3.1.6
+# ◈ DGH App — v3.3.6
 
 > Outil de pilotage de la Dotation Globale Horaire pour collège  
 > Développé par et pour les personnels de direction d'EPLE
 
-[![Version](https://img.shields.io/badge/version-3.1.6-green)](#)
+[![Version](https://img.shields.io/badge/version-3.3.6-green)](#)
 [![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)](#)
 [![RGPD](https://img.shields.io/badge/RGPD-100%25%20local-blue)](#)
 
@@ -22,7 +22,6 @@ DGH App permet à une équipe de direction de collège de **piloter, ventiler et
 - Application **100% dans le navigateur** — aucun serveur, aucun cloud, aucune dépendance externe
 - Données stockées dans le `localStorage` du navigateur
 - Export/import via fichier **JSON local** (à conserver sur votre poste ou un Drive privé d'équipe)
-- `.gitignore` exclut les données réelles du dépôt Git
 - Compatible partage par clé USB ou Drive privé d'équipe de direction
 
 ---
@@ -30,14 +29,7 @@ DGH App permet à une équipe de direction de collège de **piloter, ventiler et
 ## 🚀 Utilisation
 
 ### Sans installation
-Télécharger le ZIP → extraire → ouvrir `index.html` dans Chrome ou Firefox.  
-Aucun serveur, aucune installation, aucune connexion internet requise.
-
-### Avec GitHub Pages
-```bash
-git clone https://github.com/Info-educ/DGH_App.git
-# Pousser sur GitHub → Pages se met à jour automatiquement
-```
+Télécharger le ZIP → extraire → ouvrir `index.html` dans Chrome ou Firefox.
 
 ### Raccourcis clavier
 | Raccourci | Action |
@@ -51,174 +43,115 @@ git clone https://github.com/Info-educ/DGH_App.git
 
 | Module | Description | Statut |
 |--------|-------------|--------|
-| ⬡ **Dashboard** | KPIs (enveloppe HP/HSA, solde, divisions), encart HP/HSA consommé/disponible, tooltips au survol, résumé disciplines avec détail par niveau | ✅ v3.1 |
-| ⊞ **Structures** | Saisie matricielle (6e→3e), tableau récap par niveau, noms des groupes/HPC affichés dans la colonne dispositif | ✅ v3.1 |
-| ◎ **Dotation DGH** | Enveloppe HP/HSA, colonnes h/div par niveau éditables, besoin réel (GC ou MEN), groupes dépliables, totaux par colonne | ✅ v3.1 |
-| ◈ **H. Péda. Complémentaires** | Options, labo, dispositifs, arts & culture, sport — type HP/HSA cliquable, sélection classes, total HP/HSA | ✅ v3.1 |
-| ◉ **Enseignants** | Services individuels, ORS auto par grade, HSA, TZR, compléments | 🔜 Sprint 6 |
-| ◷ **Pilotage pédagogique** | Dédoublements, co-enseignement, simulation impact DGH | 🔜 Sprint 7 |
-| ◬ **Alertes** | Dépassements, sous-services, anomalies détectées automatiquement | ✅ actif |
-| ▤ **Synthèses** | Documents imprimables pour CA + tableaux HTML copiables | 🔜 Sprint 8 |
-| ◷ **Historique** | Comparaisons pluriannuelles, évolution DGH | 🔜 Sprint 9 |
-| ⟳ **Import TRM** | Import du Tableau de Répartition des Moyens DSDEN pour pré-remplir HP/HSA | 🔜 Sprint 6 |
+| ⬡ **Dashboard** | KPIs, barre HP/HSA, tooltips, résumé disciplines | ✅ v3.1 |
+| ⊞ **Structures** | Saisie matricielle, récap par niveau | ✅ v3.1 |
+| ◎ **Dotation DGH** | Enveloppe HP/HSA, grilles éditables, groupes de cours | ✅ v3.1 |
+| ◈ **H. Péda. Complémentaires** | Options, labo, arts, sport — HP/HSA cliquable, multi-enseignants | ✅ v3.3 |
+| ◉ **Équipe pédagogique** | 3 vues (Liste · Par discipline · HPC). Service calculé (HP disc. + HPC-HP + HSA). ORS inline éditable, icône 💬 commentaire, H.dispo = ORS − HPC-HP. | ✅ v3.3 |
+| ◷ **Pilotage pédagogique** | Dédoublements, co-enseignement, simulation | 🔜 Sprint 7 |
+| ◬ **Alertes** | Dépassements, sous-services, anomalies | ✅ actif |
+| ▤ **Synthèses** | Documents CA, tableaux copiables | 🔜 Sprint 8 |
+| ◷ **Historique** | Comparaisons pluriannuelles | 🔜 Sprint 9 |
 
 ---
 
 ## 🏫 Concepts métier intégrés
 
 ### Enveloppe DGH
-La DGH (Dotation Globale Horaire) se compose de deux types d'heures :
-- **H-Poste (HP)** : heures structurelles qui constituent les postes d'enseignants — attribuées par la DSDEN.
-- **HSA (Heures Supplémentaires Annuelles)** : heures supplémentaires payées, votées lors du CA — budget de l'établissement. Ne constituent pas de postes.
+- **H-Poste (HP)** : heures structurelles, postes d'enseignants, attribuées par la DSDEN.
+- **HSA** : heures supplémentaires payées, votées au CA. Ne constituent pas de postes.
 
-### Besoin réel vs besoin MEN
-- **Besoin MEN** = volume horaire réglementaire (arrêté du 19 mai 2015 relatif à l'organisation des enseignements dans les classes de collège, J.O. du 20 mai 2015, modifié) × nb divisions. Modifiable par discipline et par niveau directement dans le tableau.
-- **Besoin réel** = si des groupes de cours existent pour une discipline, leur coût total (heures × nb classes) **prévaut** sur le besoin MEN. Ex : LV2 Espagnol (2,5h × 16 classes) + LV2 Allemand (2,5h × 3 classes) = 47,5h.
-- **Écart** = heures allouées (HP+HSA) − besoin réel → affiché avec couleur.
+### Service enseignant — modèle de calcul (v3.3)
 
-### Grilles horaires (h/div/semaine) — modifiables par discipline
+Le service est **calculé automatiquement** depuis les affectations, jamais saisi globalement :
 
-| Discipline | 6e | 5e | 4e | 3e |
-|------------|----|----|----|----|
-| Français | 4,5 | 4,5 | 4,5 | 4 |
-| Mathématiques | 4,5 | 3,5 | 3,5 | 4 |
-| Histoire-Géographie | 3 | 3 | 3 | 3,5 |
-| LV1 | 4 | 3 | 3 | 3 |
-| LV2 | — | 2,5 | 2,5 | 2,5 |
-| SVT | 1,5 | 1,5 | 1,5 | 1,5 |
-| Physique-Chimie | — | 1,5 | 1,5 | 1,5 |
-| Sciences & Techno | 1,5 | — | — | — |
-| Technologie | — | 1,5 | 1,5 | 1,5 |
-| Arts plastiques | 1 | 1 | 1 | 1 |
-| Éducation musicale | 1 | 1 | 1 | 1 |
-| EPS | 3 | 3 | 3 | 3 |
-| EMC | 0,5 | 0,5 | 0,5 | 0,5 |
-| AP | 3 | 2 | 2 | 2 |
+```
+ORS (réglementaire ou saisi manuellement)
+  ├── HPC-HP  : heures HPC typées HP → déduites de l'ORS
+  ├── H.dispo : ORS − HPC-HP = heures disponibles pour les disciplines
+  └── HP disc.: heures saisies "Par discipline" (doivent rester ≤ H.dispo)
 
-Les valeurs MEN sont modifiables inline dans le tableau Dotation DGH. Double-clic pour revenir à la valeur réglementaire.
+HSA   : heures HPC typées HSA (hors ORS, payées en supplément)
+Total : HP disc. + HPC-HP + HSA
+```
 
-### Groupes de cours
-Rattachés à une discipline, constitués de classes précises. Le coût DGH = heures prof × nombre de classes du groupe.
-Ex : LV2 Espagnol → 5eA+5eB+5eC (15 élèves), LV2 Allemand → 5eC (5 élèves) = 2 groupes simultanés possibles.
+**Règle fondamentale** : les HPC-HP sont déduites de l'ORS avant les disciplines.  
+Ex : Certifié (ORS 18h) + Chorale HP 2h → **16h disponibles** pour ses disciplines.
+
+### ORS par grade et statut
+
+| Grade | ORS | Statut | ORS |
+|-------|-----|--------|-----|
+| Certifié | 18h | Titulaire | ORS du grade |
+| Agrégé | 15h | BMP / TZR | ORS du grade (modifiable) |
+| PLP | 17h | Temps partiel | Manuel obligatoire |
+| Prof. EPS | 20h | Contractuel | Manuel si renseigné |
+
+L'ORS est **éditable inline** dans la vue liste. Laisser vide = ORS du grade.  
+Un **commentaire** (icône 💬) peut documenter toute spécificité (décharge syndicale, temps partiel thérapeutique…).
 
 ### Heures Pédagogiques Complémentaires
-Heures hors grille standard — options (Latin, Grec), labo/TP, savoir nager, chorale, orchestre, devoirs faits, HVC, AP dédoublé, UNSS…
-Chaque HPC est déclarée en **HP** ou **HSA** (bascule au clic dans le tableau). L'impact est répercuté dans le tableau de bord.
 
-### ORS intégrées
+Chaque HPC est typée **HP** ou **HSA** (bascule au clic). Ce typage se répercute sur le service de chaque enseignant affecté. Plusieurs enseignants peuvent être affectés à une HPC avec des quotités différentes.
 
-| Corps / Grade | ORS hebdomadaire |
-|---------------|-----------------|
-| Certifié, Contractuel | 18 h |
-| Agrégé | 15 h |
-| PLP | 17 h |
-| Professeur d'EPS | 20 h |
-| Documentaliste | 36 h présence |
-| CPE, Psy-EN | 35 h |
+### Besoin réel vs besoin MEN
+- **Besoin MEN** = grille réglementaire × nb divisions (modifiable, double-clic pour réinitialiser)
+- **Besoin réel** = si groupes de cours → coût réel (h × classes) prévaut
+- **Écart** = heures allouées − besoin réel
 
 ---
 
-## 💾 Gestion des données
+## 💾 Format JSON (v3.3)
 
-### Format du fichier JSON (v3.1)
 ```json
 {
-  "_meta": { "version": "3.1.0", "updatedAt": "..." },
-  "etablissement": { "nom": "...", "uai": "...", "academie": "..." },
-  "anneeActive": "2025-2026",
-  "annees": {
-    "2025-2026": {
-      "dotation": { "hPosteEnveloppe": 320, "hsaEnveloppe": 30, "commentaire": "" },
-      "structures": [
-        { "id": "div_...", "niveau": "6e", "nom": "6eA", "effectif": 28, "dispositif": null }
-      ],
-      "disciplines": [
-        { "id": "disc_...", "nom": "Français", "couleur": "#3b82f6" }
-      ],
-      "repartition": [
-        {
-          "disciplineId": "disc_...",
-          "hPoste": 18, "hsa": 2, "commentaire": "",
-          "groupesCours": [
-            { "id": "gc_...", "nom": "LV2 Espagnol", "classesIds": ["div_..."], "heures": 2.5 }
-          ]
-        }
-      ],
-      "heuresPedaComp": [
-        { "id": "hpc_...", "nom": "Latin 4e", "categorie": "option", "disciplineId": null,
-          "classesIds": ["div_..."], "typeHeure": "hp", "heures": 3, "effectif": 12 }
-      ],
-      "grilles": {
-        "Français": { "6e": 4, "5e": 4.5 }
-      },
-      "enseignants": []
-    }
-  }
+  "_meta": { "version": "3.3.6" },
+  "heuresPedaComp": [{
+    "id": "hpc_...", "nom": "Latin 4e", "typeHeure": "hp", "heures": 3,
+    "enseignants": [{ "ensId": "ens_...", "heures": 3 }]
+  }],
+  "enseignants": [{
+    "id": "ens_...", "nom": "DUPONT", "grade": "certifie", "statut": "titulaire",
+    "disciplines": [{ "discNom": "Français", "heures": 16 }],
+    "orsManuel": null, "commentaire": "Décharge syndicale 2h"
+  }]
 }
 ```
 
 ### Migrations automatiques
-`data.js` migre automatiquement les fichiers des versions précédentes :
-- v1 → v2 : `heuresAllouees` → `hPoste`
-- v2 → v3 : `dotation.enveloppe` → `hPosteEnveloppe` + `hsaEnveloppe`
-- v2 → v3 : `groupes` → `heuresPedaComp`
-- v3.0 → v3.1 : ajout `typeHeure: 'hp'` sur les HPC existantes + `grilles: {}`
+- v3.2 → v3.3 : `hpc.enseignantId` → `hpc.enseignants: [{ensId, heures}]`
 
 ---
 
-## 🏗️ Architecture technique
+## 🏗️ Architecture
 
 ```
 dgh-app/
-├── index.html              # SPA — toutes les vues (sections HTML)
-├── assets/
-│   ├── css/style.css       # Design system complet (light + dark + utilitaires)
-│   └── js/
-│       ├── data.js         # Couche données (localStorage + import/export + migrations)
-│       ├── calculs.js      # Moteur de calcul pur (ORS, DGH, besoins MEN, suggestions)
-│       ├── modules/
-│       │   ├── dashboard.js   # DGHDashboard — tableau de bord
-│       │   ├── structures.js  # DGHStructures — divisions et saisie matricielle
-│       │   ├── dotation.js    # DGHDotation — disciplines, groupes de cours, enveloppe
-│       │   ├── hpc.js         # DGHHPC — heures pédagogiques complémentaires
-│       │   └── etab.js        # DGHEtab — établissement, années, alertes
-│       └── app.js             # Noyau : init, navigation, délégations globales, toast
-├── data/
-│   └── exemple.json        # Données fictives anonymisées
-├── SKILL.md                # Instructions de développement pour Claude
-├── CHANGELOG.md
-└── README.md
+├── index.html
+├── assets/css/style.css
+└── assets/js/
+    ├── data.js          # localStorage, migrations, CRUD
+    ├── calculs.js       # Fonctions pures : serviceTotalEnseignant, ORS, DGH…
+    ├── app.js           # Navigation, délégation globale
+    └── modules/
+        ├── dashboard.js
+        ├── structures.js
+        ├── dotation.js
+        ├── hpc.js
+        ├── etab.js
+        └── enseignants.js   # 3 vues : liste / par discipline / HPC
 ```
 
-**Stack : HTML5 + CSS3 + JS Vanilla**  
-Zéro dépendance, zéro build, zéro framework. Maintenable en autonomie sur plusieurs années.
-
-Chaque module JS est un **IIFE** (Immediately Invoked Function Expression) exposant une API publique via `return {}`. La délégation d'événements est centralisée dans `app.js` — aucun `addEventListener` direct sur les éléments générés dynamiquement.
+**Stack : HTML5 + CSS3 + JS Vanilla** — zéro dépendance, zéro build, zéro framework.
 
 ---
 
-## 🗓️ Feuille de route
+## 🗓️ Sprint 7 — Pilotage pédagogique (prochain)
 
-### Sprint 6 — Enseignants & TRM
-- Module enseignants : fiche par personne (grade → ORS auto, services affectés, HSA, TZR, compléments)
-- Import TRM DSDEN (CSV ou copier-coller) → pré-remplissage HP/HSA enveloppe
-- Flux guidé : Structures → TRM → Dotation → Groupes → HPC → Enseignants
-
-### Sprint 7 — Pilotage pédagogique
-- Déclaration de dédoublements (SVT labo, Techno, EPS mixte…)
+- Dédoublements (SVT labo, Techno, EPS mixte…)
 - Co-enseignement
-- Impact DGH par créneau et par classe
-- Simulation : "si je supprime ce dédoublement, je récupère Xh"
-
-### Sprint 8 — Synthèses & exports
-- Document PDF/HTML imprimable pour le CA
-- Tableaux copiables pour Excel
-- Rapport par discipline et par enseignant
-
-### Sprint 9 — Historique pluriannuel
-- Comparaison DGH N vs N-1
-- Évolution des effectifs et des dotations
-- Graphiques de tendance
+- Ventilation HP/HSA par enseignant depuis la dotation discipline
+- Simulation : "si je supprime ce dédoublement → économie de Xh"
 
 ---
 
