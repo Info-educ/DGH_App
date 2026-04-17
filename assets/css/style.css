@@ -1405,3 +1405,1130 @@ td.col-grille {
 
 /* Solde KPI dashboard (dépassement) */
 .kpi-solde-danger { color: var(--c-red) !important; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   MODULE ENSEIGNANTS — Sprint 6
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Tableau enseignants ─────────────────────────────────────────────── */
+.ens-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+.ens-table thead tr {
+  border-bottom: 2px solid var(--c-border2);
+}
+.ens-table th {
+  padding: .55rem .75rem;
+  text-align: left;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.ens-table td {
+  padding: .6rem .75rem;
+  border-bottom: 1px solid var(--c-border);
+  vertical-align: middle;
+}
+.ens-table tbody tr:last-child td { border-bottom: none; }
+.ens-table tbody tr:hover { background: var(--c-surface2); }
+
+.ens-nom  { font-weight: 600; }
+.ens-disc { color: var(--c-text-muted); font-size: .85rem; }
+.ens-col-num {
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .9rem;
+  white-space: nowrap;
+}
+.ens-ors { color: var(--c-text-muted); }
+.ens-col-actions { text-align: right; white-space: nowrap; }
+
+/* ── Badges statut ───────────────────────────────────────────────────── */
+.ens-badge {
+  display: inline-block;
+  padding: .18rem .55rem;
+  border-radius: 99px;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+.ens-badge-titulaire  { background: var(--c-green-bg);  color: var(--c-green);  }
+.ens-badge-bmp        { background: var(--c-blue-bg);   color: var(--c-blue);   }
+.ens-badge-tzr        { background: var(--c-amber-bg);  color: var(--c-amber);  }
+.ens-badge-contractuel { background: var(--c-surface3); color: var(--c-text-muted); }
+
+/* ── Aperçu ORS dans la modal ────────────────────────────────────────── */
+.ens-ors-preview {
+  padding: .5rem .75rem;
+  border-radius: var(--radius);
+  background: var(--c-surface2);
+  font-size: .88rem;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: .75rem;
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+}
+
+/* ── État vide ───────────────────────────────────────────────────────── */
+.ens-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--c-text-muted);
+}
+.ens-empty-hint { font-size: .88rem; margin-top: .35rem; }
+
+/* ── Zone drag & drop CSV ────────────────────────────────────────────── */
+.csv-drop-zone {
+  border: 2px dashed var(--c-border2);
+  border-radius: var(--radius);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  margin-bottom: 1rem;
+}
+.csv-drop-zone:hover,
+.csv-drop-zone.csv-drop-active {
+  border-color: var(--c-accent);
+  background: var(--c-accent-light);
+}
+.csv-drop-icon   { font-size: 2rem; margin-bottom: .5rem; }
+.csv-drop-label  { font-weight: 600; margin: .25rem 0 .1rem; }
+.csv-drop-sub    { color: var(--c-text-muted); font-size: .85rem; margin: .25rem 0; }
+.csv-file-btn    { cursor: pointer; display: inline-block; margin-top: .5rem; }
+
+/* ── Prévisualisation CSV ────────────────────────────────────────────── */
+.csv-preview { margin-top: .5rem; }
+.csv-hint    { color: var(--c-text-muted); font-size: .88rem; }
+.csv-error   { color: var(--c-red); font-size: .88rem; padding: .5rem 0; }
+.csv-warn    { color: var(--c-amber); font-size: .85rem; padding: .35rem 0 .5rem; }
+
+.csv-summary {
+  font-size: .88rem;
+  margin-bottom: .6rem;
+  color: var(--c-text-muted);
+}
+.csv-new    { color: var(--c-accent); font-weight: 600; }
+.csv-update { color: var(--c-blue);   font-weight: 600; }
+
+.csv-table-wrap { overflow-x: auto; }
+.csv-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .83rem;
+}
+.csv-preview-table th {
+  padding: .4rem .6rem;
+  text-align: left;
+  border-bottom: 2px solid var(--c-border2);
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.csv-preview-table td {
+  padding: .4rem .6rem;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.csv-badge-new,
+.csv-badge-update {
+  display: inline-block;
+  padding: .12rem .45rem;
+  border-radius: 99px;
+  font-size: .72rem;
+  font-weight: 600;
+}
+.csv-badge-new    { background: var(--c-green-bg);  color: var(--c-green); }
+.csv-badge-update { background: var(--c-blue-bg);   color: var(--c-blue);  }
+
+/* ── Bouton icône (actions tableau) ──────────────────────────────────── */
+.btn-icon {
+  background: none;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm, 4px);
+  padding: .2rem .45rem;
+  font-size: .85rem;
+  cursor: pointer;
+  color: var(--c-text-muted);
+  transition: background .12s, color .12s;
+  margin-left: .2rem;
+}
+.btn-icon:hover        { background: var(--c-surface2); color: var(--c-text); }
+.btn-icon-danger:hover { background: var(--c-red-bg);   color: var(--c-red);  }
+
+/* ══════════════════════════════════════════════════════════════════════
+   MODULE ENSEIGNANTS v1.1 — Edition inline, vue discipline, vider liste
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── KPI mono ────────────────────────────────────────────────────────── */
+.ens-kpi-mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ── Bascule de vue ──────────────────────────────────────────────────── */
+.ens-vue-toggle { display: flex; gap: .35rem; align-items: center; }
+.ens-vue-toggle .btn-sm {
+  padding: .25rem .7rem;
+  font-size: .78rem;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--c-border2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── Inputs inline dans le tableau ──────────────────────────────────── */
+.ens-inline-input,
+.ens-inline-select {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 4px);
+  padding: .2rem .35rem;
+  font-size: .88rem;
+  font-family: inherit;
+  color: var(--c-text);
+  transition: border-color .12s, background .12s;
+  box-sizing: border-box;
+}
+.ens-inline-input:hover,
+.ens-inline-select:hover {
+  border-color: var(--c-border2);
+  background: var(--c-surface2);
+}
+.ens-inline-input:focus,
+.ens-inline-select:focus {
+  outline: none;
+  border-color: var(--c-accent);
+  background: var(--c-surface);
+  box-shadow: 0 0 0 2px var(--c-accent-light);
+}
+.ens-inline-nom    { font-weight: 600; }
+.ens-inline-disc   { color: var(--c-text-muted); font-size: .85rem; }
+.ens-inline-num    { text-align: right; font-family: 'JetBrains Mono', monospace; width: 5rem; }
+
+/* ── Cellule heures avec hint statut ─────────────────────────────────── */
+.ens-heures-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .1rem;
+}
+.ens-heures-hint {
+  font-size: .7rem;
+  color: var(--c-text-dim);
+  white-space: nowrap;
+}
+/* En-tête colonne heures — deux lignes */
+.ens-table th .ens-th-hint {
+  display: block;
+  font-size: .68rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: .7;
+}
+
+/* ── Vue par discipline ──────────────────────────────────────────────── */
+.ens-disc-bloc {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  margin-bottom: .75rem;
+  overflow: hidden;
+}
+.ens-disc-header {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .6rem .85rem;
+  background: var(--c-surface2);
+  border-bottom: 1px solid var(--c-border);
+  flex-wrap: wrap;
+}
+.ens-disc-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ens-disc-nom {
+  font-weight: 600;
+  font-size: .92rem;
+}
+.ens-disc-spacer { flex: 1; }
+
+.ens-disc-service {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .85rem;
+  color: var(--c-text-muted);
+}
+.ens-disc-ecart {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .85rem;
+  font-weight: 700;
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+/* Badges dotation dans la vue disc */
+.ens-dot-badge {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: 99px;
+  font-size: .73rem;
+  font-weight: 600;
+  background: var(--c-blue-bg);
+  color: var(--c-blue);
+}
+.ens-dot-badge-hors {
+  background: var(--c-surface3);
+  color: var(--c-text-dim);
+}
+
+.ens-disc-table { border-radius: 0; }
+.ens-disc-empty {
+  padding: .6rem .85rem;
+  font-size: .85rem;
+  color: var(--c-text-dim);
+  font-style: italic;
+}
+
+/* Ligne de total */
+.ens-disc-total {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .65rem 1rem;
+  background: var(--c-surface2);
+  border-top: 2px solid var(--c-border2);
+  border-radius: 0 0 var(--radius) var(--radius);
+  font-size: .88rem;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+.ens-disc-total-label { flex: 1; color: var(--c-text-muted); text-transform: uppercase; font-size: .75rem; letter-spacing: .05em; }
+.ens-disc-total-dot   { color: var(--c-text-muted); font-family: 'JetBrains Mono', monospace; }
+.ens-disc-total-serv  { font-family: 'JetBrains Mono', monospace; }
+.ens-disc-total-ecart { font-family: 'JetBrains Mono', monospace; font-size: .95rem; min-width: 4rem; text-align: right; }
+
+/* ── Bouton danger attenué (Vider la liste) ──────────────────────────── */
+.btn-danger-soft {
+  color: var(--c-red) !important;
+  border-color: var(--c-red) !important;
+}
+.btn-danger-soft:hover {
+  background: var(--c-red-bg) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MODULE ENSEIGNANTS v1.2 — Vue discipline enrichie
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Ligne de total (tfoot) sous-tableau discipline ─────────────────── */
+.ens-disc-tfoot tr,
+.ens-disc-tfoot {
+  background: var(--c-surface2);
+  border-top: 2px solid var(--c-border2);
+}
+.ens-disc-tfoot td {
+  padding: .5rem .75rem;
+  font-size: .85rem;
+}
+.ens-disc-tfoot-label {
+  font-weight: 700;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  font-size: .75rem;
+  letter-spacing: .04em;
+}
+.ens-disc-tfoot-count {
+  color: var(--c-text-muted);
+  font-size: .83rem;
+}
+.ens-disc-tfoot-hdisc {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--c-accent);
+}
+.ens-disc-tfoot-hserv {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--c-text-muted);
+}
+
+/* ── Bouton + dans l'en-tête de bloc discipline ─────────────────────── */
+.btn-icon-add {
+  color: var(--c-accent) !important;
+  border-color: var(--c-accent) !important;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+}
+.btn-icon-add:hover {
+  background: var(--c-accent-light) !important;
+}
+
+/* ── Input H.discipline (colonne dédiée) ────────────────────────────── */
+.ens-inline-hdisc {
+  width: 4.5rem;
+  text-align: right;
+  background: var(--c-accent-light);
+  border-color: var(--c-accent) !important;
+}
+.ens-inline-hdisc:focus {
+  box-shadow: 0 0 0 2px var(--c-accent);
+}
+
+/* ── En-tête colonne : retour à la ligne propre ─────────────────────── */
+.ens-disc-table th {
+  white-space: nowrap;
+  font-size: .75rem;
+}
+
+/* ── Colonne H.établissement en vue disc (lecture partielle) ─────────── */
+.ens-disc-table .ens-col-num input[data-field="heures"] {
+  width: 4rem;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MODULE ENSEIGNANTS v1.3 — Multi-disciplines, sélection, lecture seule
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Colonne Discipline — vue liste ─────────────────────────────────── */
+.ens-disc-cell { min-width: 10rem; max-width: 18rem; }
+.ens-disc-vide { color: var(--c-text-dim); }
+.ens-disc-multi { display: flex; flex-wrap: wrap; gap: .25rem; align-items: center; }
+
+/* Badges disciplines multiples */
+.ens-disc-badge {
+  display: inline-block;
+  padding: .15rem .45rem;
+  border-radius: 99px;
+  font-size: .75rem;
+  font-weight: 500;
+  background: var(--c-surface3);
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+.ens-disc-badge-main {
+  background: var(--c-accent-light);
+  color: var(--c-accent);
+  font-weight: 700;
+}
+
+/* ── Vue discipline — cellules lecture seule ────────────────────────── */
+.ens-disc-ro {
+  color: var(--c-text);
+  font-size: .88rem;
+}
+.ens-disc-table .ens-col-num { text-align: right; }
+
+/* Alerte H.disc > H.établ */
+.ens-disc-alert {
+  color: var(--c-amber);
+  font-size: .8rem;
+  margin-left: .3rem;
+  cursor: help;
+}
+
+/* ── Modal de sélection d'enseignant ────────────────────────────────── */
+.sel-ens-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+.sel-ens-table th {
+  padding: .5rem .75rem;
+  text-align: left;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  border-bottom: 2px solid var(--c-border2);
+}
+.sel-ens-table td {
+  padding: .55rem .75rem;
+  border-bottom: 1px solid var(--c-border);
+  vertical-align: middle;
+}
+.sel-ens-table tbody tr:hover { background: var(--c-surface2); }
+.sel-ens-libre {
+  color: var(--c-accent);
+  font-size: .78rem;
+  font-weight: 600;
+}
+.sel-ens-empty {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--c-text-muted);
+  font-style: italic;
+}
+/* Input H.discipline dans la modal sélection — visuel fort */
+.sel-ens-hdisc-input {
+  width: 5.5rem;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  border: 1px solid var(--c-border2) !important;
+  background: var(--c-surface) !important;
+  padding: .3rem .5rem;
+  border-radius: var(--radius-sm, 4px);
+}
+.sel-ens-hdisc-input:focus {
+  border-color: var(--c-accent) !important;
+  box-shadow: 0 0 0 2px var(--c-accent-light);
+  outline: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MODULE ENSEIGNANTS v1.4 — Onglets signalants, écart contextuel, HPC
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Onglets principaux (Liste / Par discipline / HPC) ──────────────── */
+.ens-onglets {
+  display: flex;
+  gap: .4rem;
+  margin-bottom: .5rem;
+}
+.ens-onglet {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .55rem 1.1rem;
+  border-radius: var(--radius);
+  border: 2px solid var(--c-border2);
+  background: var(--c-surface);
+  cursor: pointer;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  transition: border-color .15s, background .15s, color .15s;
+  white-space: nowrap;
+}
+.ens-onglet:hover {
+  border-color: var(--c-accent);
+  color: var(--c-text);
+  background: var(--c-accent-light);
+}
+.ens-onglet-active {
+  border-color: var(--c-accent) !important;
+  background: var(--c-accent-light) !important;
+  color: var(--c-accent) !important;
+}
+.ens-onglet-icon { font-size: 1rem; }
+.ens-onglet-label { font-size: .88rem; }
+
+/* Badges signalants sur les onglets */
+.ens-onglet-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 99px;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 0 .35rem;
+}
+.ens-onglet-badge-ok   { background: var(--c-green-bg);  color: var(--c-green); }
+.ens-onglet-badge-warn { background: var(--c-amber-bg);  color: var(--c-amber); }
+
+/* KPI strip sous les onglets */
+.ens-kpi-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-bottom: .25rem;
+}
+.ens-kpi-chip {
+  display: inline-block;
+  padding: .2rem .65rem;
+  border-radius: 99px;
+  font-size: .78rem;
+  font-weight: 500;
+  background: var(--c-surface2);
+  color: var(--c-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.ens-kpi-chip-danger { background: var(--c-red-bg);    color: var(--c-red);    font-weight: 700; }
+.ens-kpi-chip-hsa    { background: var(--c-indigo-bg); color: var(--c-indigo); font-weight: 700; }
+
+/* ── Tags contextuels ORS/Écart selon statut ─────────────────────────── */
+.ens-statut-tag {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: 4px;
+  font-size: .78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ens-tag-bmp {
+  background: var(--c-blue-bg);
+  color: var(--c-blue);
+  font-style: italic;
+}
+.ens-tag-tzr {
+  background: var(--c-amber-bg);
+  color: var(--c-amber);
+}
+
+/* ── Tfoot vue discipline — alignement corrigé ────────────────────────── */
+.ens-disc-tfoot td { vertical-align: middle; }
+.ens-disc-tfoot-count { font-size: .83rem; color: var(--c-text-muted); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   MODULE ENSEIGNANTS v1.5 — H.libres et écart équipe/dotation
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* H. libres — heures établissement non affectées à une discipline */
+.ens-hlibres-pos  { color: var(--c-accent);  font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.ens-hlibres-zero { color: var(--c-green);   font-size: .82rem; }
+.ens-hlibres-neg  { color: var(--c-red);     font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+/* Écart équipe/dotation dans le tfoot discipline */
+.ens-disc-tfoot-ecart {
+  font-size: .75rem;
+  font-weight: 600;
+  display: block;
+  margin-top: .1rem;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DOTATION — Carte enveloppe redessinée (style dark card)
+   ══════════════════════════════════════════════════════════════════════ */
+.dot-env-card {
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border2);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.dot-env-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: .65rem 1.25rem .5rem;
+  border-bottom: 1px solid var(--c-border);
+}
+.dot-env-card-title {
+  font-weight: 700;
+  font-size: .92rem;
+}
+.dot-env-card-hint {
+  font-size: .75rem;
+  color: var(--c-text-dim);
+}
+.dot-env-card-body {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  flex-wrap: wrap;
+}
+.dot-env-card-field {
+  flex: 1;
+  min-width: 160px;
+}
+.dot-env-card-label {
+  display: block;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: .45rem;
+}
+.dot-env-card-hp   .dot-env-card-label { color: var(--c-accent); }
+.dot-env-card-hsa  .dot-env-card-label { color: var(--c-indigo); }
+
+.dot-env-card-input-row {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.dot-env-card-input {
+  flex: 1;
+  padding: .55rem .85rem;
+  border-radius: var(--radius-sm, 4px);
+  border: 1.5px solid var(--c-border2);
+  background: var(--c-surface2);
+  color: var(--c-text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.35rem;
+  font-weight: 700;
+  transition: border-color .12s, box-shadow .12s;
+  width: 100%;
+}
+.dot-env-card-hp  .dot-env-card-input:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-light); outline: none; }
+.dot-env-card-hsa .dot-env-card-input:focus { border-color: var(--c-indigo); box-shadow: 0 0 0 3px var(--c-indigo-bg);    outline: none; }
+
+.dot-env-card-unit {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--c-text-muted);
+}
+.dot-env-card-sub {
+  display: block;
+  margin-top: .3rem;
+  font-size: .68rem;
+  color: var(--c-text-dim);
+}
+.dot-env-card-op {
+  font-size: 1.6rem;
+  font-weight: 300;
+  color: var(--c-text-dim);
+  flex: 0 0 auto;
+  padding-top: 1rem;
+}
+.dot-env-card-total {
+  flex: 1.2;
+  min-width: 130px;
+}
+.dot-env-card-total-label {
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+  margin-bottom: .45rem;
+  display: block;
+}
+.dot-env-card-total-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--c-accent);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ENSEIGNANTS — Onglets encore plus visibles + déplier/replier
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Onglets renforcés */
+.ens-onglets {
+  gap: .5rem;
+  margin-bottom: .75rem;
+}
+.ens-onglet {
+  padding: .7rem 1.4rem;
+  font-size: .92rem;
+  border-width: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.07);
+}
+.ens-onglet-active {
+  box-shadow: 0 2px 8px rgba(45,106,79,.18) !important;
+}
+.ens-onglet-badge {
+  min-width: 1.6rem;
+  height: 1.6rem;
+  font-size: .75rem;
+}
+
+/* Toolbar déplier/replier */
+.ens-disc-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: .5rem;
+  gap: .4rem;
+}
+
+/* Bouton toggle dans l'en-tête de bloc discipline */
+.ens-disc-toggle {
+  font-size: .75rem;
+  color: var(--c-text-dim);
+  margin-right: .2rem;
+  flex-shrink: 0;
+}
+.ens-disc-header:hover .ens-disc-toggle { color: var(--c-accent); }
+
+/* Corps du bloc discipline (dépliable) */
+.ens-disc-body { border-top: 1px solid var(--c-border); }
+.ens-disc-body.is-hidden { border-top: none; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   REFONTE v3.3.5 — Onglets, colonnes alignées, enveloppe centrée
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Enveloppe annuelle — centrée et plus aérée ─────────────────────── */
+.dot-env-card {
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
+  background: var(--c-surface2);
+  border: 1.5px solid var(--c-border2);
+  border-radius: calc(var(--radius) + 2px);
+  box-shadow: 0 4px 24px rgba(0,0,0,.10);
+}
+.dot-env-card-body {
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1.75rem 2rem;
+}
+.dot-env-card-field { min-width: 180px; flex: 1 1 180px; max-width: 260px; }
+.dot-env-card-total { flex: 1 1 160px; max-width: 200px; text-align: center; }
+.dot-env-card-total-val { font-size: 2rem; }
+.dot-env-card-op { padding-top: 1.4rem; font-size: 1.8rem; color: var(--c-text-dim); flex: 0; }
+
+/* ── Onglets équipe pédagogique — refonte complète ──────────────────── */
+.ens-onglets-wrap {
+  margin-bottom: 1rem;
+}
+.ens-onglets {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--c-border2);
+  margin-bottom: .6rem;
+}
+.ens-onglet {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .85rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  color: var(--c-text-muted);
+  transition: color .15s, border-color .15s, background .15s;
+  font-size: .88rem;
+  font-weight: 500;
+  white-space: nowrap;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.ens-onglet:hover {
+  color: var(--c-text);
+  background: var(--c-surface2);
+}
+.ens-onglet-active {
+  color: var(--c-accent) !important;
+  border-bottom-color: var(--c-accent) !important;
+  background: var(--c-accent-light) !important;
+  font-weight: 700;
+}
+
+/* Numéro/badge sur l'onglet */
+.ens-onglet-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 99px;
+  font-size: .75rem;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
+.ens-num-ok   { background: var(--c-accent);  color: #fff; }
+.ens-num-warn { background: var(--c-amber-bg); color: var(--c-amber); }
+
+/* Contenu texte de l'onglet */
+.ens-onglet-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .05rem;
+}
+.ens-onglet-label { font-size: .9rem; font-weight: 600; line-height: 1.2; }
+.ens-onglet-sub   { font-size: .72rem; color: var(--c-text-dim); font-weight: 400; }
+.ens-onglet-active .ens-onglet-sub { color: var(--c-accent); opacity: .75; }
+
+/* KPI strip sous les onglets */
+.ens-kpi-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  min-height: 1.6rem;
+}
+
+/* ── Alignement colonnes universel — vue discipline ET HPC ───────────── */
+/*
+   Vue discipline : 8 colonnes
+   Nom | Prénom | Grade | Statut | H.établ. | H.discipline | H.libres | Actions
+
+   Vue HPC : 6 colonnes
+   Intitulé | Discipline | Type | H/sem | Effectif | Enseignant
+
+   Toutes les tables ens-disc-table partagent le même wrapper de largeur fixe.
+   On fixe les largeurs de colonne via col-group ou des largeurs minimales.
+*/
+.ens-disc-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+/* Colonnes vue discipline (8 col) */
+.ens-disc-table.ens-disc-table-8 th:nth-child(1),
+.ens-disc-table.ens-disc-table-8 td:nth-child(1) { width: 13%; } /* Nom */
+.ens-disc-table.ens-disc-table-8 th:nth-child(2),
+.ens-disc-table.ens-disc-table-8 td:nth-child(2) { width: 11%; } /* Prénom */
+.ens-disc-table.ens-disc-table-8 th:nth-child(3),
+.ens-disc-table.ens-disc-table-8 td:nth-child(3) { width: 11%; } /* Grade */
+.ens-disc-table.ens-disc-table-8 th:nth-child(4),
+.ens-disc-table.ens-disc-table-8 td:nth-child(4) { width: 12%; } /* Statut */
+.ens-disc-table.ens-disc-table-8 th:nth-child(5),
+.ens-disc-table.ens-disc-table-8 td:nth-child(5) { width: 9%;  text-align: right; } /* H.établ */
+.ens-disc-table.ens-disc-table-8 th:nth-child(6),
+.ens-disc-table.ens-disc-table-8 td:nth-child(6) { width: 12%; text-align: right; } /* H.disc */
+.ens-disc-table.ens-disc-table-8 th:nth-child(7),
+.ens-disc-table.ens-disc-table-8 td:nth-child(7) { width: 10%; text-align: right; } /* H.libres */
+.ens-disc-table.ens-disc-table-8 th:nth-child(8),
+.ens-disc-table.ens-disc-table-8 td:nth-child(8) { width: 7%;  text-align: center; } /* Actions */
+
+/* Colonnes vue HPC (6 col) */
+.ens-disc-table.ens-disc-table-6 th:nth-child(1),
+.ens-disc-table.ens-disc-table-6 td:nth-child(1) { width: 22%; } /* Intitulé */
+.ens-disc-table.ens-disc-table-6 th:nth-child(2),
+.ens-disc-table.ens-disc-table-6 td:nth-child(2) { width: 18%; } /* Discipline */
+.ens-disc-table.ens-disc-table-6 th:nth-child(3),
+.ens-disc-table.ens-disc-table-6 td:nth-child(3) { width: 9%;  text-align: center; } /* Type */
+.ens-disc-table.ens-disc-table-6 th:nth-child(4),
+.ens-disc-table.ens-disc-table-6 td:nth-child(4) { width: 9%;  text-align: right; } /* H/sem */
+.ens-disc-table.ens-disc-table-6 th:nth-child(5),
+.ens-disc-table.ens-disc-table-6 td:nth-child(5) { width: 11%; text-align: right; } /* Effectif */
+.ens-disc-table.ens-disc-table-6 th:nth-child(6),
+.ens-disc-table.ens-disc-table-6 td:nth-child(6) { width: 31%; } /* Enseignant */
+
+/* Tfoot : harmonisation */
+.ens-disc-tfoot td { padding: .5rem .75rem; vertical-align: middle; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   VUE LISTE — colonnes HP / HSA / Total (Option B : service calculé)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* En-têtes HP / HSA colorisés */
+.ens-th-hp  { color: var(--c-accent) !important; }
+.ens-th-hsa { color: var(--c-indigo) !important; }
+
+/* Valeurs HP */
+.ens-service-hp {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--c-accent);
+}
+
+/* HPC-HP : heures HPC déduites de l'ORS */
+.ens-th-hpc { color: var(--c-amber) !important; }
+.ens-service-hpc-hp {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--c-amber);
+  cursor: help;
+  border-bottom: 1px dotted var(--c-amber);
+  white-space: nowrap;
+}
+.ens-service-hpc-hp:hover { opacity: .85; }
+
+/* Dispo = ORS - HPC-HP : heures utilisables pour disciplines */
+.ens-th-dispo { color: var(--c-blue) !important; }
+.ens-dispo-ok {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--c-accent);
+}
+
+/* Info HPC-HP dans la colonne H.dispo de la vue discipline */
+.ens-disc-hpchp-info {
+  display: inline-block;
+  margin-left: .3rem;
+  font-size: .72rem;
+  color: var(--c-amber);
+  font-weight: 600;
+  cursor: help;
+  border-bottom: 1px dotted var(--c-amber);
+  white-space: nowrap;
+}
+
+/* Valeurs HSA — non-zero avec indicateur survol */
+.ens-service-hsa-nonzero {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--c-indigo);
+  cursor: help;
+  border-bottom: 1px dotted var(--c-indigo);
+  white-space: nowrap;
+}
+.ens-service-hsa-nonzero:hover { opacity: .85; }
+
+/* HSA = zéro */
+.ens-service-hsa-zero {
+  color: var(--c-text-dim);
+  font-size: .82rem;
+}
+
+/* Total général */
+.ens-service-total {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+/* ORS inline éditable dans la vue liste */
+.ens-inline-ors {
+  width: 4.5rem;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .85rem;
+  color: var(--c-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 4px);
+  padding: .2rem .4rem;
+  transition: border-color .12s, background .12s;
+}
+.ens-inline-ors:hover  { border-color: var(--c-border2); background: var(--c-surface2); }
+.ens-inline-ors:focus  { border-color: var(--c-accent);  background: var(--c-surface2); outline: none; }
+.ens-inline-ors::placeholder { color: var(--c-text-dim); font-style: italic; }
+
+/* Wrapper ORS + icône commentaire */
+.ens-ors-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  justify-content: flex-end;
+}
+
+/* Bouton icône commentaire 💬 */
+.ens-comment-btn {
+  font-size: .85rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: .55;
+  transition: opacity .12s, transform .1s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.ens-comment-btn:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+
+
+/* Info HSA dans la colonne Écart HP */
+.ens-ecart-hsa {
+  font-size: .72rem;
+  color: var(--c-indigo);
+  font-weight: 600;
+  margin-left: .2rem;
+  cursor: help;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   VUE HPC — table 7 colonnes, colonne Enseignant(s) en dernière position
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Colonnes vue HPC (7 col) */
+.ens-disc-table.ens-disc-table-hpc {
+  table-layout: fixed;
+  width: 100%;
+}
+.ens-disc-table.ens-disc-table-hpc th:nth-child(1),
+.ens-disc-table.ens-disc-table-hpc td:nth-child(1) { width: 16%; } /* Intitulé */
+.ens-disc-table.ens-disc-table-hpc th:nth-child(2),
+.ens-disc-table.ens-disc-table-hpc td:nth-child(2) { width: 13%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* Classe(s) */
+.ens-disc-table.ens-disc-table-hpc th:nth-child(3),
+.ens-disc-table.ens-disc-table-hpc td:nth-child(3) { width: 13%; } /* Discipline */
+.ens-disc-table.ens-disc-table-hpc th:nth-child(4),
+.ens-disc-table.ens-disc-table-hpc td:nth-child(4) { width: 7%;  text-align: center; } /* Type */
+.ens-disc-table.ens-disc-table-hpc th:nth-child(5),
+.ens-disc-table.ens-disc-table-hpc td:nth-child(5) { width: 7%;  text-align: right; } /* H/sem */
+.ens-disc-table.ens-disc-table-hpc th:nth-child(6),
+.ens-disc-table.ens-disc-table-hpc td:nth-child(6) { width: 10%; text-align: right; } /* Effectif */
+/* Enseignant(s) — DERNIÈRE colonne, contenu poussé vers la droite */
+.ens-disc-table.ens-disc-table-hpc th:nth-child(7) {
+  width: 34%;
+  text-align: right;
+  padding-right: .85rem;
+}
+.ens-disc-table.ens-disc-table-hpc td:nth-child(7) {
+  width: 34%;
+}
+
+/* Colonne enseignant(s) HPC — alignée à droite pour coller au bord */
+.hpc-col-ens {
+  vertical-align: middle;
+  text-align: right;
+}
+
+/* Wrapper des tags enseignants — flex, poussé à droite */
+.hpc-ens-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .3rem;
+}
+
+/* Tag individuel : nom + quotité + bouton retirer */
+.hpc-ens-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  background: var(--c-surface2);
+  border: 1px solid var(--c-border2);
+  border-radius: 99px;
+  padding: .15rem .5rem .15rem .65rem;
+  font-size: .78rem;
+  font-weight: 500;
+  color: var(--c-text);
+  white-space: nowrap;
+}
+
+/* Quotité horaire dans le tag */
+.hpc-ens-h {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .72rem;
+  color: var(--c-accent);
+  font-weight: 700;
+  margin-left: .15rem;
+}
+
+/* Bouton retirer dans le tag */
+.hpc-ens-retirer {
+  width: 1.1rem;
+  height: 1.1rem;
+  font-size: .6rem;
+  padding: 0;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Bouton + ajouter enseignant */
+.hpc-ens-add {
+  margin-left: .1rem;
+  flex-shrink: 0;
+}
+
+/* Cellule classes (tronquée si trop longue) */
+.hpc-classes-cell {
+  font-size: .8rem;
+  color: var(--c-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Info enseignant déjà affecté dans la modal */
+.sel-ens-deja {
+  display: block;
+  font-size: .72rem;
+  color: var(--c-accent);
+  font-weight: 600;
+  margin-bottom: .2rem;
+}
+.sel-ens-ors {
+  font-size: .72rem;
+  color: var(--c-text-dim);
+}
