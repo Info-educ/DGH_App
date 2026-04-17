@@ -1,5 +1,5 @@
 /**
- * DGH App — Couche données v3.2.0
+ * DGH App — Couche données v3.3.6
  * SEUL fichier qui touche localStorage
  *
  * v3.0.0 — Sprint 5 : enveloppe HP/HSA, groupesCours, heuresPedaComp, sélection classes
