@@ -291,7 +291,8 @@ const app = (() => {
     if (e.target.classList.contains('impact-aff-check')) { const d=e.target.dataset; DGHPilotage.saveAffectation(d.ensId,d.modId,d.scenId,'affecte',e.target.checked); return; }
     if (e.target.classList.contains('impact-th-radio'))  { const d=e.target.dataset; DGHPilotage.saveAffectation(d.ensId,d.modId,d.scenId,'typeHeure',e.target.value); return; }
     if (e.target.classList.contains('mod-type-select'))  { DGHPilotage.onTypeChange(e.target); return; }
-    if (e.target.id === 'recapScenSelect')                { DGHPilotage.setRecapScen(e.target.value); return; }
+    if (e.target.id === 'recapScenSelect')                { DGHPilotage.setRecapScen(e.target.value);  return; }
+    if (e.target.id === 'impactScenSelect')               { DGHPilotage.setImpactScen(e.target.value); return; }
   }
 
   // ── DÉLÉGATION GLOBALE DBLCLICK ───────────────────────────────────
