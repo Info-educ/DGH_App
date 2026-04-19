@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **3.3.6** — Dernière mise à jour : Sprint 6+
+> Version courante : **3.5.0** — Dernière mise à jour : Sprint 8
 
 ---
 
@@ -59,6 +59,10 @@ content.encode('utf-8')  # lève UnicodeEncodeError si surrogate → corriger av
 with open(path, 'w', encoding='utf-8') as f: f.write(content)
 ```
 
+### 7. Jamais de `style="font-family:..."` inline dans les modules JS
+Utiliser uniquement la classe CSS `.font-mono` pour la police monospace (définie dans `style.css`).
+Toute valeur numérique DGH doit utiliser `.font-mono` — jamais d'attribut `style` pour la typographie.
+
 ---
 
 ## Architecture des fichiers
@@ -81,9 +85,15 @@ data/exemple.json       → Données fictives anonymisées (schéma v3.3)
 
 ---
 
-## Modèle de données — Schéma v3.3
+## Modèle de données — Schéma v3.4
 
 ```js
+// EtablissementObject — v3.4
+{
+  nom, uai, academie, commune,
+  typeEtab: 'college' | 'lycee'  // ← ajouté v3.4 (migration automatique)
+}
+
 // HPCObject — clé : enseignants[] remplace enseignantId depuis v3.3
 {
   id, nom, categorie, disciplineId, classesIds,
@@ -110,6 +120,23 @@ data/exemple.json       → Données fictives anonymisées (schéma v3.3)
 4. Mettre à jour `data/exemple.json`
 
 ---
+
+## Modèle de données — `ScenarioObject` (v3.5)
+
+```js
+// ScenarioObject
+{
+  id, nom, description, createdAt, updatedAt,
+  actif: boolean,       // un seul actif à la fois
+  modificateurs: [ModificateurObject]
+}
+
+// ModificateurObject — 3 types
+// type:'dedoublement'    → { disciplineId, classeIds[], heuresParGroupe, commentaire }
+// type:'co-enseignement' → { disciplineId, classeIds[], heuresParGroupe, commentaire }
+// type:'projet'          → { nom, heuresHP, heuresHSA, commentaire }
+```
+
 
 ## Concepts métier — À connaître absolument
 
@@ -304,13 +331,6 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 
 ## Prochains sprints — Conception validée
 
-### Sprint 7 — Pilotage pédagogique
-- Dédoublements : 1 classe → 2 groupes simultanés = 2h prof au lieu de 1h
-- Co-enseignement : 2 profs dans la même classe
-- Ventilation HP/HSA par enseignant depuis la dotation discipline (3e source de HSA après HPC)
-- Simulation : "si je supprime ce dédoublement → économie de Xh"
-- `serviceTotalEnseignant` est extensible : ajouter une 3e source dans `detailHSA`
-
 ### Sprint 8 — Synthèses & exports
 - Tableau de synthèse DGH pour le CA (format A4)
 - Rapport par discipline : besoin / HP / HSA / enseignants
@@ -328,6 +348,8 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 - [ ] `grep -n "onclick" index.html` → vide
 - [ ] `grep -n "localStorage" assets/js/app.js` → vide (sauf thème)
 - [ ] `grep -n "localStorage" assets/js/calculs.js` → vide
+- [ ] `grep -rn "font-family" assets/js/modules/` → vide
+- [ ] `data/exemple.json` version = VERSION dans `data.js`
 - [ ] Aucun `id` JS sans équivalent HTML
 - [ ] Aucune couleur hardcodée dans le CSS
 - [ ] `data/exemple.json` mis à jour si schéma modifié
@@ -348,4 +370,59 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 
 *Ce fichier fait partie intégrante du projet DGH App.*
 *Le mettre à jour à chaque évolution structurelle.*
-*Version : 3.3.6 — Dernière mise à jour : Sprint 6+*
+*Version : 3.4.0 — Dernière mise à jour : Sprint 7*
+
+## API publique — Scénarios (v3.5)
+
+### `data.js` — Scénarios
+
+```js
+DGHData.getScenarios()                        // → [ScenarioObject]
+DGHData.getScenario(id)                       // → ScenarioObject | null
+DGHData.getScenarioActif()                    // → ScenarioObject | null
+DGHData.addScenario(fields)                   // → ScenarioObject
+DGHData.updateScenario(id, fields)            // → boolean
+DGHData.deleteScenario(id)                    // → boolean
+DGHData.dupliquerScenario(id)                 // → ScenarioObject | null
+DGHData.setScenarioActif(id)                  // → void  (null = désactiver tous)
+
+// Modificateurs
+DGHData.addModificateur(scenarioId, fields)              // → ModificateurObject | null
+DGHData.updateModificateur(scenarioId, modId, fields)    // → boolean
+DGHData.deleteModificateur(scenarioId, modId)            // → boolean
+```
+
+### `calculs.js` — Scénarios
+
+```js
+Calculs.bilanScenario(anneeData, modificateurs)
+  // → { coutHP, coutHSA, coutTotal, soldeBase, soldeSimule,
+  //        enveloppe, depassement, detailParDisc, detailParMod }
+
+Calculs.comparerScenarios(anneeData, scenarios)
+  // → [{ scenario, bilan }]  // triés par soldeSimule décroissant
+```
+
+### Délégation globale — `app.js` (Sprint 8)
+
+```js
+// Dans _onGlobalClick — data-action
+'add-mod'            → DGHPilotage.openModForm(type, scenId)
+'save-mod'           → DGHPilotage.saveModificateur(scenId)
+'cancel-mod'         → DGHPilotage.cancelModForm()
+'delete-mod'         → DGHPilotage.deleteModificateur(scenId, modId)
+'duplicate-scenario' → DGHPilotage.dupliquerScenario(id)
+'delete-scenario'    → DGHPilotage.confirmDeleteScenario(id)
+'set-actif-scenario' → DGHPilotage.setActif(id)
+'#btnAddScenario'    → DGHPilotage.startNewScenario()
+'#btnDesactiverScen' → DGHPilotage.desactiverScenario()
+
+// Dans _onGlobalChange
+'.mod-disc-select'   → DGHPilotage.previewImpact()
+'.mod-classe-check'  → DGHPilotage.previewImpact()
+'.mod-h-input'       → DGHPilotage.previewImpact()
+
+// Dans _onGlobalBlur
+'.scen-nom-input'    → DGHPilotage.saveNom(el)
+```
+

@@ -27,8 +27,8 @@ const DGHStructures = (() => {
           + '<td><span class="niveau-badge niveau-' + n.niveau.toLowerCase().replace(/[^a-z0-9]/g,'') + '">' + n.niveau + '</span></td>'
           + '<td class="col-num">' + n.nbDivisions + '</td>'
           + '<td class="col-num">' + n.effectif + '</td>'
-          + '<td class="col-num" style="font-family:\'JetBrains Mono\',monospace">' + (n.hTheoriqueDiv > 0 ? n.hTheoriqueDiv + ' h' : '—') + '</td>'
-          + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + (n.hTheoriqueTotal > 0 ? n.hTheoriqueTotal + ' h' : '—') + '</strong></td>'
+          + '<td class="col-num font-mono">' + (n.hTheoriqueDiv > 0 ? n.hTheoriqueDiv + ' h' : '—') + '</td>'
+          + '<td class="col-num"><strong class="font-mono">' + (n.hTheoriqueTotal > 0 ? n.hTheoriqueTotal + ' h' : '—') + '</strong></td>'
           + '</tr>'
         ).join('');
       }
@@ -38,7 +38,7 @@ const DGHStructures = (() => {
           + '<td class="col-num"><strong>' + resume.nbDivisions + '</strong></td>'
           + '<td class="col-num"><strong>' + resume.effectifTotal + '</strong></td>'
           + '<td class="col-num">—</td>'
-          + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace;color:var(--c-accent)">' + resume.hTheoriqueTotal + ' h</strong></td>'
+          + '<td class="col-num"><strong class="font-mono" style="color:var(--c-accent)">' + resume.hTheoriqueTotal + ' h</strong></td>'
           + '</tr>';
       }
 

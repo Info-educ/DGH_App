@@ -419,11 +419,117 @@ const Calculs = (() => {
     };
   }
 
+
+/**
+ * Calcule le coût total d'un scénario appliqué sur les données réelles.
+ * Fonction pure — zéro DOM, zéro localStorage.
+ *
+ * @param {Object} anneeData     - DGHData.getAnnee()
+ * @param {Array}  modificateurs - ScenarioObject.modificateurs
+ */
+function bilanScenario(anneeData, modificateurs) {
+  const bilanBase  = bilanDotation(anneeData);
+  const disciplines = anneeData.disciplines || [];
+
+  let coutHP = 0, coutHSA = 0;
+  const detailParMod  = [];
+  const deltaParDisc  = {}; // { disciplineId: deltaHP }
+
+  (modificateurs || []).forEach(mod => {
+    // ── Modalités pédagogiques (dédoublement, co-ens, GER, GBI, autre) ──────
+    // Par défaut HSA — sauf si l'utilisateur choisit HP via mod.typeHeure
+    const MODS_PEDAGOGIQUES = ['dedoublement','co-enseignement','groupe-effectif-reduit','groupes-besoins','autre'];
+    if (MODS_PEDAGOGIQUES.includes(mod.type)) {
+      const isHP     = (mod.typeHeure === 'hp');
+      const nbClasses = (mod.classeIds || []).length;
+
+      // Calcul du delta selon le type
+      let delta;
+      if (mod.type === 'groupes-besoins') {
+        // Groupes besoins : 1 groupe pour 2 classes
+        const nbGroupes = Math.max(1, Math.ceil(nbClasses / 2));
+        delta = Math.round((mod.heuresParGroupe || 0) * nbGroupes * 2) / 2;
+      } else {
+        // Tous les autres : H × nb classes
+        delta = Math.round((mod.heuresParGroupe || 0) * nbClasses * 2) / 2;
+      }
+
+      if (isHP) {
+        coutHP += delta;
+        if (mod.disciplineId) deltaParDisc[mod.disciplineId] = (deltaParDisc[mod.disciplineId] || 0) + delta;
+        detailParMod.push({ mod, coutHP: delta, coutHSA: 0,
+          libelle: (mod.titre || mod.type) + ' → +' + delta + 'h HP' });
+      } else {
+        coutHSA += delta;
+        // HSA : aussi comptabilisé par discipline pour l'affichage dans le récap
+        if (mod.disciplineId) deltaParDisc[mod.disciplineId] = (deltaParDisc[mod.disciplineId] || 0) + delta;
+        detailParMod.push({ mod, coutHP: 0, coutHSA: delta,
+          libelle: (mod.titre || mod.type) + ' → +' + delta + 'h HSA' });
+      }
+    }
+    else if (mod.type === 'projet') {
+      const dHP  = parseFloat(mod.heuresHP)  || 0;
+      const dHSA = parseFloat(mod.heuresHSA) || 0;
+      coutHP  += dHP;
+      coutHSA += dHSA;
+      detailParMod.push({
+        mod, coutHP: dHP, coutHSA: dHSA,
+        libelle: (mod.nom || 'Projet')
+          + (dHP  > 0 ? ' +' + dHP  + 'h HP'  : '')
+          + (dHSA > 0 ? ' +' + dHSA + 'h HSA' : '')
+      });
+    }
+  });
+
+  coutHP  = Math.round(coutHP  * 2) / 2;
+  coutHSA = Math.round(coutHSA * 2) / 2;
+  const coutTotal   = Math.round((coutHP + coutHSA) * 2) / 2;
+  const soldeSimule = Math.round((bilanBase.solde - coutTotal) * 2) / 2;
+
+  const detailParDisc = disciplines.map(disc => {
+    const rep      = (anneeData.repartition || []).find(r => r.disciplineId === disc.id) || {};
+    const coutBase = Math.round(((rep.hPoste || 0) + (rep.hsa || 0)) * 2) / 2;
+    const delta    = deltaParDisc[disc.id] || 0;
+    return {
+      disciplineId: disc.id,
+      nom:          disc.nom,
+      couleur:      disc.couleur || '#6b6860',
+      coutBase,
+      delta,
+      coutScen: Math.round((coutBase + delta) * 2) / 2
+    };
+  }).filter(d => d.coutBase > 0 || d.delta !== 0);
+
+  return {
+    coutHP, coutHSA, coutTotal,
+    soldeBase:   bilanBase.solde,
+    soldeSimule,
+    enveloppe:   bilanBase.enveloppe,
+    depassement: soldeSimule < 0,
+    detailParDisc,
+    detailParMod
+  };
+}
+
+/**
+ * Compare plusieurs scénarios entre eux.
+ * Retourne le tableau trié par solde simulé décroissant (meilleur en premier).
+ */
+function comparerScenarios(anneeData, scenarios) {
+  return (scenarios || [])
+    .map(scen => ({
+      scenario: scen,
+      bilan:    bilanScenario(anneeData, scen.modificateurs)
+    }))
+    .sort((a, b) => b.bilan.soldeSimule - a.bilan.soldeSimule);
+}
+
   return {
     ORS, GRILLES_MEN, H_THEORIQUES_NIV,
     getORS, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
     resumeStructures, bilanDotation, besoinsParDiscipline,
-    suggererRepartition, bilanHPC, genererAlertes, serviceTotalEnseignant
+    suggererRepartition, bilanHPC, genererAlertes, serviceTotalEnseignant,
+    bilanScenario, comparerScenarios
   };
 
 })();

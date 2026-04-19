@@ -595,9 +595,25 @@ const DGHEnseignants = (() => {
       if (h <= 0 || !id) return;
       const ens = DGHData.getEnseignant(id);
       if (!ens) return;
-      let discs = Array.isArray(ens.disciplines) ? ens.disciplines.map(d => ({ discNom: d.discNom, heures: d.heures })) : [];
-      if (discs.length === 0) { discs = [{ discNom: discNom, heures: h }]; }
-      else { discs[0].heures = Math.max(0, Math.round((discs[0].heures - h) * 2) / 2); discs.push({ discNom: discNom, heures: h }); }
+      let discs = Array.isArray(ens.disciplines)
+        ? ens.disciplines.map(d => ({ discNom: d.discNom, heures: d.heures }))
+        : [];
+      // Cas 1 : aucune discipline → créer directement
+      if (discs.length === 0) {
+        discs = [{ discNom: discNom, heures: h }];
+      }
+      // Cas 2 : discipline déjà présente → mettre à jour (pas de doublon)
+      else if (discs.some(d => d.discNom === discNom)) {
+        discs = discs.map(d =>
+          d.discNom === discNom ? { discNom: d.discNom, heures: h } : d
+        );
+      }
+      // Cas 3 : nouvelle discipline → ajouter, ajuster la principale si possible
+      else {
+        const surplus = Math.max(0, Math.round((discs[0].heures - h) * 2) / 2);
+        discs[0] = { discNom: discs[0].discNom, heures: surplus };
+        discs.push({ discNom: discNom, heures: h });
+      }
       const newTotal = Math.round(discs.reduce((s, d) => s + (d.heures || 0), 0) * 2) / 2;
       DGHData.updateEnseignant(id, { disciplines: discs, heures: Math.max(ens.heures||0, newTotal) });
       nb++;
@@ -703,7 +719,11 @@ const DGHEnseignants = (() => {
     const dispoEl = document.getElementById('ens-dispo-' + id);
     if (dispoEl) dispoEl.innerHTML = _affDispoORS(sv);
   }
-  function _refreshKPI() { renderEnseignants(); }
+  function _refreshKPIOnly() {
+    const enseignants = DGHData.getEnseignants();
+    _renderKPI(Calculs.bilanEnseignants(enseignants));
+  }
+  function _refreshKPI() { _refreshKPIOnly(); }
 
   // ── BASCULER VUE ───────────────────────────────────────────────────────────
   function setVueListe() { _vueMode = 'liste';       renderEnseignants(); }
@@ -1064,7 +1084,16 @@ const DGHEnseignants = (() => {
     app.toast('Enseignant retiré de la HPC.', 'info');
   }
 
-  function affecterEnsHPCDirect(ensId) { confirmerSelEns(); }
+  function affecterEnsHPCDirect(ensId) {
+    const inp = document.querySelector('.sel-ens-hdisc-input[data-ens-id="' + ensId + '"]');
+    if (!inp) { confirmerSelEns(); return; }
+    const h = parseFloat(inp.value) || 0;
+    if (h <= 0) {
+      app.toast('Saisissez un nombre d\'heures avant de confirmer.', 'warning');
+      return;
+    }
+    confirmerSelEns();
+  }
 
   // ── UTILITAIRES ────────────────────────────────────────────────────────────
   function _esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

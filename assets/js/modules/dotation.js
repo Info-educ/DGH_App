@@ -120,7 +120,7 @@ const DGHDotation = (() => {
             : (b.besoinTheorique > 0 ? b.besoinTheorique + ' h' : '<span class="no-tag">\u2014</span>')) + '</td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hp" data-disc-id="' + disc.id + '" data-field="hPoste" value="' + b.hPoste + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hsa" data-disc-id="' + disc.id + '" data-field="hsa" value="' + b.hsa + '" min="0" step="0.5" /></td>'
-          + '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + b.total + ' h</strong></td>'
+          + '<td class="col-num"><strong class="font-mono">' + b.total + ' h</strong></td>'
           + '<td class="col-num dot-ecart-cell">' + _renderEcartCell(b, disc.id, ecartCls) + '</td>'
           + '<td class="col-bar"><div class="dot-bar-track"><div class="dot-bar-fill" style="width:' + pctBar + '%;background:' + _esc(disc.couleur) + '"></div></div><span class="dot-bar-pct">' + pctBar + '%</span></td>'
           + '<td class="col-actions">'
@@ -141,14 +141,14 @@ const DGHDotation = (() => {
               + '<span class="gc-nom"><strong>' + _esc(gc.nom||'\u2014') + '</strong></span>'
               + '<span class="gc-classes">' + _esc(classesLabel) + '</span>'
               + '<span class="gc-effectif">' + (gc.effectif||0) + ' \u00e9l\u00e8ves</span>'
-              + '<span class="gc-heures" style="font-family:\'JetBrains Mono\',monospace;font-weight:700">' + (gc.heures||0) + ' h/sem</span>'
+              + '<span class="gc-heures font-mono" style="font-weight:700">' + (gc.heures||0) + ' h/sem</span>'
               + '<span class="gc-actions">'
               + '<button class="btn-icon-sm" data-action="edit-gc" data-disc-id="' + disc.id + '" data-gc-id="' + gc.id + '" title="Modifier">\u270e</button>'
               + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-gc" data-disc-id="' + disc.id + '" data-gc-id="' + gc.id + '" title="Supprimer">\u2715</button>'
               + '</span></div>';
           });
           if (b.heuresGroupes > 0) {
-            html += '<div class="gc-total-row"><span>Total groupes de cours\u00a0:</span><strong style="font-family:\'JetBrains Mono\',monospace">' + (b.heuresGroupesReel||b.heuresGroupes) + ' h/sem</strong></div>';
+            html += '<div class="gc-total-row"><span>Total groupes de cours\u00a0:</span><strong class="font-mono">' + (b.heuresGroupesReel||b.heuresGroupes) + ' h/sem</strong></div>';
           }
         }
         html += '</div></td></tr>';
@@ -170,19 +170,19 @@ const DGHDotation = (() => {
         const hTotalNiv    = Math.round(hParDivTotal * nb * 2) / 2;
         tfootHtml += '<td class="col-num col-grille">'
           + '<div class="grille-tfoot-cell">'
-          + '<strong style="font-family:\'JetBrains Mono\',monospace">' + hParDivTotalR + '\u00a0h</strong>'
+          + '<strong class="font-mono">' + hParDivTotalR + '\u00a0h</strong>'
           + '<span class="grille-col-total">' + hTotalNiv + 'h \u00d7' + nb + '</span>'
           + '</div>'
           + '</td>';
       });
       const tfBesoin = Math.round(besoins.reduce((s,b) => s + (b.besoinTheorique||0), 0) * 2) / 2;
-      tfootHtml += '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace">' + tfBesoin + ' h</strong></td>';
+      tfootHtml += '<td class="col-num"><strong class="font-mono">' + tfBesoin + ' h</strong></td>';
       const tfHP  = Math.round(besoins.reduce((s,b) => s + (b.hPoste||0), 0) * 2) / 2;
-      tfootHtml += '<td class="col-num dot-col-hp"><strong style="font-family:\'JetBrains Mono\',monospace">' + tfHP + ' h</strong></td>';
+      tfootHtml += '<td class="col-num dot-col-hp"><strong class="font-mono">' + tfHP + ' h</strong></td>';
       const tfHSA = Math.round(besoins.reduce((s,b) => s + (b.hsa||0), 0) * 2) / 2;
-      tfootHtml += '<td class="col-num dot-col-hsa"><strong style="font-family:\'JetBrains Mono\',monospace">' + tfHSA + ' h</strong></td>';
+      tfootHtml += '<td class="col-num dot-col-hsa"><strong class="font-mono">' + tfHSA + ' h</strong></td>';
       const tfAll = Math.round((tfHP + tfHSA) * 2) / 2;
-      tfootHtml += '<td class="col-num"><strong style="font-family:\'JetBrains Mono\',monospace;color:var(--c-accent)">' + tfAll + ' h</strong></td>';
+      tfootHtml += '<td class="col-num"><strong class="font-mono" style="color:var(--c-accent)">' + tfAll + ' h</strong></td>';
       const tfEcart = Math.round((tfAll - tfBesoin) * 2) / 2;
       const tfEcCls = tfEcart > 0 ? 'dot-ecart-over' : tfEcart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
       tfootHtml += '<td class="col-num"><span class="dot-ecart ' + tfEcCls + '"><strong>' + (tfEcart >= 0 ? '+' : '') + tfEcart + ' h</strong></span></td>';

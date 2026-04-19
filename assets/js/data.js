@@ -10,7 +10,7 @@
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '3.3.2';
+  const VERSION = '3.5.0';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   const DISCIPLINES_MEN = [
@@ -47,7 +47,7 @@ const DGHData = (() => {
   function _schema() {
     return {
       _meta: { version: VERSION, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-      etablissement: { nom: '', uai: '', academie: '', commune: '' },
+      etablissement: { nom: '', uai: '', academie: '', commune: '', typeEtab: 'college' },
       annees: { '2025-2026': _annee('2025-2026') },
       anneeActive: '2025-2026'
     };
@@ -64,7 +64,7 @@ const DGHData = (() => {
       repartition: [],   // [{ disciplineId, hPoste, hsa, commentaire, groupesCours[] }]
       heuresPedaComp: [],
       enseignants: [],
-      simulation: { active: false, nom: '', dotation: null, repartition: [], enseignants: [] },
+      scenarios: [],   // Sprint 8 — liste des ScenarioObjects
       alertes: []
     };
   }
@@ -170,6 +170,17 @@ const DGHData = (() => {
         });
       });
     }
+    // Migration v3.4 : typeEtab
+    if (!_data.etablissement.typeEtab) {
+      _data.etablissement.typeEtab = 'college';
+    }
+    // Migration v3.5 : scenarios[] remplace simulation (stub inutilisé)
+    Object.values(_data.annees).forEach(ann => {
+      if (!Array.isArray(ann.scenarios)) {
+        ann.scenarios = [];
+        delete ann.simulation; // stub jamais utilisé en production
+      }
+    });
     _data._meta.version = VERSION;
     save();
   }
@@ -553,6 +564,139 @@ const DGHData = (() => {
     ) || null;
   }
 
+  // ── CRUD SCÉNARIOS ────────────────────────────────────────────────────
+  /**
+   * ScenarioObject :
+   * { id, nom, description, createdAt, updatedAt, actif,
+   *   modificateurs: [ModificateurObject] }
+   *
+   * ModificateurObject — 3 types :
+   *   { id, type:'dedoublement', disciplineId, classeIds[], heuresParGroupe, commentaire }
+   *   { id, type:'co-enseignement', disciplineId, classeIds[], heuresParGroupe, commentaire }
+   *   { id, type:'projet', nom, heuresHP, heuresHSA, commentaire }
+   */
+
+  function getScenarios(annee) {
+    return (getAnnee(annee).scenarios || []).slice()
+      .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+  }
+
+  function getScenario(id, annee) {
+    return (getAnnee(annee).scenarios || []).find(s => s.id === id) || null;
+  }
+
+  function getScenarioActif(annee) {
+    return (getAnnee(annee).scenarios || []).find(s => s.actif) || null;
+  }
+
+  function addScenario(fields) {
+    const ann = getAnnee();
+    const scen = {
+      id:           genId('scen'),
+      nom:          (fields.nom || 'Nouveau scénario').trim(),
+      description:  fields.description || '',
+      createdAt:    new Date().toISOString(),
+      updatedAt:    new Date().toISOString(),
+      actif:        false,
+      modificateurs: []
+    };
+    ann.scenarios.push(scen);
+    save();
+    return scen;
+  }
+
+  function updateScenario(id, fields) {
+    const ann = getAnnee();
+    const idx = ann.scenarios.findIndex(s => s.id === id);
+    if (idx === -1) return false;
+    const scen = ann.scenarios[idx];
+    if (fields.nom         !== undefined) scen.nom         = (fields.nom || '').trim();
+    if (fields.description !== undefined) scen.description = fields.description || '';
+    if (fields.actif       !== undefined) scen.actif       = !!fields.actif;
+    scen.updatedAt = new Date().toISOString();
+    save();
+    return true;
+  }
+
+  function deleteScenario(id) {
+    const ann    = getAnnee();
+    const before = ann.scenarios.length;
+    ann.scenarios = ann.scenarios.filter(s => s.id !== id);
+    if (ann.scenarios.length < before) { save(); return true; }
+    return false;
+  }
+
+  function dupliquerScenario(id) {
+    const source = getScenario(id);
+    if (!source) return null;
+    const ann  = getAnnee();
+    const copy = {
+      id:           genId('scen'),
+      nom:          source.nom + ' (copie)',
+      description:  source.description || '',
+      createdAt:    new Date().toISOString(),
+      updatedAt:    new Date().toISOString(),
+      actif:        false,
+      modificateurs: JSON.parse(JSON.stringify(source.modificateurs || []))
+    };
+    // Régénérer les ids des modificateurs pour éviter les doublons
+    copy.modificateurs.forEach(m => { m.id = genId('mod'); });
+    ann.scenarios.push(copy);
+    save();
+    return copy;
+  }
+
+  /**
+   * Marque un scénario comme actif et désactive tous les autres.
+   * Si id est null, désactive tous.
+   */
+  function setScenarioActif(id) {
+    const ann = getAnnee();
+    (ann.scenarios || []).forEach(s => { s.actif = (s.id === id); });
+    save();
+  }
+
+  // ── CRUD MODIFICATEURS ────────────────────────────────────────────────
+
+  function addModificateur(scenarioId, fields) {
+    const ann  = getAnnee();
+    const scen = ann.scenarios.find(s => s.id === scenarioId);
+    if (!scen) return null;
+    if (!Array.isArray(scen.modificateurs)) scen.modificateurs = [];
+    const mod = { id: genId('mod'), ...fields };
+    scen.modificateurs.push(mod);
+    scen.updatedAt = new Date().toISOString();
+    save();
+    return mod;
+  }
+
+  function updateModificateur(scenarioId, modId, fields) {
+    const ann  = getAnnee();
+    const scen = ann.scenarios.find(s => s.id === scenarioId);
+    if (!scen) return false;
+    const idx = (scen.modificateurs || []).findIndex(m => m.id === modId);
+    if (idx === -1) return false;
+    Object.assign(scen.modificateurs[idx], fields);
+    scen.updatedAt = new Date().toISOString();
+    save();
+    return true;
+  }
+
+  function deleteModificateur(scenarioId, modId) {
+    const ann  = getAnnee();
+    const scen = ann.scenarios.find(s => s.id === scenarioId);
+    if (!scen) return false;
+    const before = (scen.modificateurs || []).length;
+    scen.modificateurs = (scen.modificateurs || []).filter(m => m.id !== modId);
+    if (scen.modificateurs.length < before) {
+      scen.updatedAt = new Date().toISOString();
+      save();
+      return true;
+    }
+    return false;
+  }
+
+
   // ── ANNÉES ───────────────────────────────────────────────────────
   function resetAnnee(annee) { const key=annee||_data.anneeActive; _data.annees[key]=_annee(key); save(); }
 
@@ -628,6 +772,9 @@ const DGHData = (() => {
     addGroupeCours,updateGroupeCours,deleteGroupeCours,
     addHPC,updateHPC,deleteHPC,
     getEnseignants,getEnseignant,addEnseignant,updateEnseignant,deleteEnseignant,deleteAllEnseignants,findEnseignantByNomPrenom,
+    getScenarios,getScenario,getScenarioActif,
+    addScenario,updateScenario,deleteScenario,dupliquerScenario,setScenarioActif,
+    addModificateur,updateModificateur,deleteModificateur,
     resetAnnee,deleteAnnee,
     save,exportJSON,importJSON,genId,isEmpty
   };

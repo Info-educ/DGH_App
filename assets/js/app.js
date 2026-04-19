@@ -24,6 +24,7 @@ const app = (() => {
     dotation:    'DGH + Vol. Horaire',
     hpc:         'H. péda. complémentaires',
     enseignants: 'Équipe pédagogique',
+    pilotage:    'Pilotage pédagogique',
     alertes:     'Alertes',
     synthese:    'Synthèses',
     historique:  'Historique'
@@ -64,6 +65,7 @@ const app = (() => {
     if (viewId === 'dotation')   DGHDotation.renderDotation();
     if (viewId === 'hpc')        DGHHPC.renderHPC();
     if (viewId === 'enseignants') DGHEnseignants.renderEnseignants();
+    if (viewId === 'pilotage')    DGHPilotage.renderPilotage();
   }
 
   // ── RENDU GLOBAL ─────────────────────────────────────────────────
@@ -136,6 +138,16 @@ const app = (() => {
       if (action==='sel-ens-hpc-direct'){ DGHEnseignants.affecterEnsHPCDirect(actionBtn.dataset.ensId||id);                        return; }
       if (action==='toggle-hpc-cat')    { DGHEnseignants.toggleHPCCat(actionBtn.dataset.cat);                                     return; }
       if (action==='toggle-all-hpc')    { DGHEnseignants.toggleAllHPC(actionBtn.dataset.open==='1');                              return; }
+      if (action === 'pil-tab')            { DGHPilotage.switchTab(actionBtn.dataset.tab);           return; }
+      if (action === 'edit-mod')          { DGHPilotage.openEditMod(actionBtn.dataset.scenId, actionBtn.dataset.modId); return; }
+      if (action === 'save-edit-mod')     { DGHPilotage.saveEditMod(actionBtn.dataset.scenId, actionBtn.dataset.modId); return; }
+      if (action === 'cancel-edit-mod')   { DGHPilotage.cancelEditMod(); return; }
+      if (action === 'edit-scenario')     { DGHPilotage.toggleEditScenario(actionBtn.dataset.id);                                return; }
+      if (action === 'save-mod')          { DGHPilotage.saveModificateur(actionBtn.dataset.scenId);                    return; }
+      if (action === 'delete-mod')        { DGHPilotage.deleteModificateur(actionBtn.dataset.scenId, actionBtn.dataset.modId); return; }
+      if (action === 'duplicate-scenario'){ DGHPilotage.dupliquerScenario(actionBtn.dataset.id);                       return; }
+      if (action === 'delete-scenario')   { DGHPilotage.confirmDeleteScenario(actionBtn.dataset.id);                   return; }
+      if (action === 'set-actif-scenario'){ DGHPilotage.setActif(actionBtn.dataset.id);                                return; }
     }
 
     // btn-toggle-gc (généré dynamiquement) — délégué ici
@@ -153,6 +165,10 @@ const app = (() => {
     if (modalTab) { DGHEtab.switchModalTab(modalTab.dataset.tab); return; }
 
     // Boutons statiques
+    if (e.target.closest('#btnAddScenario'))    { DGHPilotage.startNewScenario();    return; }
+    if (e.target.closest('#btnDesactiverScen')) { DGHPilotage.desactiverScenario();  return; }
+    const selNivBtn = e.target.closest('.mod-sel-niv');
+    if (selNivBtn) { DGHPilotage.selectionnerNiveau(selNivBtn); return; }
     if (e.target.closest('#btnAddDiv'))       { DGHStructures.openModalDiv(null);    return; }
     if (e.target.closest('#btnMatrice'))      { DGHStructures.openModalMatrice();     return; }
     if (e.target.closest('#btnAddDisc'))      { DGHDotation.openModalDisc(null);      return; }
@@ -268,6 +284,14 @@ const app = (() => {
     if (e.target.classList.contains('ens-inline-num'))    { DGHEnseignants.handleInlineEdit(e.target); return; }
     // H.discipline dans vue par discipline (field heures-disc)
     if (e.target.classList.contains('ens-inline-hdisc'))  { DGHEnseignants.handleInlineEdit(e.target); return; }
+    if (e.target.classList.contains('mod-disc-select'))  { const f=e.target.closest('.scen-form-add'); if(f) DGHPilotage.previewImpact(f.dataset.scenId); return; }
+    if (e.target.classList.contains('mod-classe-check')) { const f=e.target.closest('.scen-form-add'); if(f) DGHPilotage.previewImpact(f.dataset.scenId); return; }
+    if (e.target.classList.contains('mod-h-input'))      { const f=e.target.closest('.scen-form-add'); if(f) DGHPilotage.previewImpact(f.dataset.scenId); return; }
+    if (e.target.classList.contains('mod-th-radio'))     { const f=e.target.closest('.scen-form-add'); if(f) DGHPilotage.previewImpact(f.dataset.scenId); return; }
+    if (e.target.classList.contains('impact-aff-check')) { const d=e.target.dataset; DGHPilotage.saveAffectation(d.ensId,d.modId,d.scenId,'affecte',e.target.checked); return; }
+    if (e.target.classList.contains('impact-th-radio'))  { const d=e.target.dataset; DGHPilotage.saveAffectation(d.ensId,d.modId,d.scenId,'typeHeure',e.target.value); return; }
+    if (e.target.classList.contains('mod-type-select'))  { DGHPilotage.onTypeChange(e.target); return; }
+    if (e.target.id === 'recapScenSelect')                { DGHPilotage.setRecapScen(e.target.value); return; }
   }
 
   // ── DÉLÉGATION GLOBALE DBLCLICK ───────────────────────────────────
@@ -280,6 +304,7 @@ const app = (() => {
     if (e.target.id==='inputEnvHP'||e.target.id==='inputEnvHSA') DGHDotation.saveEnveloppe();
     // Edition inline texte enseignants (blur = sauvegarde)
     if (e.target.classList.contains('ens-inline-input')) { DGHEnseignants.handleInlineEdit(e.target); return; }
+    if (e.target.classList.contains('scen-nom-input'))  { DGHPilotage.saveNom(e.target); return; }
   }
 
   // ── EVENTS ───────────────────────────────────────────────────────
