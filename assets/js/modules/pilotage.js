@@ -19,6 +19,8 @@ const DGHPilotage = (() => {
   let _tabActif    = 'scenarios'; // 'scenarios' | 'recap' | 'synthese'
   let _scenEditId  = null;        // scénario ouvert en accordéon
   let _scenRecapId = null;        // scénario affiché dans le récap (null = scénario actif)
+  let _modEditId   = null;        // id du modificateur en cours d'édition (null = ajout)
+  let _modEditScenId = null;      // scénario du modificateur en édition
 
   const TYPES_MOD = {
     'dedoublement':           { label: 'Dédoublement',                     css: 'mod-t-ded',   short: 'Déd.',    defH: 1   },
@@ -175,7 +177,9 @@ const DGHPilotage = (() => {
               const cout   = detail ? ('+' + (detail.coutHP + detail.coutHSA) + ' h') : '—';
               // Titre : stocké ou regénéré à la volée pour les anciens modificateurs
               const titreDisp = mod.titre || _titreModificateur(mod.type, mod.disciplineId, mod.classeIds, structures, disciplines);
-              return '<tr>'
+              const isEditing = (_modEditId === mod.id && _modEditScenId === scen.id);
+              const editFormHtml = isEditing ? _htmlFormModaliteEdit(scen.id, mod, disciplines, structures) : '';
+              return '<tr class="scen-mods-tr' + (isEditing ? ' scen-mods-tr-editing' : '') + '">'
                 + '<td class="mod-titre-cell"><strong>' + _esc(titreDisp) + '</strong></td>'
                 + '<td><span class="mod-badge ' + tInfo.css + '">' + tInfo.short + '</span></td>'
                 + '<td class="scen-td-cibles">' + _esc(_nomsCibles(mod, structures)) + '</td>'
@@ -183,8 +187,12 @@ const DGHPilotage = (() => {
                 + '<td><span class="mod-th-badge mod-th-badge-' + (mod.typeHeure||'hsa') + '">' + ((mod.typeHeure||'hsa').toUpperCase()) + '</span></td>'
                 + '<td class="scen-th-r font-mono scen-cout-val">' + cout + '</td>'
                 + '<td>' + (mod.commentaire ? '<span class="mod-comment-cell">' + _esc(mod.commentaire) + '</span>' : '') + '</td>'
-                + '<td><button class="btn-icon btn-icon-danger" data-action="delete-mod" data-scen-id="' + scen.id + '" data-mod-id="' + mod.id + '">✕</button></td>'
-              + '</tr>';
+                + '<td class="mod-actions-cell">'
+                  + '<button class="btn-icon mod-btn-edit" data-action="edit-mod" data-scen-id="' + scen.id + '" data-mod-id="' + mod.id + '" title="Modifier">✏</button>'
+                  + '<button class="btn-icon btn-icon-danger" data-action="delete-mod" data-scen-id="' + scen.id + '" data-mod-id="' + mod.id + '" title="Supprimer">✕</button>'
+                + '</td>'
+              + '</tr>'
+              + (isEditing ? '<tr class="scen-mods-tr-editrow"><td colspan="8">' + editFormHtml + '</td></tr>' : '');
             }).join('')
           + '</tbody></table></div>';
 
@@ -192,6 +200,71 @@ const DGHPilotage = (() => {
       + '<div class="scen-panel-header"><span class="scen-panel-titre">Modalités — <strong>' + _esc(scen.nom) + '</strong></span></div>'
       + modsHtml
       + _htmlFormModalite(scen.id, disciplines, structures)
+    + '</div>';
+  }
+
+  // ── Formulaire d'ÉDITION d'une modalité existante ─────────────────
+  function _htmlFormModaliteEdit(scenId, mod, disciplines, structures) {
+    const typeOpts = Object.entries(TYPES_MOD).map(([k,v]) =>
+      '<option value="' + k + '"' + (mod.type === k ? ' selected' : '') + '>' + v.label + '</option>'
+    ).join('');
+    const discOpts = disciplines.map(d =>
+      '<option value="' + d.id + '"' + (mod.disciplineId === d.id ? ' selected' : '') + '>' + _esc(d.nom) + '</option>'
+    ).join('');
+
+    const parNiv = {};
+    structures.forEach(s => { if (!parNiv[s.niveau]) parNiv[s.niveau] = []; parNiv[s.niveau].push(s); });
+    const selectedIds = new Set(mod.classeIds || []);
+
+    const classesHtml = NIVEAUX_ORD.filter(n => parNiv[n]?.length).map(niv => {
+      const cases = parNiv[niv].map(s =>
+        '<label class="mod-classe-label">'
+          + '<input type="checkbox" class="mod-edit-classe-check" value="' + s.id + '"'
+          + (selectedIds.has(s.id) ? ' checked' : '') + '> ' + _esc(s.nom)
+        + '</label>'
+      ).join('');
+      return '<div class="mod-niv-groupe">'
+        + '<span class="mod-niv-label">' + niv + '</span>'
+        + '<div class="mod-niv-cases">' + cases + '</div>'
+      + '</div>';
+    }).join('');
+
+    const isHSA = (mod.typeHeure || 'hsa') === 'hsa';
+    const nomAutreShow = mod.type === 'autre';
+
+    return '<div class="scen-form-add mod-edit-form" data-scen-id="' + scenId + '" data-mod-id="' + mod.id + '">'
+      + '<div class="scen-form-title mod-edit-title">✏ Modifier la modalité</div>'
+      + '<div class="scen-form-grid">'
+        + '<div class="scen-form-col">'
+          + '<div class="scen-form-field"><label>Type de modalité</label>'
+            + '<select class="mod-edit-type-select" id="modEditType_' + mod.id + '">' + typeOpts + '</select></div>'
+          + '<div class="scen-form-field' + (nomAutreShow ? '' : ' mod-nom-autre-wrap is-hidden') + '" id="modEditNomAutreWrap_' + mod.id + '"><label>Nom de la modalité</label>'
+            + '<input type="text" class="mod-edit-nom-autre" id="modEditNomAutre_' + mod.id + '" value="' + _esc(mod.nomAutre||'') + '" placeholder="ex: Aide aux devoirs" /></div>'
+          + '<div class="scen-form-field"><label>Discipline (optionnel)</label>'
+            + '<select class="mod-edit-disc-select" id="modEditDisc_' + mod.id + '">'
+              + '<option value="">— Toutes —</option>' + discOpts
+            + '</select></div>'
+          + '<div class="scen-form-field-row">'
+            + '<div class="scen-form-field"><label>H/groupe/semaine</label>'
+              + '<input type="number" class="mod-edit-h-input" id="modEditH_' + mod.id + '" min="0.5" max="20" step="0.5" value="' + (mod.heuresParGroupe||1) + '" /></div>'
+            + '<div class="scen-form-field"><label>Type d\'heure</label>'
+              + '<div class="mod-typeheure-toggle">'
+                + '<label class="mod-th-label"><input type="radio" class="mod-edit-th-radio" name="modEditTH_' + mod.id + '" value="hsa"' + (isHSA ? ' checked' : '') + '> HSA</label>'
+                + '<label class="mod-th-label"><input type="radio" class="mod-edit-th-radio" name="modEditTH_' + mod.id + '" value="hp"'  + (!isHSA ? ' checked' : '') + '> HP</label>'
+              + '</div></div>'
+          + '</div>'
+          + '<div class="scen-form-field"><label>Commentaire</label>'
+            + '<input type="text" class="mod-edit-comment" id="modEditComment_' + mod.id + '" value="' + _esc(mod.commentaire||'') + '" placeholder="Précisions éventuelles" /></div>'
+        + '</div>'
+        + '<div class="scen-form-col">'
+          + '<label class="scen-form-label-classes">Classes concernées</label>'
+          + '<div class="mod-classes-grid-niv" id="modEditGrid_' + mod.id + '">' + (classesHtml || '<span class="scen-cout-zero">Aucune division.</span>') + '</div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="scen-form-actions">'
+        + '<button class="btn-secondary" data-action="cancel-edit-mod" data-scen-id="' + scenId + '" data-mod-id="' + mod.id + '">Annuler</button>'
+        + '<button class="btn-primary" data-action="save-edit-mod" data-scen-id="' + scenId + '" data-mod-id="' + mod.id + '">Enregistrer ✓</button>'
+      + '</div>'
     + '</div>';
   }
 
@@ -263,6 +336,15 @@ const DGHPilotage = (() => {
   // ══════════════════════════════════════════════════════════════════
   // ONGLET 2 — RÉCAPITULATIF DGH
   // ══════════════════════════════════════════════════════════════════
+  /**
+   * Tableau récapitulatif visuel :
+   * - Colonne discipline (barre couleur)
+   * - Heures plancher MEN par niveau
+   * - Besoin MEN total
+   * - HP allouées / HSA allouées / Total (avec mini-barre de consommation)
+   * - Écart plancher vs alloué
+   * - Section modalités scénario : 1 colonne par modalité + total scénario + solde
+   */
   function _renderOngletRecap() {
     const el = document.getElementById('scenRecapWrap');
     if (!el) return;
@@ -275,154 +357,249 @@ const DGHPilotage = (() => {
     const NIVEAUX_GR  = ['6e','5e','4e','3e'];
 
     if (disciplines.length === 0) {
-      el.innerHTML = '<div class="scen-empty"><p>Saisissez vos disciplines et dotation pour afficher le récapitulatif.</p></div>';
+      el.innerHTML = '<div class="scen-empty"><p>Saisissez vos disciplines et la dotation pour afficher le récapitulatif.</p></div>';
       return;
     }
 
-    // Scénario affiché dans la colonne
+    // ── Scénario sélectionné ──────────────────────────────────────
     if (_scenRecapId && !scenarios.find(sc => sc.id === _scenRecapId)) _scenRecapId = null;
     const scenChoisi = _scenRecapId
       ? scenarios.find(sc => sc.id === _scenRecapId)
       : DGHData.getScenarioActif();
-    const bilanScen = scenChoisi ? Calculs.bilanScenario(data, scenChoisi.modificateurs) : null;
+    const bilanScen  = scenChoisi ? Calculs.bilanScenario(data, scenChoisi.modificateurs) : null;
+    const mods       = scenChoisi ? (scenChoisi.modificateurs || []) : [];
 
-    // ── Sélecteur de scénario ─────────────────────────────────────
+    // ── Sélecteur ────────────────────────────────────────────────
     const selectOpts = '<option value="">— Aucun scénario —</option>'
       + scenarios.map(sc =>
           '<option value="' + sc.id + '"' + (scenChoisi && sc.id === scenChoisi.id ? ' selected' : '') + '>'
           + _esc(sc.nom) + (sc.actif ? ' ●' : '') + '</option>'
         ).join('');
+
     const selectorHtml = '<div class="recap-scen-selector">'
-      + '<label class="recap-scen-select-label">Scénario à afficher :</label>'
+      + '<label class="recap-scen-select-label">Comparer avec le scénario :</label>'
       + '<select class="recap-scen-select" id="recapScenSelect">' + selectOpts + '</select>'
+      + (scenarios.length === 0
+          ? '<span class="recap-no-scen">Créez des scénarios dans l\'onglet ⊕ Scénarios</span>'
+          : '')
     + '</div>';
 
-    // ── Niveaux présents ──────────────────────────────────────────
+    // ── Niveaux présents ─────────────────────────────────────────
     const nbParNiv = {};
     NIVEAUX_GR.forEach(n => { nbParNiv[n] = structures.filter(s => s.niveau === n).length; });
     const nivsPresents = NIVEAUX_GR.filter(n => nbParNiv[n] > 0);
 
-    // ── En-tête colonne scénario ──────────────────────────────────
-    let scenTh = '';
-    if (scenChoisi) {
-      const modsTags = (scenChoisi.modificateurs||[]).map(m => {
-        const t   = TYPES_MOD[m.type] || { css: '', short: m.type };
-        const tit = m.titre || _titreModificateur(m.type, m.disciplineId, m.classeIds, structures, disciplines, m.nomAutre);
-        const thBadge = '<span class="recap-mod-th-badge">' + (m.typeHeure||'hsa').toUpperCase() + '</span>';
-        return '<span class="recap-mod-tag mod-badge ' + t.css + '">' + _esc(tit) + ' ' + thBadge + '</span>';
+    // ── Construire le tableau par sections ───────────────────────
+    // Section A : plancher MEN | Section B : dotation HP/HSA | Section C : modalités scénario
+
+    // En-têtes section A : niveaux
+    const thNivs = nivsPresents.map(n =>
+      '<th class="rc-th rc-th-niv" title="' + nbParNiv[n] + ' division(s)">'
+        + n + '<span class="rc-th-sub">' + nbParNiv[n] + ' div.</span>'
+      + '</th>'
+    ).join('');
+
+    // En-têtes section C : une colonne par modalité
+    let thMods = '';
+    if (bilanScen && mods.length > 0) {
+      thMods = mods.map(m => {
+        const tInfo = TYPES_MOD[m.type] || { css: '', short: m.type };
+        const tit   = m.titre || _titreModificateur(m.type, m.disciplineId, m.classeIds, structures, disciplines, m.nomAutre);
+        const isHSA = (m.typeHeure || 'hsa') === 'hsa';
+        return '<th class="rc-th rc-th-mod">'
+          + '<span class="rc-mod-badge mod-badge ' + tInfo.css + '">' + tInfo.short + '</span>'
+          + '<div class="rc-mod-tit">' + _esc(tit) + '</div>'
+          + '<div class="rc-mod-th ' + (isHSA ? 'rc-th-hsa' : 'rc-th-hp') + '">'
+            + (isHSA ? 'HSA' : 'HP') + ' · ' + m.heuresParGroupe + 'h/gr'
+          + '</div>'
+        + '</th>';
       }).join('');
-      scenTh = '<th class="recap-th-h recap-th-scen">'
-        + '<div class="recap-scen-nom">' + _esc(scenChoisi.nom) + '</div>'
-        + (modsTags ? '<div class="recap-scen-mods">' + modsTags + '</div>' : '<div class="recap-scen-mods scen-cout-zero">Aucune modalité</div>')
-      + '</th>';
+      thMods += '<th class="rc-th rc-th-scen-tot">Total scénario<span class="rc-th-sub">' + _esc(scenChoisi.nom) + '</span></th>';
+    } else if (scenChoisi && mods.length === 0) {
+      thMods = '<th class="rc-th rc-th-mod rc-mod-empty">Aucune modalité<span class="rc-th-sub">dans ce scénario</span></th>';
     }
 
-    const thead = '<tr>'
-      + '<th class="recap-th-disc">Discipline</th>'
-      + nivsPresents.map(n => '<th class="recap-th-h" title="' + nbParNiv[n] + ' div.">' + n + '</th>').join('')
-      + '<th class="recap-th-h recap-col-sep">Besoin MEN</th>'
-      + '<th class="recap-th-h">Alloué HP</th>'
-      + '<th class="recap-th-h">Alloué HSA</th>'
-      + '<th class="recap-th-h recap-col-total">Total alloué</th>'
-      + '<th class="recap-th-h recap-col-ecart">Écart</th>'
-      + scenTh
-    + '</tr>';
+    // ── En-tête du tableau (2 lignes) ────────────────────────────
+    // Ligne 1 : groupes de colonnes
+    const nbColNivs = nivsPresents.length;
+    const nbColMods = mods.length > 0 ? mods.length + 1 : (scenChoisi ? 1 : 0);
+    const thead = '<thead>'
+      // Ligne de groupes
+      + '<tr class="rc-tr-group">'
+        + '<th class="rc-th-disc-group" rowspan="2">Discipline</th>'
+        + (nbColNivs > 0
+            ? '<th colspan="' + nbColNivs + '" class="rc-group rc-group-niv">Heures plancher MEN</th>'
+            : '')
+        + '<th class="rc-group rc-group-men" rowspan="2">Besoin<br>MEN</th>'
+        + '<th colspan="3" class="rc-group rc-group-dot">Dotation allouée</th>'
+        + '<th class="rc-group rc-group-ecart" rowspan="2">Écart</th>'
+        + (nbColMods > 0
+            ? '<th colspan="' + nbColMods + '" class="rc-group rc-group-scen">'
+                + '⊕ Scénario — modalités pédagogiques'
+              + '</th>'
+            : '')
+      + '</tr>'
+      // Ligne de colonnes détaillées
+      + '<tr class="rc-tr-cols">'
+        + thNivs
+        + '<th class="rc-th rc-th-hp">HP<span class="rc-th-sub">allouées</span></th>'
+        + '<th class="rc-th rc-th-hsa">HSA<span class="rc-th-sub">allouées</span></th>'
+        + '<th class="rc-th rc-th-tot">Total<span class="rc-th-sub">HP + HSA</span></th>'
+        + thMods
+      + '</tr>'
+    + '</thead>';
 
-    // ── Lignes disciplines ────────────────────────────────────────
+    // ── Lignes par discipline ─────────────────────────────────────
     const tbodyDisc = besoins.map(b => {
       const hp    = b.hPoste || 0;
       const hsa   = b.hsa   || 0;
       const tot   = b.total || 0;
       const ecart = b.ecart || 0;
-      const ecartCls  = ecart > 0 ? 'recap-ecart-pos' : ecart < 0 ? 'recap-ecart-neg' : 'recap-ecart-zero';
-      const ecartSign = ecart > 0 ? '+' : '';
 
-      const cellesNiv = nivsPresents.map(n => {
+      // Heures plancher MEN par niveau
+      const tdNivs = nivsPresents.map(n => {
         const gl  = (b.grilleLignes||{})[n];
         const val = gl ? gl.valeur : 0;
-        const mod = gl ? gl.modifie : false;
-        return '<td class="recap-td-h' + (mod ? ' recap-modifie' : '') + '" title="' + (mod ? 'Override' : 'Grille MEN') + '">'
-          + (val > 0 ? val + ' h' : '<span class="scen-cout-zero">—</span>') + '</td>';
+        const ov  = gl ? gl.modifie : false;
+        return '<td class="rc-td rc-td-niv' + (ov ? ' rc-ov' : '') + '">'
+          + (val > 0 ? val + ' h' : '<span class="rc-zero">—</span>')
+        + '</td>';
       }).join('');
 
-      // Colonne scénario : UNIQUEMENT le delta (heures ajoutées par les modalités)
-      let celleScen = '';
-      if (bilanScen) {
-        const ds    = bilanScen.detailParDisc.find(x => x.disciplineId === b.disciplineId);
+      // Barre de consommation HP/HSA inline
+      const pctHP  = bilanRef.hPosteEnv > 0 ? Math.min(100, Math.round(hp  / bilanRef.hPosteEnv  * 100)) : 0;
+      const pctHSA = bilanRef.hsaEnv    > 0 ? Math.min(100, Math.round(hsa / bilanRef.hsaEnv     * 100)) : 0;
+
+      // Écart
+      const ecartCls = ecart > 0 ? 'rc-pos' : ecart < 0 ? 'rc-neg' : '';
+      const ecartSign = ecart > 0 ? '+' : '';
+
+      // Colonnes modalités scénario
+      let tdMods = '';
+      if (bilanScen && mods.length > 0) {
+        let totalDeltaDisc = 0;
+        tdMods = mods.map(m => {
+          // Ce modificateur concerne-t-il cette discipline ?
+          const concerne = !m.disciplineId || m.disciplineId === b.disciplineId;
+          if (!concerne) return '<td class="rc-td rc-td-mod rc-zero">—</td>';
+
+          // Calcul du delta de CE modificateur pour CETTE discipline
+          const detMod = bilanScen.detailParMod.find(d => d.mod.id === m.id);
+          const coutMod = detMod ? (detMod.coutHP + detMod.coutHSA) : 0;
+          // Est-ce que ce modificateur touche cette discipline ?
+          const toucheDisc = detMod && (m.disciplineId === b.disciplineId || !m.disciplineId);
+          if (!toucheDisc || coutMod === 0) return '<td class="rc-td rc-td-mod rc-zero">—</td>';
+
+          const isHSA = (m.typeHeure || 'hsa') === 'hsa';
+          const cls   = isHSA ? 'rc-mod-hsa' : 'rc-mod-hp';
+          totalDeltaDisc += coutMod;
+          return '<td class="rc-td rc-td-mod ' + cls + '">'
+            + '<span class="rc-mod-h">+' + coutMod + ' h</span>'
+            + '<span class="rc-mod-chip ' + (isHSA ? 'rc-chip-hsa' : 'rc-chip-hp') + '">' + (isHSA ? 'HSA' : 'HP') + '</span>'
+          + '</td>';
+        }).join('');
+
+        // Colonne total scénario pour cette discipline
+        const ds = bilanScen.detailParDisc.find(x => x.disciplineId === b.disciplineId);
         const delta = ds ? ds.delta : 0;
-        if (delta !== 0) {
-          const cls  = delta > 0 ? 'recap-ecart-pos' : 'scen-solde-danger';
-          celleScen = '<td class="recap-td-h recap-col-scen font-mono ' + cls + '">'
-            + '<strong>' + (delta > 0 ? '+' : '') + delta + ' h</strong></td>';
-        } else {
-          celleScen = '<td class="recap-td-h recap-col-scen scen-cout-zero">—</td>';
-        }
+        const totCls = delta > 0 ? 'rc-pos' : delta < 0 ? 'rc-neg' : '';
+        tdMods += '<td class="rc-td rc-td-scen-tot ' + totCls + '">'
+          + (delta !== 0
+              ? '<strong>' + (delta > 0 ? '+' : '') + delta + ' h</strong>'
+              + '<div class="rc-new-tot font-mono">' + (tot + delta) + ' h</div>'
+              : '<span class="rc-zero">—</span>')
+        + '</td>';
+      } else if (scenChoisi && mods.length === 0) {
+        tdMods = '<td class="rc-td rc-zero">—</td>';
       }
 
-      const pct = bilanRef.enveloppe > 0 ? Math.min(100, Math.round((tot / bilanRef.enveloppe) * 100)) : 0;
-
-      return '<tr class="recap-tr">'
-        + '<td class="recap-td-disc">'
-          + '<span class="scen-disc-dot" style="background:' + _esc(b.couleur||'#999') + '"></span>'
-          + _esc(b.nom)
-          + '<div class="recap-bar-wrap"><div class="recap-bar-fill" style="width:' + pct + '%;background:' + _esc(b.couleur||'#999') + '"></div></div>'
+      return '<tr class="rc-tr">'
+        // Discipline
+        + '<td class="rc-td-disc">'
+          + '<div class="rc-disc-inner">'
+            + '<span class="rc-disc-color" style="background:' + _esc(b.couleur||'#999') + '"></span>'
+            + '<span class="rc-disc-nom">' + _esc(b.nom) + '</span>'
+          + '</div>'
+          + '<div class="rc-bar-wrap">'
+            + '<div class="rc-bar-hp"  style="width:' + pctHP  + '%;background:' + _esc(b.couleur||'#999') + '"></div>'
+            + '<div class="rc-bar-hsa" style="width:' + pctHSA + '%;left:' + pctHP + '%"></div>'
+          + '</div>'
         + '</td>'
-        + cellesNiv
-        + '<td class="recap-td-h recap-col-sep font-mono">' + (b.besoinMEN > 0 ? b.besoinMEN + ' h' : '—') + '</td>'
-        + '<td class="recap-td-h font-mono">' + (hp > 0 ? hp + ' h' : '—') + '</td>'
-        + '<td class="recap-td-h font-mono">' + (hsa > 0 ? hsa + ' h' : '—') + '</td>'
-        + '<td class="recap-td-h recap-col-total font-mono"><strong>' + (tot > 0 ? tot + ' h' : '—') + '</strong></td>'
-        + '<td class="recap-td-h ' + ecartCls + ' font-mono">'
-          + (ecart !== 0 ? ecartSign + ecart + ' h' : '<span class="recap-ecart-zero">=</span>') + '</td>'
-        + celleScen
+        // Plancher MEN
+        + tdNivs
+        // Besoin MEN total
+        + '<td class="rc-td rc-td-men font-mono">'
+          + (b.besoinMEN > 0 ? b.besoinMEN + ' h' : '<span class="rc-zero">—</span>')
+        + '</td>'
+        // HP / HSA / Total
+        + '<td class="rc-td rc-td-hp font-mono">' + (hp > 0 ? hp + ' h' : '<span class="rc-zero">—</span>') + '</td>'
+        + '<td class="rc-td rc-td-hsa font-mono">' + (hsa > 0 ? '<span class="rc-hsa-val">' + hsa + ' h</span>' : '<span class="rc-zero">—</span>') + '</td>'
+        + '<td class="rc-td rc-td-tot font-mono"><strong>' + (tot > 0 ? tot + ' h' : '—') + '</strong></td>'
+        // Écart
+        + '<td class="rc-td rc-td-ecart font-mono ' + ecartCls + '">'
+          + (ecart !== 0 ? ecartSign + ecart + ' h' : '<span class="rc-eq">=</span>')
+        + '</td>'
+        // Modalités
+        + tdMods
       + '</tr>';
     }).join('');
 
     // ── Ligne totaux ──────────────────────────────────────────────
-    const scenTotCol = bilanScen
-      ? '<td class="recap-td-h recap-col-scen recap-total">'
-          + '<div class="font-mono ' + (bilanScen.coutTotal > 0 ? 'recap-ecart-pos' : '') + '">'
-            + (bilanScen.coutHP  > 0 ? '<div>HP : <strong>+' + bilanScen.coutHP  + ' h</strong></div>' : '')
-            + (bilanScen.coutHSA > 0 ? '<div>HSA : <strong>+' + bilanScen.coutHSA + ' h</strong></div>' : '')
-            + (bilanScen.coutTotal === 0 ? '—' : '')
-          + '</div>'
-          + '<div class="font-mono ' + (bilanScen.depassement ? 'scen-solde-danger' : 'scen-solde-ok') + '">'
-            + 'Solde : <strong>' + (bilanScen.soldeSimule >= 0 ? '+' : '') + bilanScen.soldeSimule + ' h</strong>'
-          + '</div>'
-        + '</td>'
-      : '';
+    let tdTotMods = '';
+    if (bilanScen && mods.length > 0) {
+      tdTotMods = mods.map(m => {
+        const det = bilanScen.detailParMod.find(d => d.mod.id === m.id);
+        const cout = det ? (det.coutHP + det.coutHSA) : 0;
+        const isHSA = (m.typeHeure || 'hsa') === 'hsa';
+        return cout > 0
+          ? '<td class="rc-td rc-td-mod ' + (isHSA ? 'rc-mod-hsa' : 'rc-mod-hp') + ' font-mono"><strong>+' + cout + ' h</strong></td>'
+          : '<td class="rc-td rc-zero">—</td>';
+      }).join('');
+      // Colonne total scénario
+      tdTotMods += '<td class="rc-td rc-td-scen-tot rc-tot-scen-global">'
+        + (bilanScen.coutHP  > 0 ? '<div class="rc-chip-hp">HP +' + bilanScen.coutHP + ' h</div>' : '')
+        + (bilanScen.coutHSA > 0 ? '<div class="rc-chip-hsa">HSA +' + bilanScen.coutHSA + ' h</div>' : '')
+        + '<div class="rc-solde ' + (bilanScen.depassement ? 'rc-neg' : 'rc-pos') + '">'
+          + 'Solde ' + (bilanScen.soldeSimule >= 0 ? '+' : '') + bilanScen.soldeSimule + ' h'
+        + '</div>'
+      + '</td>';
+    } else if (scenChoisi && mods.length === 0) {
+      tdTotMods = '<td class="rc-td rc-zero">—</td>';
+    }
 
-    const ecartTot  = Math.round((bilanRef.totalAlloue - besoins.reduce((s,b) => s + b.besoinMEN, 0)) * 2) / 2;
     const besoinTot = Math.round(besoins.reduce((s,b) => s + b.besoinMEN, 0) * 2) / 2;
+    const ecartTot  = Math.round((bilanRef.totalAlloue - besoinTot) * 2) / 2;
 
-    const tbodyTotaux = '<tr class="recap-row-total">'
-      + '<td class="recap-td-disc"><strong>Total</strong></td>'
-      + nivsPresents.map(() => '<td></td>').join('')
-      + '<td class="recap-td-h recap-col-sep font-mono"><strong>' + besoinTot + ' h</strong></td>'
-      + '<td class="recap-td-h font-mono"><strong>' + bilanRef.totalHPDisc + ' h</strong></td>'
-      + '<td class="recap-td-h font-mono"><strong>' + bilanRef.totalHSADisc + ' h</strong></td>'
-      + '<td class="recap-td-h recap-col-total font-mono"><strong>' + bilanRef.totalAlloue + ' h</strong></td>'
-      + '<td class="recap-td-h font-mono ' + (ecartTot >= 0 ? 'recap-ecart-pos' : 'recap-ecart-neg') + '">'
-        + '<strong>' + (ecartTot >= 0 ? '+' : '') + ecartTot + ' h</strong></td>'
-      + scenTotCol
+    const tbodyTotaux = '<tr class="rc-tr-total">'
+      + '<td class="rc-td-disc"><strong>Total</strong></td>'
+      + nivsPresents.map(() => '<td class="rc-td"></td>').join('')
+      + '<td class="rc-td rc-td-men font-mono"><strong>' + besoinTot + ' h</strong></td>'
+      + '<td class="rc-td rc-td-hp font-mono"><strong>' + bilanRef.totalHPDisc + ' h</strong></td>'
+      + '<td class="rc-td rc-td-hsa font-mono"><strong>' + bilanRef.totalHSADisc + ' h</strong></td>'
+      + '<td class="rc-td rc-td-tot font-mono"><strong>' + bilanRef.totalAlloue + ' h</strong></td>'
+      + '<td class="rc-td rc-td-ecart font-mono ' + (ecartTot >= 0 ? 'rc-pos' : 'rc-neg') + '"><strong>' + (ecartTot >= 0 ? '+' : '') + ecartTot + ' h</strong></td>'
+      + tdTotMods
     + '</tr>';
 
-    // ── Ligne enveloppe ───────────────────────────────────────────
-    const tbodyEnv = '<tr class="recap-row-env">'
-      + '<td class="recap-td-disc">Enveloppe DGH</td>'
-      + nivsPresents.map(() => '<td></td>').join('')
-      + '<td class="recap-col-sep"></td>'
-      + '<td class="recap-td-h font-mono">' + bilanRef.hPosteEnv + ' h</td>'
-      + '<td class="recap-td-h font-mono">' + bilanRef.hsaEnv + ' h</td>'
-      + '<td class="recap-td-h recap-col-total font-mono">' + bilanRef.enveloppe + ' h</td>'
-      + '<td class="recap-td-h font-mono ' + (bilanRef.depassement ? 'scen-solde-danger' : 'scen-solde-ok') + '">'
-        + '<strong>' + (bilanRef.solde >= 0 ? '+' : '') + bilanRef.solde + ' h</strong></td>'
-      + (bilanScen ? '<td class="recap-col-scen"></td>' : '')
+    // ── Ligne enveloppe DGH ───────────────────────────────────────
+    const colsTotal = nivsPresents.length + 1 + 3 + 1 + (bilanScen && mods.length > 0 ? mods.length + 1 : scenChoisi ? 1 : 0);
+    const tbodyEnv = '<tr class="rc-tr-env">'
+      + '<td class="rc-td-disc rc-env-label">Enveloppe DGH</td>'
+      + nivsPresents.map(() => '<td class="rc-td"></td>').join('')
+      + '<td class="rc-td"></td>'
+      + '<td class="rc-td rc-td-hp font-mono">' + bilanRef.hPosteEnv + ' h</td>'
+      + '<td class="rc-td rc-td-hsa font-mono">' + bilanRef.hsaEnv + ' h</td>'
+      + '<td class="rc-td rc-td-tot font-mono">' + bilanRef.enveloppe + ' h</td>'
+      + '<td class="rc-td rc-td-ecart font-mono ' + (bilanRef.depassement ? 'rc-neg' : 'rc-pos') + '">'
+        + '<strong>' + (bilanRef.solde >= 0 ? '+' : '') + bilanRef.solde + ' h</strong>'
+        + '<div class="rc-env-sub">' + (bilanRef.depassement ? 'dépassement' : 'disponible') + '</div>'
+      + '</td>'
+      + (bilanScen ? '<td colspan="' + (nbColMods) + '" class="rc-td"></td>' : '')
     + '</tr>';
 
     el.innerHTML = selectorHtml
-      + '<div class="scen-comp-wrap"><table class="recap-table">'
-      + '<thead>' + thead + '</thead>'
+      + '<div class="rc-table-wrap"><table class="rc-table">'
+      + thead
       + '<tbody>' + tbodyDisc + tbodyTotaux + tbodyEnv + '</tbody>'
       + '</table></div>';
   }
@@ -848,6 +1025,48 @@ const DGHPilotage = (() => {
     _renderOngletScenarios();
   }
 
+  // ── Ouvrir formulaire d'édition d'une modalité ──────────────────
+  function openEditMod(scenId, modId) {
+    _modEditScenId = scenId;
+    _modEditId     = modId;
+    _renderOngletScenarios();
+  }
+
+  function cancelEditMod() {
+    _modEditId     = null;
+    _modEditScenId = null;
+    _renderOngletScenarios();
+  }
+
+  function saveEditMod(scenId, modId) {
+    const type    = document.getElementById('modEditType_'    + modId)?.value || 'dedoublement';
+    const discId  = document.getElementById('modEditDisc_'    + modId)?.value || '';
+    const h       = parseFloat(document.getElementById('modEditH_' + modId)?.value) || 0;
+    const comment = document.getElementById('modEditComment_' + modId)?.value.trim() || '';
+    const nomAutre= (type === 'autre') ? (document.getElementById('modEditNomAutre_' + modId)?.value.trim() || 'Autre') : '';
+    const typeHeure = document.querySelector('input[name="modEditTH_' + modId + '"]:checked')?.value || 'hsa';
+    const ids = Array.from(document.querySelectorAll('#modEditGrid_' + modId + ' .mod-edit-classe-check:checked')).map(c => c.value);
+
+    if (!ids.length || h <= 0) {
+      if (typeof app !== 'undefined' && app.toast) app.toast('Sélectionnez au moins une classe et des heures > 0.', 'warning');
+      return;
+    }
+
+    const structures  = DGHData.getStructures();
+    const disciplines = DGHData.getDisciplines();
+    const titre = _titreModificateur(type, discId||null, ids, structures, disciplines, nomAutre);
+
+    DGHData.updateModificateur(scenId, modId, {
+      type, disciplineId: discId||null, classeIds: ids,
+      heuresParGroupe: h, typeHeure, commentaire: comment, nomAutre, titre
+    });
+
+    _modEditId     = null;
+    _modEditScenId = null;
+    renderPilotage();
+    if (typeof app !== 'undefined' && app.toast) app.toast('Modalité "' + titre + '" mise à jour.', 'success');
+  }
+
   function saveModificateur(scenId) {
     const type      = document.getElementById('modType_'    + scenId)?.value || 'dedoublement';
     const discId    = document.getElementById('modDisc_'    + scenId)?.value || '';
@@ -1015,7 +1234,10 @@ const DGHPilotage = (() => {
     selectionnerNiveau,
     onTypeChange,
     saveAffectation,
-    setRecapScen
+    setRecapScen,
+    openEditMod,
+    cancelEditMod,
+    saveEditMod
   };
 
 })();

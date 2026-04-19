@@ -139,6 +139,9 @@ const app = (() => {
       if (action==='toggle-hpc-cat')    { DGHEnseignants.toggleHPCCat(actionBtn.dataset.cat);                                     return; }
       if (action==='toggle-all-hpc')    { DGHEnseignants.toggleAllHPC(actionBtn.dataset.open==='1');                              return; }
       if (action === 'pil-tab')            { DGHPilotage.switchTab(actionBtn.dataset.tab);           return; }
+      if (action === 'edit-mod')          { DGHPilotage.openEditMod(actionBtn.dataset.scenId, actionBtn.dataset.modId); return; }
+      if (action === 'save-edit-mod')     { DGHPilotage.saveEditMod(actionBtn.dataset.scenId, actionBtn.dataset.modId); return; }
+      if (action === 'cancel-edit-mod')   { DGHPilotage.cancelEditMod(); return; }
       if (action === 'edit-scenario')     { DGHPilotage.toggleEditScenario(actionBtn.dataset.id);                                return; }
       if (action === 'save-mod')          { DGHPilotage.saveModificateur(actionBtn.dataset.scenId);                    return; }
       if (action === 'delete-mod')        { DGHPilotage.deleteModificateur(actionBtn.dataset.scenId, actionBtn.dataset.modId); return; }

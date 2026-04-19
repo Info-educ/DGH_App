@@ -2909,6 +2909,305 @@ td.col-grille {
 .impact-check-label input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--c-accent); cursor: pointer; }
 .impact-th-disabled { opacity: .35; pointer-events: none; }
 
+/* ══ TABLEAU RÉCAPITULATIF DGH (rc-*) ═══════════════════════════════════════ */
+
+/* Wrapper global */
+.rc-table-wrap { overflow-x: auto; margin-top: 1rem; }
+
+/* Le tableau lui-même */
+.rc-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: .82rem;
+  background: var(--c-surface);
+  border: 1.5px solid var(--c-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ── EN-TÊTES ── */
+.rc-table thead th { vertical-align: bottom; }
+
+/* Ligne des groupes de colonnes */
+.rc-tr-group th {
+  padding: .5rem .75rem .25rem;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  border-bottom: none;
+  white-space: nowrap;
+}
+.rc-th-disc-group {
+  background: var(--c-surface2);
+  border-right: 1px solid var(--c-border);
+  min-width: 160px;
+  text-align: left;
+}
+.rc-group {
+  text-align: center;
+  border-bottom: 2px solid var(--c-border);
+}
+.rc-group-niv  { background: #eef6f1; color: var(--c-accent); border-right: 1px solid var(--c-border2); }
+.rc-group-men  { background: var(--c-surface2); color: var(--c-text-muted); border-right: 1px solid var(--c-border2); }
+.rc-group-dot  { background: var(--c-blue-bg);  color: var(--c-blue);   border-right: 1px solid var(--c-border2); }
+.rc-group-ecart{ background: var(--c-surface2); color: var(--c-text-muted); border-right: 1px solid var(--c-border2); }
+.rc-group-scen { background: var(--c-amber-bg); color: var(--c-amber); border-left: 2px solid var(--c-amber); font-size: .72rem; }
+
+/* Ligne des colonnes détaillées */
+.rc-tr-cols th {
+  padding: .35rem .6rem .5rem;
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--c-text-muted);
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 2px solid var(--c-border);
+  background: var(--c-surface2);
+}
+.rc-th { text-align: right; }
+.rc-th-sub {
+  display: block;
+  font-size: .62rem;
+  font-weight: 400;
+  color: var(--c-text-dim);
+  margin-top: 1px;
+}
+.rc-th-niv { background: #eef6f1; color: var(--c-accent); text-align: center; }
+.rc-th-hp  { background: var(--c-blue-bg);  color: var(--c-blue); }
+.rc-th-hsa { background: var(--c-amber-bg); color: var(--c-amber); }
+.rc-th-tot { background: var(--c-surface3); }
+.rc-th-mod {
+  background: var(--c-amber-bg);
+  border-left: 1px solid var(--c-amber);
+  min-width: 120px;
+  max-width: 170px;
+  text-align: center;
+  vertical-align: top;
+  padding: .4rem .5rem;
+}
+.rc-mod-badge { display: inline-block; margin-bottom: .2rem; }
+.rc-mod-tit {
+  font-size: .68rem;
+  font-weight: 600;
+  color: var(--c-text);
+  line-height: 1.3;
+  white-space: normal;
+  margin: .15rem 0;
+}
+.rc-mod-th {
+  font-size: .64rem;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 1px 5px;
+  display: inline-block;
+}
+.rc-th-hsa { background: var(--c-amber-bg); color: var(--c-amber); }
+.rc-th-hp  { background: var(--c-blue-bg);  color: var(--c-blue); }
+.rc-th-scen-tot {
+  background: var(--c-amber-bg);
+  border-left: 2px solid var(--c-amber);
+  color: var(--c-amber);
+  text-align: center;
+  white-space: normal;
+  min-width: 110px;
+}
+.rc-mod-empty { color: var(--c-text-dim); font-style: italic; text-align: center; min-width: 120px; }
+
+/* ── COLONNE DISCIPLINE ── */
+.rc-td-disc {
+  padding: .5rem .75rem;
+  border-bottom: 1px solid var(--c-border);
+  border-right: 1px solid var(--c-border);
+  min-width: 160px;
+  max-width: 210px;
+  background: var(--c-surface);
+}
+.rc-disc-inner {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-bottom: .3rem;
+}
+.rc-disc-color {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.rc-disc-nom { font-weight: 600; font-size: .83rem; color: var(--c-text); }
+
+/* Mini-barre HP/HSA sous le nom */
+.rc-bar-wrap {
+  position: relative;
+  height: 5px;
+  background: var(--c-surface3);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.rc-bar-hp {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  border-radius: 99px;
+  opacity: .7;
+  transition: width .3s;
+}
+.rc-bar-hsa {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 6px;
+  background: var(--c-amber);
+  border-radius: 99px;
+  opacity: .7;
+}
+
+/* ── CELLULES GÉNÉRIQUES ── */
+.rc-td {
+  padding: .45rem .65rem;
+  text-align: right;
+  border-bottom: 1px solid var(--c-border);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.rc-table tbody tr:last-child td { border-bottom: none; }
+.rc-tr:hover td, .rc-tr:hover .rc-td-disc { background: var(--c-surface2) !important; }
+
+/* Colonnes spécifiques */
+.rc-td-niv  { text-align: center; background: #f5fbf7; color: var(--c-text-muted); font-size: .8rem; border-right: none; }
+.rc-td-men  { border-left: 1px solid var(--c-border2); border-right: 1px solid var(--c-border2); color: var(--c-text-muted); }
+.rc-td-hp   { background: #f0f6ff; color: var(--c-blue); font-weight: 500; }
+.rc-td-hsa  { background: #fffbf0; }
+.rc-td-tot  { background: var(--c-surface2); font-weight: 700; border-right: 1px solid var(--c-border2); }
+.rc-td-ecart { border-right: 2px solid var(--c-border2); }
+
+.rc-hsa-val { color: var(--c-amber); font-weight: 600; }
+.rc-ov  { color: var(--c-amber); font-style: italic; } /* override utilisateur */
+.rc-zero { color: var(--c-text-dim); font-size: .8rem; }
+.rc-eq   { color: var(--c-text-dim); font-size: 1rem; }
+.rc-pos  { color: var(--c-accent); }
+.rc-neg  { color: var(--c-red); }
+
+/* ── COLONNES MODALITÉS SCÉNARIO ── */
+.rc-td-mod {
+  border-left: 1px solid var(--c-amber);
+  text-align: center;
+  background: #fffdf5;
+}
+.rc-mod-hp  { background: #f0f8ff; border-left-color: var(--c-blue); }
+.rc-mod-hsa { background: #fffdf0; border-left-color: var(--c-amber); }
+.rc-mod-h {
+  display: block;
+  font-weight: 700;
+  font-size: .88rem;
+}
+.rc-mod-chip {
+  display: inline-block;
+  font-size: .62rem;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-top: 2px;
+}
+.rc-chip-hp  { background: var(--c-blue-bg);  color: var(--c-blue); }
+.rc-chip-hsa { background: var(--c-amber-bg); color: var(--c-amber); }
+
+/* Colonne total scénario */
+.rc-td-scen-tot {
+  border-left: 2px solid var(--c-amber);
+  background: #fff8e6;
+  text-align: center;
+}
+.rc-new-tot {
+  font-size: .72rem;
+  color: var(--c-text-muted);
+  margin-top: 2px;
+}
+.rc-solde {
+  font-size: .72rem;
+  font-weight: 700;
+  margin-top: 3px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+.rc-tot-scen-global {
+  text-align: center;
+  vertical-align: middle;
+}
+.rc-chip-hp, .rc-chip-hsa {
+  display: block;
+  margin: 2px auto;
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 2px 8px;
+  width: fit-content;
+}
+
+/* ── LIGNES SPÉCIALES ── */
+.rc-tr-total td {
+  background: var(--c-surface2) !important;
+  border-top: 2px solid var(--c-border2);
+  font-weight: 600;
+}
+.rc-tr-total .rc-td-disc { font-weight: 700; }
+.rc-tr-env td {
+  background: var(--c-surface3) !important;
+  border-top: 1px dashed var(--c-border2);
+  color: var(--c-text-muted);
+  font-size: .8rem;
+}
+.rc-env-label { font-weight: 600; color: var(--c-text-muted); }
+.rc-env-sub { font-size: .7rem; font-weight: 400; color: var(--c-text-dim); }
+
+/* ── Sélecteur (inchangé) ── */
+.recap-no-scen { font-size: .8rem; color: var(--c-text-dim); font-style: italic; }
+
+/* ── Édition inline des modalités ────────────────────────────────────────── */
+
+/* Bouton édition crayon */
+.mod-btn-edit {
+  opacity: .5;
+  transition: opacity .15s;
+  font-style: normal;
+}
+.mod-btn-edit:hover { opacity: 1; color: var(--c-accent); }
+
+/* Cellule actions (✏ + ✕) */
+.mod-actions-cell {
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Ligne du tableau en mode édition */
+.scen-mods-tr-editing td {
+  background: var(--c-accent-light) !important;
+  border-bottom: none;
+}
+
+/* Ligne contenant le formulaire d'édition */
+.scen-mods-tr-editrow td {
+  padding: 0;
+  border-bottom: 2px solid var(--c-accent);
+}
+
+/* Formulaire d'édition — variante du formulaire d'ajout */
+.mod-edit-form {
+  border-color: var(--c-accent);
+  border-style: solid;
+  border-radius: 0 0 8px 8px;
+  background: var(--c-accent-light);
+}
+.mod-edit-title {
+  color: var(--c-accent);
+  font-weight: 700;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .scen-form-grid { grid-template-columns: 1fr; }

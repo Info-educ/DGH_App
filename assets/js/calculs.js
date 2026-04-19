@@ -461,6 +461,8 @@ function bilanScenario(anneeData, modificateurs) {
           libelle: (mod.titre || mod.type) + ' → +' + delta + 'h HP' });
       } else {
         coutHSA += delta;
+        // HSA : aussi comptabilisé par discipline pour l'affichage dans le récap
+        if (mod.disciplineId) deltaParDisc[mod.disciplineId] = (deltaParDisc[mod.disciplineId] || 0) + delta;
         detailParMod.push({ mod, coutHP: 0, coutHSA: delta,
           libelle: (mod.titre || mod.type) + ' → +' + delta + 'h HSA' });
       }
