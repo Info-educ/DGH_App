@@ -31,6 +31,7 @@
       <li class="nav-item" data-view="dotation"><span class="nav-icon">◎</span><span class="nav-label">DGH + Vol. Horaire</span></li>
       <li class="nav-item" data-view="hpc"><span class="nav-icon">◈</span><span class="nav-label">H. péda. complémentaires</span></li>
       <li class="nav-item" data-view="enseignants"><span class="nav-icon">◉</span><span class="nav-label">Équipe pédagogique</span></li>
+      <li class="nav-item" data-view="pilotage"><span class="nav-icon">⊕</span><span class="nav-label">Pilotage</span><span class="nav-badge-scen is-hidden" id="badge-pilotage"></span></li>
       <li class="nav-section-label">Analyse</li>
       <li class="nav-item" data-view="alertes"><span class="nav-icon">◬</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
       <li class="nav-section-label">Restitution</li>
@@ -70,6 +71,8 @@
           <h1 class="view-title">Tableau de bord</h1>
           <p class="view-subtitle">Vue d'ensemble · <span id="dashYear">2025–2026</span></p>
         </div>
+        <!-- Bandeau scénario actif (masqué si aucun) -->
+        <div class="is-hidden dash-scen-banner" id="dashScenActif"></div>
         <div class="kpi-grid">
           <div class="kpi-card kpi-tooltip-card" data-color="blue" data-kpi="dghtotal"><div class="kpi-label">Enveloppe DGH</div><div class="kpi-value" id="kpi-dghtotal">— h</div><div class="kpi-sub">HP + HSA total</div><div class="kpi-tooltip" id="kpi-tooltip-dghtotal"></div></div>
           <div class="kpi-card kpi-tooltip-card" data-color="green" data-kpi="hposte"><div class="kpi-label">Heures-poste</div><div class="kpi-value" id="kpi-hposte">— h</div><div class="kpi-sub" id="kpi-hposte-sub">dotation structurelle</div><div class="kpi-tooltip" id="kpi-tooltip-hposte"></div></div>
@@ -136,7 +139,58 @@
         </div>
       </section>
 
-      <!-- ══ STRUCTURES ══════════════════════════════════════════════ -->
+<!-- ══ PILOTAGE ══════════════════════════════════════════════ -->
+      <section class="view" id="view-pilotage">
+        <div class="view-header">
+          <div class="view-header-row">
+            <div>
+              <h1 class="view-title">Pilotage pédagogique</h1>
+              <p class="view-subtitle">Scénarios · Récapitulatif DGH · Synthèse</p>
+            </div>
+            <div class="view-header-actions" id="pilotageHeaderActions">
+              <!-- Boutons contextuels selon l'onglet actif — rendus par JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Bandeau scénario actif (masqué si aucun) -->
+        <div class="scen-actif-banner is-hidden" id="scenActifBanner">
+          <span class="scen-actif-label">Scénario actif :</span>
+          <span class="scen-actif-nom" id="scenActifNom">—</span>
+          <span class="scen-actif-solde" id="scenActifSolde"></span>
+          <button class="btn-link scen-actif-off" id="btnDesactiverScen">Désactiver</button>
+        </div>
+
+        <!-- Onglets -->
+        <div class="pil-tabs" id="pilTabs">
+          <button class="pil-tab active" data-action="pil-tab" data-tab="scenarios">⊕ Scénarios</button>
+          <button class="pil-tab" data-action="pil-tab" data-tab="recap">▦ Récapitulatif DGH</button>
+          <button class="pil-tab" data-action="pil-tab" data-tab="impact">◉ Impact enseignants</button>
+          <button class="pil-tab" data-action="pil-tab" data-tab="synthese">◈ Synthèse</button>
+        </div>
+
+        <!-- Contenu onglet Scénarios -->
+        <div class="pil-panel active" id="pil-panel-scenarios">
+          <div id="scenTableauWrap"><!-- Rempli par JS --></div>
+        </div>
+
+        <!-- Contenu onglet Récapitulatif -->
+        <div class="pil-panel" id="pil-panel-recap">
+          <div id="scenRecapWrap"><!-- Rempli par JS --></div>
+        </div>
+
+        <!-- Contenu onglet Impact enseignants -->
+        <div class="pil-panel" id="pil-panel-impact">
+          <div id="scenImpactWrap"><!-- Rempli par JS --></div>
+        </div>
+
+        <!-- Contenu onglet Synthèse -->
+        <div class="pil-panel" id="pil-panel-synthese">
+          <div id="scenSyntheseWrap"><!-- Rempli par JS --></div>
+        </div>
+      </section>
+
+            <!-- ══ STRUCTURES ══════════════════════════════════════════════ -->
       <section class="view" id="view-structures">
         <div class="view-header">
           <div class="view-header-row">
@@ -709,6 +763,7 @@
   <script src="assets/js/modules/hpc.js"></script>
   <script src="assets/js/modules/etab.js"></script>
   <script src="assets/js/modules/enseignants.js"></script>
+  <script src="assets/js/modules/pilotage.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

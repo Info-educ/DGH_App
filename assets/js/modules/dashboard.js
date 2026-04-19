@@ -132,6 +132,25 @@ const DGHDashboard = (() => {
       // Résumé HPC
       _renderHPCResume();
 
+      // Scénario actif — bandeau informatif dans le dashboard
+      const scenActif = DGHData.getScenarioActif();
+      const scenDashEl = document.getElementById('dashScenActif');
+      if (scenDashEl) {
+        if (scenActif) {
+          const bilanScen = Calculs.bilanScenario(DGHData.getAnnee(), scenActif.modificateurs);
+          const sign = bilanScen.soldeSimule >= 0 ? '+' : '';
+          scenDashEl.classList.remove('is-hidden');
+          scenDashEl.innerHTML =
+            '⊕ Scénario actif : <strong>' + _esc(scenActif.nom) + '</strong>'
+            + ' — Solde simulé : <strong class="font-mono '
+            + (bilanScen.depassement ? 'scen-solde-danger' : 'scen-solde-ok') + '">'
+            + sign + bilanScen.soldeSimule + ' h</strong>'
+            + ' <button class="btn-link" data-navigate="pilotage">Voir →</button>';
+        } else {
+          scenDashEl.classList.add('is-hidden');
+        }
+      }
+
     } catch(e) { console.error('[DGH] renderDashboard:', e); }
     updateBtnEtab();
   }
