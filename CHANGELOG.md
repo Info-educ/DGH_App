@@ -5,7 +5,17 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
-## v4.3.0 — Saisie des scénarios en grille (2026-06-13)
+## v4.3.1 — Cache-busting des fichiers (2026-06-13)
+
+### Corrigé
+- **Anti-cache navigateur** : tous les fichiers JS et le CSS sont désormais appelés avec un suffixe `?v=4.3.1` dans `index.html`. Après chaque déploiement (GitHub Pages), le navigateur recharge automatiquement les fichiers à jour au lieu de servir une version mise en cache. C'est la cause la plus fréquente de « je ne vois pas les dernières fonctionnalités après mise à jour ».
+- **Rappel** : ce suffixe doit être incrémenté à chaque release (voir checklist de version dans SKILL.md).
+
+### Note de diagnostic
+- Les jauges HP/HSA ne s'affichent que si la **dotation (enveloppe HP + HSA)** est renseignée dans le module Dotation — sinon le bloc reste masqué (comportement inchangé).
+- La grille de saisie des scénarios apparaît dans **Pilotage → déplier un scénario (▼) → bouton ▦ Grille**.
+
+---
 
 ### Nouveau
 - **Mode Grille** dans l'onglet Scénarios (bascule Liste / Grille) : tableau **disciplines en lignes × classes en colonnes**. Chaque case = un nombre d'heures + un **type** de modalité (Déd. / Co-ens. / G.E.R. / G.B.I. / Autre) + **HP/HSA**, tous réglables par case.

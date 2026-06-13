@@ -1,9 +1,9 @@
-# ◈ DGH App — v4.3.0
+# ◈ DGH App — v4.3.1
 
 > Outil de pilotage de la Dotation Globale Horaire pour collège  
 > Développé par et pour les personnels de direction d'EPLE
 
-[![Version](https://img.shields.io/badge/version-4.3.0-green)](#)
+[![Version](https://img.shields.io/badge/version-4.3.1-green)](#)
 [![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)](#)
 [![RGPD](https://img.shields.io/badge/RGPD-100%25%20local-blue)](#)
 [![Stack](https://img.shields.io/badge/stack-HTML5%20%2B%20CSS3%20%2B%20JS%20Vanilla-orange)](#)

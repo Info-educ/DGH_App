@@ -531,3 +531,15 @@ Règles :
 - La grille ne gère que les modalités **mono-classe** ; les multi-classes (vue Liste) sont comptées dans le bilan mais signalées comme éditables uniquement en Liste.
 - Toute mutation appelle `_renderOngletScenarios()` + `renderBannerAndDashboard()` (rafraîchit bandeau actif + dashboard).
 - Type par défaut à la création : `dedoublement` ; HP/HSA par défaut : `hsa`. Titre recalculé via `_titreModificateur`.
+
+## Cache-busting des assets (v4.3.1)
+
+`index.html` appelle tous les JS et le CSS avec un suffixe `?v=X.Y.Z` correspondant à la version courante. **À chaque release, incrémenter ce suffixe en même temps que les autres marqueurs de version** (data.js VERSION, footer index.html, exemple.json _meta.version). Sans cela, les navigateurs (et GitHub Pages) servent les anciens fichiers en cache → l'utilisateur ne voit pas les nouveautés après déploiement.
+
+Checklist de version (à synchroniser à chaque release) :
+1. `assets/js/data.js` → `const VERSION`
+2. `index.html` → footer `<span>vX.Y.Z</span>`
+3. `index.html` → suffixe `?v=X.Y.Z` sur chaque `<script>` et le `<link>` CSS
+4. `data/exemple.json` → `_meta.version`
+5. `README.md` → titre + badge
+6. `CHANGELOG.md` → nouvelle entrée
