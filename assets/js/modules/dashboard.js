@@ -10,6 +10,8 @@ const DGHDashboard = (() => {
     try {
       const data    = DGHData.getAnnee();
       const bilan   = Calculs.bilanDotation(data);
+      const scenActif  = DGHData.getScenarioActif();
+      const bilanScen  = scenActif ? Calculs.bilanScenario(data, scenActif.modificateurs) : null;
       const alertes = Calculs.genererAlertes(data);
       const resume  = Calculs.resumeStructures(DGHData.getStructures());
 
@@ -64,38 +66,13 @@ const DGHDashboard = (() => {
       _set('prog-leg-hp',  bilan.totalHP  + ' h');
       _set('prog-leg-hsa', bilan.totalHSA + ' h');
 
-      // Encart HP/HSA consommé/disponible
+      // Encart HP/HSA — jauges Dotation / Consommé / Marge
       const hpHsaGrid = document.getElementById('dashHpHsaGrid');
       if (hpHsaGrid) {
         if (bilan.enveloppe > 0) {
           hpHsaGrid.classList.remove('is-hidden');
-          const hpFree  = Math.round((bilan.hPosteEnv - bilan.totalHP) * 2) / 2;
-          const hsaFree = Math.round((bilan.hsaEnv    - bilan.totalHSA) * 2) / 2;
-          const pctHP   = bilan.hPosteEnv > 0 ? Math.min(100, Math.round((bilan.totalHP  / bilan.hPosteEnv)  * 100)) : 0;
-          const pctHSA  = bilan.hsaEnv    > 0 ? Math.min(100, Math.round((bilan.totalHSA / bilan.hsaEnv)    * 100)) : 0;
-          _set('dash-hp-env',   bilan.hPosteEnv + ' h');
-          _set('dash-hp-used',  bilan.totalHP   + ' h');
-          _set('dash-hp-free',  hpFree + ' h');
-          _set('dash-hsa-env',  bilan.hsaEnv    + ' h');
-          _set('dash-hsa-used', bilan.totalHSA  + ' h');
-          _set('dash-hsa-free', hsaFree + ' h');
-          const barDHP  = document.getElementById('dash-bar-hp');
-          const barDHSA = document.getElementById('dash-bar-hsa');
-          if (barDHP)  barDHP.style.width  = pctHP  + '%';
-          if (barDHSA) barDHSA.style.width = pctHSA + '%';
-          // Couleur solde HP/HSA via classes CSS
-          const freeHP  = document.getElementById('dash-hp-free');
-          const freeHSA = document.getElementById('dash-hsa-free');
-          if (freeHP) {
-            freeHP.classList.toggle('solde-danger',   hpFree  < 0);
-            freeHP.classList.toggle('solde-neutre',   hpFree  === 0);
-            freeHP.classList.toggle('solde-positif',  hpFree  > 0);
-          }
-          if (freeHSA) {
-            freeHSA.classList.toggle('solde-danger',  hsaFree < 0);
-            freeHSA.classList.toggle('solde-neutre',  hsaFree === 0);
-            freeHSA.classList.toggle('solde-hsa',     hsaFree > 0);
-          }
+          _renderJauge('hp',  bilan.hPosteEnv, bilan.totalHP,  bilanScen ? bilanScen.coutHP  : 0);
+          _renderJauge('hsa', bilan.hsaEnv,    bilan.totalHSA, bilanScen ? bilanScen.coutHSA : 0);
         } else {
           hpHsaGrid.classList.add('is-hidden');
         }
@@ -133,22 +110,41 @@ const DGHDashboard = (() => {
       _renderHPCResume();
 
       // Scénario actif — bandeau informatif dans le dashboard
-      const scenActif = DGHData.getScenarioActif();
       const scenDashEl = document.getElementById('dashScenActif');
       if (scenDashEl) {
         if (scenActif) {
-          const bilanScen = Calculs.bilanScenario(DGHData.getAnnee(), scenActif.modificateurs);
-          const sign = bilanScen.soldeSimule >= 0 ? '+' : '';
+          const bs    = bilanScen;
+          const delta = Math.round((bs.soldeSimule - bilan.solde) * 2) / 2;
+          const sCls  = bs.depassement ? 'scen-solde-danger' : 'scen-solde-ok';
+          const ssign = bs.soldeSimule >= 0 ? '+' : '';
+          const dsign = delta > 0 ? '+' : '';
           scenDashEl.classList.remove('is-hidden');
           scenDashEl.innerHTML =
-            '⊕ Scénario actif : <strong>' + _esc(scenActif.nom) + '</strong>'
-            + ' — Solde simulé : <strong class="font-mono '
-            + (bilanScen.depassement ? 'scen-solde-danger' : 'scen-solde-ok') + '">'
-            + sign + bilanScen.soldeSimule + ' h</strong>'
-            + ' <button class="btn-link" data-navigate="pilotage">Voir →</button>';
+            '<div class="dash-scen-line">'
+            + '<span class="dash-scen-tag">⊕ Scénario actif</span>'
+            + '<strong class="dash-scen-nom">' + _esc(scenActif.nom) + '</strong>'
+            + '<span class="dash-scen-cout">Coût : <span class="font-mono">+' + bs.coutHP + ' h HP'
+              + (bs.coutHSA > 0 ? ' / +' + bs.coutHSA + ' h HSA' : '') + '</span></span>'
+            + '<span class="dash-scen-solde">Solde : <span class="font-mono">' + (bilan.solde >= 0 ? '+' : '') + bilan.solde + ' h</span>'
+              + ' → <strong class="font-mono ' + sCls + '">' + ssign + bs.soldeSimule + ' h</strong>'
+              + (delta !== 0 ? ' <span class="font-mono ' + sCls + '">(' + dsign + delta + ' h)</span>' : '') + '</span>'
+            + '<button class="btn-link" data-navigate="pilotage">Voir le détail →</button>'
+            + '</div>';
         } else {
           scenDashEl.classList.add('is-hidden');
         }
+      }
+      // Reporter le solde simulé sous le KPI Solde + dans son infobulle
+      if (soldeSub) {
+        soldeSub.textContent = scenActif
+          ? 'simulé : ' + (bilanScen.soldeSimule >= 0 ? '+' : '') + bilanScen.soldeSimule + ' h'
+          : (bilan.depassement ? 'dépassement !' : 'heures restantes');
+      }
+      if (scenActif && soldeEl) soldeEl.classList.toggle('kpi-solde-danger', !!bilanScen.depassement);
+      const tipSolde2 = document.getElementById('kpi-tooltip-solde');
+      if (tipSolde2 && scenActif && bilan.enveloppe > 0) {
+        tipSolde2.innerHTML += '<br><strong>Avec scénario actif</strong><br>Coût\u00a0: +' + bilanScen.coutTotal
+          + '\u00a0h<br>Solde simulé\u00a0: ' + (bilanScen.soldeSimule >= 0 ? '+' : '') + bilanScen.soldeSimule + '\u00a0h';
       }
 
     } catch(e) { console.error('[DGH] renderDashboard:', e); }
@@ -240,6 +236,51 @@ const DGHDashboard = (() => {
       + '</div>';
     hpcHtml += '</div>';
     hpcListEl.innerHTML = hpcHtml;
+  }
+
+  // ── Jauge HP / HSA : Dotation / Consommé / Marge (+ simulation) ────
+  function _renderJauge(pfx, dotation, conso, coutScen) {
+    const marge = Math.round((dotation - conso) * 2) / 2;
+    const pct   = dotation > 0 ? (conso / dotation) * 100 : 0;
+    const pctClamp = Math.max(0, Math.min(100, Math.round(pct)));
+    const etat  = marge < 0 ? 'over' : marge === 0 ? 'tight' : 'ok';
+
+    _set('dash-' + pfx + '-dotation', dotation + ' h');
+    _set('dash-' + pfx + '-conso',    conso + ' h');
+    const margeEl = document.getElementById('dash-' + pfx + '-marge');
+    if (margeEl) {
+      margeEl.textContent = (marge >= 0 ? '+' : '') + marge + ' h';
+      margeEl.classList.toggle('gauge-marge-over',  etat === 'over');
+      margeEl.classList.toggle('gauge-marge-tight', etat === 'tight');
+      margeEl.classList.toggle('gauge-marge-ok',    etat === 'ok');
+    }
+    _set('dash-' + pfx + '-pct', pctClamp + '%');
+
+    const fill = document.getElementById('dash-gauge-' + pfx);
+    if (fill) {
+      fill.style.width = pctClamp + '%';
+      fill.classList.toggle('gauge-fill-over',  etat === 'over');
+      fill.classList.toggle('gauge-fill-tight', etat === 'tight');
+    }
+
+    // Surcouche simulation (scénario actif) : marqueur + ligne
+    const simMark = document.getElementById('dash-gauge-' + pfx + '-sim');
+    const simLine = document.getElementById('dash-' + pfx + '-sim');
+    if (coutScen > 0 && dotation > 0) {
+      const consoSim = Math.round((conso + coutScen) * 2) / 2;
+      const margeSim = Math.round((dotation - consoSim) * 2) / 2;
+      const pctSim   = Math.max(0, Math.min(100, Math.round((consoSim / dotation) * 100)));
+      if (simMark) { simMark.style.left = pctSim + '%'; simMark.classList.remove('is-hidden'); }
+      if (simLine) {
+        simLine.classList.remove('is-hidden');
+        simLine.innerHTML = '⊕ avec scénario : consommé <strong class="font-mono">' + consoSim
+          + ' h</strong> · marge <strong class="font-mono ' + (margeSim < 0 ? 'gauge-marge-over' : 'gauge-marge-ok')
+          + '">' + (margeSim >= 0 ? '+' : '') + margeSim + ' h</strong>';
+      }
+    } else {
+      if (simMark) simMark.classList.add('is-hidden');
+      if (simLine) simLine.classList.add('is-hidden');
+    }
   }
 
   // ── BOUTON ÉTABLISSEMENT ──────────────────────────────────────────

@@ -75,6 +75,9 @@ const DGHInstances = (() => {
   // ══════════════════════════════════════════════════════════════════
   function _htmlSyntheseCA(d) {
     const { bilan, stru, discs, hpcs, totalPacte, totalImp } = d;
+    // Scénario actif (simulation) — ajouté en surcouche explicite, sans modifier la base votée
+    const scenActif = DGHData.getScenarioActif();
+    const bScen = scenActif ? Calculs.bilanScenario(DGHData.getAnnee(), scenActif.modificateurs) : null;
     const statut = bilan.depassement
       ? '<span class="inst-badge inst-badge-danger">Dépassement</span>'
       : bilan.solde === 0
@@ -115,6 +118,17 @@ const DGHInstances = (() => {
     </div>
     <div class="inst-progress-legend"><span>${bilan.pctConsomme}% consommé</span><span>${bilan.totalAlloue}h / ${bilan.enveloppe}h</span></div>
   </div>
+
+  ${bScen ? `
+  <div class="inst-card inst-card-scen">
+    <div class="inst-card-title">Scénario en simulation : ${_esc(scenActif.nom)}</div>
+    <div class="inst-scen-row">
+      <span class="inst-scen-item">Coût simulation <span class="font-mono">+${bScen.coutHP}h HP${bScen.coutHSA > 0 ? ' / +' + bScen.coutHSA + 'h HSA' : ''}</span></span>
+      <span class="inst-scen-item">Total simulé <span class="font-mono">${Math.round((bilan.totalAlloue + bScen.coutTotal)*2)/2}h</span></span>
+      <span class="inst-scen-item">Solde simulé <span class="font-mono ${bScen.depassement ? 'txt-danger' : 'txt-ok'}">${bScen.soldeSimule >= 0 ? '+' : ''}${bScen.soldeSimule}h</span></span>
+    </div>
+    <div class="inst-scen-note">Simulation indicative — la répartition par discipline ci-dessous reflète la ventilation de référence.</div>
+  </div>` : ''}
 
   <!-- Tableau disciplines -->
   <div class="inst-card inst-card-full">

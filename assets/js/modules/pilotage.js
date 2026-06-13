@@ -22,6 +22,7 @@ const DGHPilotage = (() => {
   let _modEditId   = null;        // id du modificateur en cours d\'édition (null = ajout)
   let _modEditScenId = null;      // scénario du modificateur en édition
   let _scenImpactId = null;       // scénario affiché dans l\'onglet Impact
+  let _scenViewMode = 'liste';    // 'liste' | 'grille' — mode de saisie des modalités
 
   const TYPES_MOD = {
     'dedoublement':           { label: 'Dédoublement',                     css: 'mod-t-ded',   short: 'Déd.',    defH: 1   },
@@ -198,9 +199,120 @@ const DGHPilotage = (() => {
           + '</tbody></table></div>';
 
     return '<div class="scen-panel">'
-      + '<div class="scen-panel-header"><span class="scen-panel-titre">Modalités — <strong>' + _esc(scen.nom) + '</strong></span></div>'
-      + modsHtml
-      + _htmlFormModalite(scen.id, disciplines, structures)
+      + '<div class="scen-panel-header">'
+        + '<span class="scen-panel-titre">Modalités — <strong>' + _esc(scen.nom) + '</strong></span>'
+        + _htmlImpactDotation(data, bilan)
+      + '</div>'
+      + '<div class="scen-view-toggle">'
+        + '<button class="scen-view-btn' + (_scenViewMode==='liste'?' active':'') + '" data-action="scen-view-mode" data-mode="liste">☰ Liste</button>'
+        + '<button class="scen-view-btn' + (_scenViewMode==='grille'?' active':'') + '" data-action="scen-view-mode" data-mode="grille">▦ Grille</button>'
+      + '</div>'
+      + (_scenViewMode === 'grille'
+          ? _htmlGrilleModalites(scen, data)
+          : (modsHtml + _htmlFormModalite(scen.id, disciplines, structures)))
+    + '</div>';
+  }
+
+  /**
+   * Mode GRILLE : disciplines en lignes × classes en colonnes.
+   * Chaque case = heures + type + HP/HSA → une modalité mono-classe.
+   */
+  function _htmlGrilleModalites(scen, data) {
+    const disciplines = DGHData.getDisciplines();
+    const structures  = DGHData.getStructures();
+    if (disciplines.length === 0 || structures.length === 0) {
+      return '<p class="scen-panel-empty">Renseignez vos disciplines (Dotation) et vos divisions (Structures) pour utiliser la grille.</p>';
+    }
+
+    // Colonnes = divisions triées par niveau puis nom
+    const divisions = structures.slice().sort((a,b) => {
+      const ia = NIVEAUX_ORD.indexOf(a.niveau), ib = NIVEAUX_ORD.indexOf(b.niveau);
+      if (ia !== ib) return ia - ib;
+      return (a.nom||'').localeCompare(b.nom||'');
+    });
+
+    // Index des modalités mono-classe : clé discId|divId → modificateur (le 1er)
+    const mono = {};
+    let multiClasse = 0;
+    (scen.modificateurs || []).forEach(m => {
+      const cl = m.classeIds || [];
+      if (m.disciplineId && cl.length === 1) {
+        const k = m.disciplineId + '|' + cl[0];
+        if (!mono[k]) mono[k] = m; // garde le premier ; doublons éventuels édités en Liste
+      } else {
+        multiClasse++;
+      }
+    });
+
+    const typeOptsFor = (sel) => Object.entries(TYPES_MOD).map(([k,v]) =>
+      '<option value="' + k + '"' + (sel === k ? ' selected' : '') + '>' + v.short + '</option>').join('');
+
+    // En-tête colonnes
+    const thCols = divisions.map(div =>
+      '<th class="grid-col-cls"><span class="niveau-badge niveau-' + div.niveau.toLowerCase().replace(/[^a-z0-9]/g,'') + '">'
+      + _esc(div.niveau) + '</span><br>' + _esc(div.nom) + '</th>').join('');
+
+    // Lignes disciplines
+    const rows = disciplines.map(disc => {
+      let rowSum = 0;
+      const cells = divisions.map(div => {
+        const k   = disc.id + '|' + div.id;
+        const mod = mono[k];
+        const dataAttrs = 'data-scen-id="' + scen.id + '" data-disc-id="' + disc.id + '" data-div-id="' + div.id + '"'
+          + (mod ? ' data-mod-id="' + mod.id + '"' : '');
+        if (!mod) {
+          return '<td class="grid-cell grid-cell-empty">'
+            + '<input class="grid-h" type="number" min="0" max="20" step="0.5" placeholder="·" '
+              + 'data-action="grid-cell-h" ' + dataAttrs + ' />'
+          + '</td>';
+        }
+        rowSum += parseFloat(mod.heuresParGroupe) || 0;
+        const isHSA = (mod.typeHeure || 'hsa') === 'hsa';
+        return '<td class="grid-cell grid-cell-filled mod-' + (mod.type||'') + '">'
+          + '<input class="grid-h" type="number" min="0" max="20" step="0.5" value="' + (mod.heuresParGroupe||0) + '" '
+            + 'data-action="grid-cell-h" ' + dataAttrs + ' />'
+          + '<select class="grid-type" data-action="grid-cell-type" ' + dataAttrs + '>' + typeOptsFor(mod.type) + '</select>'
+          + '<select class="grid-th" data-action="grid-cell-th" ' + dataAttrs + '>'
+            + '<option value="hsa"' + (isHSA?' selected':'') + '>HSA</option>'
+            + '<option value="hp"'  + (!isHSA?' selected':'') + '>HP</option>'
+          + '</select>'
+        + '</td>';
+      }).join('');
+      return '<tr>'
+        + '<th class="grid-row-disc"><span class="disc-color-dot" style="background:' + (disc.couleur||'#6b6860') + '"></span>' + _esc(disc.nom) + '</th>'
+        + cells
+        + '<td class="grid-row-sum font-mono">' + (rowSum>0 ? rowSum+' h' : '—') + '</td>'
+      + '</tr>';
+    }).join('');
+
+    const note = multiClasse > 0
+      ? '<p class="grid-note">ⓘ ' + multiClasse + ' modalité(s) multi-classes (créée(s) en vue Liste) ne sont pas affichées ici mais restent comptées. Éditez-les dans la vue Liste.</p>'
+      : '';
+
+    return '<div class="grid-modalites">'
+      + '<p class="grid-help">Tapez les heures dans une case pour créer une modalité (type ' + TYPES_MOD['dedoublement'].short
+        + ' par défaut), puis ajustez le type et HP/HSA. Effacez les heures (0) pour la supprimer.</p>'
+      + '<div class="grid-scroll"><table class="grid-table">'
+        + '<thead><tr><th class="grid-corner">Discipline \\ Classe</th>' + thCols + '<th class="grid-row-sum">Σ</th></tr></thead>'
+        + '<tbody>' + rows + '</tbody>'
+      + '</table></div>'
+      + note
+    + '</div>';
+  }
+
+  /** Bandeau d'impact courant sur la dotation (référence → simulé). */
+  function _htmlImpactDotation(data, bilanScen) {
+    const ref   = Calculs.bilanDotation(data);
+    const delta = Math.round((bilanScen.soldeSimule - ref.solde) * 2) / 2;
+    const cls   = bilanScen.depassement ? 'scen-solde-danger' : 'scen-solde-ok';
+    const dsign = delta <= 0 ? '' : '+';
+    const ssign = bilanScen.soldeSimule >= 0 ? '+' : '';
+    return '<div class="scen-panel-impact">'
+      + '<span class="scen-impact-lbl">Impact dotation</span>'
+      + '<span class="scen-impact-ref">Solde réf. <strong class="font-mono">' + (ref.solde >= 0 ? '+' : '') + ref.solde + ' h</strong></span>'
+      + '<span class="scen-impact-arrow">→</span>'
+      + '<span class="scen-impact-sim">Solde simulé <strong class="font-mono ' + cls + '">' + ssign + bilanScen.soldeSimule + ' h</strong></span>'
+      + (delta !== 0 ? '<span class="scen-impact-delta font-mono ' + cls + '">(' + dsign + delta + ' h)</span>' : '')
     + '</div>';
   }
 
@@ -669,6 +781,14 @@ const DGHPilotage = (() => {
     const disciplines = DGHData.getDisciplines();
     const structures  = DGHData.getStructures();
 
+    // Répartition de service : si des affectations existent, on pré-coche
+    // automatiquement chaque modalité sur le(s) prof(s) de la classe concernée.
+    const reparti   = Calculs.affectationsExistent(data);
+    const autoByMod = {};
+    if (reparti) mods.forEach(m => {
+      autoByMod[m.id] = new Set(Calculs.profsDeClasseDiscipline(data, m.disciplineId, m.classeIds));
+    });
+
     if (mods.length === 0) {
       el.innerHTML = selectorHtml
         + '<div class="scen-empty"><p>Le scénario <strong>' + _esc(scenChoisi.nom) + '</strong> n\'a aucune modalité.</p>'
@@ -712,7 +832,8 @@ const DGHPilotage = (() => {
         const tInfo     = TYPES_MOD[mod.type] || { label: mod.type, css: '', short: mod.type };
         const aff       = (mod.affectations || []).find(a => a.ensId === ens.id);
         const th        = aff ? aff.typeHeure : (mod.typeHeure || 'hsa');
-        const affecte   = aff ? aff.affecte !== false : false;
+        const autoAff   = reparti && autoByMod[mod.id] ? autoByMod[mod.id].has(ens.id) : false;
+        const affecte   = aff ? aff.affecte !== false : autoAff;
         const hParSemaine = mod.heuresParGroupe || 0;
         const titre     = mod.titre || _titreModificateur(mod.type, mod.disciplineId, mod.classeIds, structures, disciplines, mod.nomAutre);
         const estLieeDisc = mod.disciplineId
@@ -747,7 +868,11 @@ const DGHPilotage = (() => {
 
     el.innerHTML = selectorHtml
       + '<div class="impact-header">'
-        + '<p class="impact-subtitle">Cochez les modalités attribuées à chaque enseignant et choisissez HP ou HSA. Le service simulé se met à jour immédiatement.</p>'
+        + '<p class="impact-subtitle">'
+          + (reparti
+              ? 'Répartition de service détectée : chaque modalité est <strong>pré-attribuée automatiquement</strong> au(x) professeur(s) de la classe concernée. Vous pouvez ajuster manuellement ci-dessous.'
+              : 'Cochez les modalités attribuées à chaque enseignant et choisissez HP ou HSA. Le service simulé se met à jour immédiatement.')
+        + '</p>'
       + '</div>'
       + lignesEns.map(row => _htmlImpactEnseignant(row, scenChoisi.id)).join('');
   }
@@ -1065,6 +1190,61 @@ const DGHPilotage = (() => {
     _renderOngletScenarios();
   }
 
+  // ── Mode GRILLE ───────────────────────────────────────────────────
+  function setScenView(mode) {
+    _scenViewMode = (mode === 'grille') ? 'grille' : 'liste';
+    _renderOngletScenarios();
+  }
+
+  function _titreCell(type, discId, divId) {
+    return _titreModificateur(type, discId || null, [divId],
+      DGHData.getStructures(), DGHData.getDisciplines(),
+      type === 'autre' ? 'Autre' : '');
+  }
+
+  function gridCellH(el) {
+    const scenId = el.dataset.scenId, discId = el.dataset.discId, divId = el.dataset.divId;
+    const modId  = el.dataset.modId || null;
+    const h = parseFloat(el.value) || 0;
+    if (modId) {
+      if (h <= 0) DGHData.deleteModificateur(scenId, modId);
+      else        DGHData.updateModificateur(scenId, modId, { heuresParGroupe: h });
+    } else if (h > 0) {
+      DGHData.addModificateur(scenId, {
+        type: 'dedoublement', disciplineId: discId, classeIds: [divId],
+        heuresParGroupe: h, typeHeure: 'hsa', titre: _titreCell('dedoublement', discId, divId)
+      });
+    }
+    _renderOngletScenarios();
+    renderBannerAndDashboard();
+  }
+
+  function gridCellType(el) {
+    const scenId = el.dataset.scenId, modId = el.dataset.modId;
+    if (!modId) return;
+    const type = el.value;
+    DGHData.updateModificateur(scenId, modId, {
+      type, nomAutre: type === 'autre' ? 'Autre' : '',
+      titre: _titreCell(type, el.dataset.discId, el.dataset.divId)
+    });
+    _renderOngletScenarios();
+    renderBannerAndDashboard();
+  }
+
+  function gridCellTH(el) {
+    const scenId = el.dataset.scenId, modId = el.dataset.modId;
+    if (!modId) return;
+    DGHData.updateModificateur(scenId, modId, { typeHeure: el.value });
+    _renderOngletScenarios();
+    renderBannerAndDashboard();
+  }
+
+  /** Rafraîchit le bandeau actif + le dashboard si le scénario édité est actif. */
+  function renderBannerAndDashboard() {
+    _renderBannerActif();
+    try { if (typeof DGHDashboard !== 'undefined') DGHDashboard.renderDashboard(); } catch(e) {}
+  }
+
   // ── Ouvrir formulaire d\'édition d\'une modalité ──────────────────
   function openEditMod(scenId, modId) {
     _modEditScenId = scenId;
@@ -1278,7 +1458,11 @@ const DGHPilotage = (() => {
     openEditMod,
     cancelEditMod,
     saveEditMod,
-    setImpactScen
+    setImpactScen,
+    setScenView,
+    gridCellH,
+    gridCellType,
+    gridCellTH
   };
 
 })();

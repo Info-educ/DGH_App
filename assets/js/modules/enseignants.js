@@ -324,6 +324,14 @@ const DGHEnseignants = (() => {
           // Alerte si H.disc cette discipline > H.établ.
           const discAlert = m.heuresDisc > dv.heuresFait && dv.heuresFait > 0
             ? ' <span class="ens-disc-alert" title="H.discipline dépasse H.établissement">⚠</span>' : '';
+          // v4.2 : si pilotée par la répartition de service → lecture seule
+          const piloteAff = DGHData.disciplinePiloteeParAffectation(ens.id, b.disc);
+          const cellHDisc = piloteAff
+            ? '<span class="ens-hdisc-auto font-mono" title="Calculé depuis la Répartition de service">' + m.heuresDisc + 'h <span class="ens-hdisc-auto-badge">auto</span></span>' + discAlert
+            : '<input class="ens-inline-input ens-inline-num ens-inline-hdisc" ' +
+                'data-ens-id="' + ens.id + '" data-disc="' + _esc(b.disc) + '" ' +
+                'data-field="heures-disc" type="number" min="0" max="40" step="0.5" ' +
+                'value="' + m.heuresDisc + '" />' + discAlert;
 
           html += '<tr data-ens-id="' + ens.id + '">' +
             '<td class="ens-nom ens-disc-ro">' + _esc(ens.nom||'—') + '</td>' +
@@ -331,14 +339,8 @@ const DGHEnseignants = (() => {
             '<td class="ens-disc-ro">' + _esc(GRADE_LABELS[ens.grade]||'—') + '</td>' +
             '<td>' + _statutBadge(ens.statut) + '</td>' +
             '<td class="ens-col-num ens-disc-ro">' + dv.heuresFait + 'h</td>' +
-            // H.discipline — seul champ éditable
-            '<td class="ens-col-num">' +
-              '<input class="ens-inline-input ens-inline-num ens-inline-hdisc" ' +
-                'data-ens-id="' + ens.id + '" data-disc="' + _esc(b.disc) + '" ' +
-                'data-field="heures-disc" type="number" min="0" max="40" step="0.5" ' +
-                'value="' + m.heuresDisc + '" />' +
-              discAlert +
-            '</td>' +
+            // H.discipline — éditable, ou lecture seule si piloté par la répartition
+            '<td class="ens-col-num">' + cellHDisc + '</td>' +
             // H.dispo + info HPC-HP
             '<td class="ens-col-num"><span class="' + hLibresCls + '">' + hLibresTxt + '</span>' + hpcHpInfo + '</td>' +
             '<td class="ens-col-actions">' +

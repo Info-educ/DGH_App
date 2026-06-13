@@ -24,6 +24,7 @@ const app = (() => {
     dotation:    'Dotation DGH',
     hpc:         'H. péda. complémentaires',
     enseignants: 'Équipe pédagogique',
+    repartition: 'Répartition de service',
     scenarios:   'Scénarios',
     pilotage:    'Scénarios',
     edt:         'Contraintes EDT',
@@ -74,6 +75,7 @@ const app = (() => {
     if (realViewId === 'dotation')   DGHDotation.renderDotation();
     if (realViewId === 'hpc')        DGHHPC.renderHPC();
     if (realViewId === 'enseignants') DGHEnseignants.renderEnseignants();
+    if (realViewId === 'repartition') DGHRepartition.renderRepartition();
     if (realViewId === 'pilotage')    DGHPilotage.renderPilotage();
     if (realViewId === 'edt')         DGHEdt.renderEdt();
     if (realViewId === 'structures')  { DGHStructures.renderStructures(); DGHStructures.renderGroupes(); }
@@ -181,6 +183,7 @@ const app = (() => {
       if (action === 'duplicate-scenario'){ DGHPilotage.dupliquerScenario(actionBtn.dataset.id);                       return; }
       if (action === 'delete-scenario')   { DGHPilotage.confirmDeleteScenario(actionBtn.dataset.id);                   return; }
       if (action === 'set-actif-scenario'){ DGHPilotage.setActif(actionBtn.dataset.id);                                return; }
+      if (action === 'scen-view-mode')    { DGHPilotage.setScenView(actionBtn.dataset.mode);                          return; }
       // ── Groupes (Structures) ──
       if (action === 'struct-edit-groupe')   { DGHStructures.editGroupe(id);                        return; }
       if (action === 'struct-save-groupe')   { DGHStructures.saveGroupe(id);                        return; }
@@ -218,6 +221,9 @@ const app = (() => {
       if (action === 'edit-mission')          { DGHMissions.openModal(id);                      return; }
       if (action === 'delete-mission')        { DGHMissions.confirmDelete(id);                  return; }
       if (action === 'missions-filtre')       { DGHMissions.filtrer(actionBtn.dataset.filtre);   return; }
+      // ── Répartition de service ──
+      if (action === 'rep-mode')              { DGHRepartition.setMode(actionBtn.dataset.mode);  return; }
+      if (action === 'rep-del-aff')           { DGHRepartition.deleteAff(actionBtn.dataset.id);  return; }
     }
 
     // btn-toggle-gc (généré dynamiquement) — délégué ici
@@ -383,6 +389,17 @@ const app = (() => {
       if (action === 'hist-select-gauche') { DGHHistorique.selectGauche(e.target.value); return; }
       if (action === 'hist-select-droite') { DGHHistorique.selectDroite(e.target.value); return; }
     }
+    // ── Répartition de service ──
+    {
+      const ra = e.target.dataset.action;
+      if (ra === 'rep-sel-disc')         { DGHRepartition.selectDiscipline(e.target); return; }
+      if (ra === 'rep-sel-ens')          { DGHRepartition.selectEnseignant(e.target); return; }
+      if (ra === 'rep-add')              { DGHRepartition.addFromSelect(e.target);    return; }
+      if (ra === 'rep-add-disc-ens')     { DGHRepartition.addDiscToEns(e.target);     return; }
+      if (ra === 'rep-toggle-ens-classe'){ DGHRepartition.toggleEnsClasse(e.target);  return; }
+      if (ra === 'rep-aff-h')            { DGHRepartition.setHeures(e.target);        return; }
+      if (ra === 'rep-set-pp')           { DGHRepartition.setPP(e.target);            return; }
+    }
   }
 
   // ── DÉLÉGATION GLOBALE DBLCLICK ───────────────────────────────────
@@ -396,6 +413,10 @@ const app = (() => {
     // Edition inline texte enseignants (blur = sauvegarde)
     if (e.target.classList.contains('ens-inline-input')) { DGHEnseignants.handleInlineEdit(e.target); return; }
     if (e.target.classList.contains('scen-nom-input'))  { DGHPilotage.saveNom(e.target); return; }
+    // ── Grille de saisie des modalités ──
+    if (e.target.classList.contains('grid-h'))    { DGHPilotage.gridCellH(e.target);    return; }
+    if (e.target.classList.contains('grid-type')) { DGHPilotage.gridCellType(e.target); return; }
+    if (e.target.classList.contains('grid-th'))   { DGHPilotage.gridCellTH(e.target);   return; }
   }
 
   // ── EVENTS ───────────────────────────────────────────────────────

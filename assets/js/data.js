@@ -1,16 +1,18 @@
 /**
- * DGH App — Couche données v3.2.0
+ * DGH App — Couche données v4.2.0
  * SEUL fichier qui touche localStorage
  *
  * v3.0.0 — Sprint 5 : enveloppe HP/HSA, groupesCours, heuresPedaComp, sélection classes
  * v3.1.0 — Sprint 5+ : typeHeure HP/HSA sur HPC, grilles horaires overrides
  * v3.2.0 — Sprint 6 : CRUD enseignants, migration services→heures, import CSV
+ * v4.2.0 — Sprint 12 : affectations[] (répartition de service), ppEnsId sur divisions,
+ *                      recalcul auto des heures de service depuis les affectations
  */
 
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '4.1.0';
+  const VERSION = '4.3.0';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   const DISCIPLINES_MEN = [
@@ -67,6 +69,7 @@ const DGHData = (() => {
       grilles: {},
       disciplines: [],
       repartition: [],
+      affectations: [],     // Sprint 12 — répartition de service (classe × discipline → enseignant)
       heuresPedaComp: [],
       enseignants: [],
       scenarios: [],
@@ -217,7 +220,25 @@ const DGHData = (() => {
       if (!Array.isArray(ann.missions)) ann.missions = [];
       if (ann.snapshot === undefined) ann.snapshot = null;
     });
+    // Migration v4.2 : affectations[] (répartition de service) + ppEnsId sur divisions
+    Object.values(_data.annees).forEach(ann => {
+      if (!Array.isArray(ann.affectations)) ann.affectations = [];
+      (ann.structures || []).forEach(div => {
+        if (div.ppEnsId === undefined) div.ppEnsId = null;
+      });
+      // Nettoyer d'éventuelles affectations orphelines (réf. supprimées)
+      const divIds  = new Set((ann.structures  || []).map(d => d.id));
+      const discIds = new Set((ann.disciplines || []).map(d => d.id));
+      const ensIds  = new Set((ann.enseignants || []).map(e => e.id));
+      ann.affectations = ann.affectations.filter(a =>
+        divIds.has(a.divisionId) && discIds.has(a.disciplineId) && ensIds.has(a.ensId)
+      );
+      (ann.structures || []).forEach(div => {
+        if (div.ppEnsId && !ensIds.has(div.ppEnsId)) div.ppEnsId = null;
+      });
+    });
     _data._meta.version = VERSION;
+    _recomputeHeuresFromAffectations();
     save();
   }
 
@@ -316,7 +337,8 @@ const DGHData = (() => {
     const div = { id: genId('div'), niveau: fields.niveau||'6e', nom: (fields.nom||'').trim(),
                   effectif: parseInt(fields.effectif,10)||0,
                   options: Array.isArray(fields.options)?fields.options.slice():[],
-                  dispositif: fields.dispositif||null };
+                  dispositif: fields.dispositif||null,
+                  ppEnsId: fields.ppEnsId || null };
     ann.structures.push(div); save(); return div;
   }
 
@@ -329,6 +351,7 @@ const DGHData = (() => {
     if (fields.effectif!==undefined)   div.effectif   = parseInt(fields.effectif,10)||0;
     if (fields.options!==undefined)    div.options    = Array.isArray(fields.options)?fields.options.slice():[];
     if (fields.dispositif!==undefined) div.dispositif = fields.dispositif||null;
+    if (fields.ppEnsId!==undefined)    div.ppEnsId    = fields.ppEnsId || null;
     save(); return true;
   }
 
@@ -339,6 +362,7 @@ const DGHData = (() => {
       (r.groupesCours||[]).forEach(gc => { gc.classesIds = (gc.classesIds||[]).filter(c=>c!==id); });
     });
     (ann.heuresPedaComp||[]).forEach(h => { h.classesIds = (h.classesIds||[]).filter(c=>c!==id); });
+    ann.affectations = (ann.affectations||[]).filter(a => a.divisionId !== id);
     if (ann.structures.length<before){save();return true;} return false;
   }
 
@@ -384,6 +408,7 @@ const DGHData = (() => {
     ann.disciplines = ann.disciplines.filter(d=>d.id!==id);
     ann.repartition = ann.repartition.filter(r=>r.disciplineId!==id);
     (ann.heuresPedaComp||[]).forEach(h => { if(h.disciplineId===id) h.disciplineId=null; });
+    ann.affectations = (ann.affectations||[]).filter(a => a.disciplineId !== id);
     if (ann.disciplines.length<before){save();return true;} return false;
   }
 
@@ -578,6 +603,14 @@ const DGHData = (() => {
   function deleteEnseignant(id) {
     const ann = getAnnee(); const before = ann.enseignants.length;
     ann.enseignants = ann.enseignants.filter(e=>e.id!==id);
+    // Nettoyer affectations + PP + affectations d'impact dans les scénarios
+    ann.affectations = (ann.affectations||[]).filter(a => a.ensId !== id);
+    (ann.structures||[]).forEach(div => { if (div.ppEnsId === id) div.ppEnsId = null; });
+    (ann.heuresPedaComp||[]).forEach(h => { h.enseignants = (h.enseignants||[]).filter(a => a.ensId !== id); });
+    (ann.scenarios||[]).forEach(s => (s.modificateurs||[]).forEach(m => {
+      if (Array.isArray(m.affectations)) m.affectations = m.affectations.filter(a => a.ensId !== id);
+    }));
+    _recomputeHeuresFromAffectations();
     if (ann.enseignants.length<before){save();return true;} return false;
   }
 
@@ -899,6 +932,129 @@ const DGHData = (() => {
     return false;
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // AFFECTATIONS — Répartition de service (v4.2)
+  // ══════════════════════════════════════════════════════════════════
+  /**
+   * AffectationObject :
+   * { id, divisionId, disciplineId, ensId, heures }
+   * Plusieurs affectations sur un même couple (division, discipline) =
+   * classe partagée / co-titularité (ex : 4A Français = Mme Briant + Mme Forgeais).
+   * Les heures de service par discipline (ens.disciplines[].heures) sont
+   * RECALCULÉES automatiquement à partir de ces affectations dès qu'il en existe
+   * au moins une pour le couple (enseignant, discipline). Sinon la saisie manuelle
+   * (vue « Par discipline ») reste maîtresse. Zéro double saisie.
+   */
+  function getAffectations(annee) {
+    const ann = getAnnee(annee);
+    if (!Array.isArray(ann.affectations)) ann.affectations = [];
+    return ann.affectations.slice();
+  }
+
+  function getAffectationsCell(divisionId, disciplineId, annee) {
+    return getAffectations(annee).filter(a => a.divisionId === divisionId && a.disciplineId === disciplineId);
+  }
+
+  function getAffectationsEnseignant(ensId, annee) {
+    return getAffectations(annee).filter(a => a.ensId === ensId);
+  }
+
+  function addAffectation(fields) {
+    const ann = getAnnee();
+    if (!Array.isArray(ann.affectations)) ann.affectations = [];
+    const aff = {
+      id:           genId('aff'),
+      divisionId:   fields.divisionId   || null,
+      disciplineId: fields.disciplineId || null,
+      ensId:        fields.ensId        || null,
+      heures:       parseFloat(fields.heures) || 0
+    };
+    if (!aff.divisionId || !aff.disciplineId || !aff.ensId) return null;
+    ann.affectations.push(aff);
+    _recomputeHeuresFromAffectations(aff.ensId);
+    save();
+    return aff;
+  }
+
+  function updateAffectation(id, fields) {
+    const ann = getAnnee();
+    const aff = (ann.affectations||[]).find(a => a.id === id);
+    if (!aff) return false;
+    const ancienEns = aff.ensId;
+    if (fields.divisionId   !== undefined) aff.divisionId   = fields.divisionId   || null;
+    if (fields.disciplineId !== undefined) aff.disciplineId = fields.disciplineId || null;
+    if (fields.ensId        !== undefined) aff.ensId        = fields.ensId        || null;
+    if (fields.heures       !== undefined) aff.heures       = parseFloat(fields.heures) || 0;
+    _recomputeHeuresFromAffectations(ancienEns);
+    if (aff.ensId !== ancienEns) _recomputeHeuresFromAffectations(aff.ensId);
+    save();
+    return true;
+  }
+
+  function deleteAffectation(id) {
+    const ann = getAnnee();
+    const aff = (ann.affectations||[]).find(a => a.id === id);
+    if (!aff) return false;
+    const ensId = aff.ensId;
+    ann.affectations = ann.affectations.filter(a => a.id !== id);
+    _recomputeHeuresFromAffectations(ensId);
+    save();
+    return true;
+  }
+
+  /**
+   * Désigne (ou retire si ensId falsy) le professeur principal d'une division.
+   */
+  function setProfesseurPrincipal(divisionId, ensId) {
+    const div = getDivision(divisionId);
+    if (!div) return false;
+    div.ppEnsId = ensId || null;
+    save();
+    return true;
+  }
+
+  /**
+   * Recalcule ens.disciplines[].heures à partir des affectations.
+   * Pour chaque enseignant : toute discipline ayant >= 1 affectation pour lui
+   * voit ses heures écrasées par la somme de ces affectations. Les disciplines
+   * SANS affectation conservent leur saisie manuelle (non destructif).
+   * @param {string} [ensId] limite le recalcul à un enseignant (sinon : tous)
+   */
+  function _recomputeHeuresFromAffectations(ensId) {
+    const ann = getAnnee();
+    const discNomById = {};
+    (ann.disciplines||[]).forEach(d => { discNomById[d.id] = d.nom; });
+    // Sommes par (ensId → discNom → heures)
+    const sommes = {};
+    (ann.affectations||[]).forEach(a => {
+      const nom = discNomById[a.disciplineId];
+      if (!nom) return;
+      if (!sommes[a.ensId]) sommes[a.ensId] = {};
+      sommes[a.ensId][nom] = Math.round(((sommes[a.ensId][nom]||0) + (parseFloat(a.heures)||0)) * 2) / 2;
+    });
+    (ann.enseignants||[]).forEach(ens => {
+      if (ensId && ens.id !== ensId) return;
+      const parDisc = sommes[ens.id] || {};
+      if (!Array.isArray(ens.disciplines)) ens.disciplines = [];
+      // Écraser les disciplines pilotées par des affectations
+      Object.keys(parDisc).forEach(nom => {
+        const d = ens.disciplines.find(x => x.discNom === nom);
+        if (d) d.heures = parDisc[nom];
+        else   ens.disciplines.push({ discNom: nom, heures: parDisc[nom] });
+      });
+      ens.heures = Math.round(ens.disciplines.reduce((s,d)=>s+(parseFloat(d.heures)||0),0)*2)/2;
+      ens.disciplinePrincipale = ens.disciplines.length > 0 ? ens.disciplines[0].discNom : '';
+    });
+  }
+
+  /** Indique si une discipline d'un enseignant est pilotée par des affectations. */
+  function disciplinePiloteeParAffectation(ensId, discNom, annee) {
+    const ann = getAnnee(annee);
+    const disc = (ann.disciplines||[]).find(d => d.nom === discNom);
+    if (!disc) return false;
+    return (ann.affectations||[]).some(a => a.ensId === ensId && a.disciplineId === disc.id);
+  }
+
   // ── SAUVEGARDE ───────────────────────────────────────────────────
   function save() {
     if(!_data) return;
@@ -1042,6 +1198,9 @@ const DGHData = (() => {
     addScenario,updateScenario,deleteScenario,dupliquerScenario,setScenarioActif,
     addModificateur,updateModificateur,deleteModificateur,
     getGroupes,getGroupe,addGroupe,updateGroupe,deleteGroupe,
+    getAffectations,getAffectationsCell,getAffectationsEnseignant,
+    addAffectation,updateAffectation,deleteAffectation,
+    setProfesseurPrincipal,disciplinePiloteeParAffectation,
     getContraintesEDT,
     getBarrettes,addBarrette,updateBarrette,deleteBarrette,
     getCoInterventions,addCoIntervention,updateCoIntervention,deleteCoIntervention,

@@ -1,9 +1,9 @@
-# ◈ DGH App — v3.4.0
+# ◈ DGH App — v4.3.0
 
 > Outil de pilotage de la Dotation Globale Horaire pour collège  
 > Développé par et pour les personnels de direction d'EPLE
 
-[![Version](https://img.shields.io/badge/version-3.4.0-green)](#)
+[![Version](https://img.shields.io/badge/version-4.3.0-green)](#)
 [![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)](#)
 [![RGPD](https://img.shields.io/badge/RGPD-100%25%20local-blue)](#)
 [![Stack](https://img.shields.io/badge/stack-HTML5%20%2B%20CSS3%20%2B%20JS%20Vanilla-orange)](#)
@@ -49,6 +49,7 @@ Télécharger le ZIP → extraire → ouvrir `index.html` dans Chrome ou Firefox
 | ◎ **Dotation DGH** | Enveloppe HP/HSA, grilles éditables, groupes de cours | ✅ v3.1 |
 | ◈ **H. Péda. Complémentaires** | Options, labo, arts, sport — HP/HSA cliquable, multi-enseignants | ✅ v3.3 |
 | ◉ **Équipe pédagogique** | 3 vues (Liste · Par discipline · HPC). Service calculé. ORS inline éditable. | ✅ v3.4 |
+| ▦ **Répartition de service** | Affectation classe × discipline → enseignant (2 modes), professeurs principaux, grille récap, propagation auto vers services & pilotage | ✅ v4.2 |
 | ◬ **Alertes** | Dépassements, sous-services, anomalies | ✅ actif |
 | ▤ **Synthèses** | Tableau de synthèse DGH pour le CA, rapports par discipline et par enseignant | 🔜 Sprint 8 |
 | ◷ **Historique** | Comparaisons pluriannuelles N / N-1 | 🔜 Sprint 9 |

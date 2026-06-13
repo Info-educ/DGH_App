@@ -50,6 +50,7 @@
       <!-- ÉQUIPE -->
       <li class="nav-section-label">Équipe</li>
       <li class="nav-item" data-view="enseignants"><span class="nav-icon">◉</span><span class="nav-label">Équipe pédagogique</span></li>
+      <li class="nav-item" data-view="repartition"><span class="nav-icon">▦</span><span class="nav-label">Répartition de service</span></li>
       <li class="nav-item" data-view="missions"><span class="nav-icon">◑</span><span class="nav-label">PACTE / IMP</span></li>
 
       <!-- OUTILS -->
@@ -63,7 +64,7 @@
       <input type="file" id="fileImport" accept=".json" style="display:none" />
     </div>
     <div class="sidebar-footer">
-      <span>v4.0.0</span>
+      <span>v4.3.0</span>
       <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -113,20 +114,25 @@
         </div>
         <!-- Encart HP/HSA consommé / disponible -->
         <div class="dash-hphsa-grid is-hidden" id="dashHpHsaGrid">
-          <div class="dash-hphsa-block dash-hphsa-hp">
-            <div class="dash-hphsa-title">Heures-Poste (HP)</div>
-            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Enveloppe</span><span class="dash-hphsa-val" id="dash-hp-env">— h</span></div>
-            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Consommées</span><span class="dash-hphsa-val dash-hphsa-used" id="dash-hp-used">— h</span></div>
-            <div class="dash-hphsa-row dash-hphsa-dispo"><span class="dash-hphsa-label">Disponibles</span><span class="dash-hphsa-val dash-hphsa-free" id="dash-hp-free">— h</span></div>
-            <div class="dash-hphsa-bar"><div class="progress-track"><div class="progress-fill dot-bar-hp" id="dash-bar-hp" style="width:0%"></div></div></div>
+          <div class="gauge-block gauge-hp">
+            <div class="gauge-head"><span class="gauge-name">Heures-poste (HP)</span><span class="gauge-pct" id="dash-hp-pct">—</span></div>
+            <div class="gauge-track"><div class="gauge-fill gauge-fill-hp" id="dash-gauge-hp" style="width:0%"></div><span class="gauge-sim-mark is-hidden" id="dash-gauge-hp-sim"></span></div>
+            <div class="gauge-figures">
+              <span class="gauge-fig">Dotation <strong id="dash-hp-dotation">— h</strong></span>
+              <span class="gauge-fig">Consommé <strong id="dash-hp-conso">— h</strong></span>
+              <span class="gauge-fig gauge-fig-marge">Marge <strong id="dash-hp-marge">— h</strong></span>
+            </div>
+            <div class="gauge-sim is-hidden" id="dash-hp-sim"></div>
           </div>
-          <div class="dash-hphsa-sep">+</div>
-          <div class="dash-hphsa-block dash-hphsa-hsa">
-            <div class="dash-hphsa-title">HSA autorisées</div>
-            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Enveloppe</span><span class="dash-hphsa-val" id="dash-hsa-env">— h</span></div>
-            <div class="dash-hphsa-row"><span class="dash-hphsa-label">Consommées</span><span class="dash-hphsa-val dash-hphsa-used" id="dash-hsa-used">— h</span></div>
-            <div class="dash-hphsa-row dash-hphsa-dispo"><span class="dash-hphsa-label">Disponibles</span><span class="dash-hphsa-val dash-hphsa-free" id="dash-hsa-free">— h</span></div>
-            <div class="dash-hphsa-bar"><div class="progress-track"><div class="progress-fill dot-bar-hsa-part" id="dash-bar-hsa" style="width:0%"></div></div></div>
+          <div class="gauge-block gauge-hsa">
+            <div class="gauge-head"><span class="gauge-name">HSA autorisées</span><span class="gauge-pct" id="dash-hsa-pct">—</span></div>
+            <div class="gauge-track"><div class="gauge-fill gauge-fill-hsa" id="dash-gauge-hsa" style="width:0%"></div><span class="gauge-sim-mark is-hidden" id="dash-gauge-hsa-sim"></span></div>
+            <div class="gauge-figures">
+              <span class="gauge-fig">Dotation <strong id="dash-hsa-dotation">— h</strong></span>
+              <span class="gauge-fig">Consommé <strong id="dash-hsa-conso">— h</strong></span>
+              <span class="gauge-fig gauge-fig-marge">Marge <strong id="dash-hsa-marge">— h</strong></span>
+            </div>
+            <div class="gauge-sim is-hidden" id="dash-hsa-sim"></div>
           </div>
         </div>
         <div class="empty-state" id="emptyState">
@@ -455,6 +461,15 @@
       <!-- ══ HISTORIQUE ══════════════════════════════════════════════ -->
       <section class="view" id="view-historique">
         <!-- Rendu dynamique par DGHHistorique.render() -->
+      </section>
+
+      <!-- ══ RÉPARTITION DE SERVICE ══════════════════════════════════ -->
+      <section class="view" id="view-repartition">
+        <div class="view-header">
+          <h1 class="view-title">Répartition de service</h1>
+          <p class="view-subtitle">Affectation des enseignants aux classes par discipline · professeurs principaux</p>
+        </div>
+        <div id="repartition-zone"></div>
       </section>
 
       <!-- ══ MISSIONS (PACTE / IMP) ══════════════════════════════════ -->
@@ -924,6 +939,7 @@
   <script src="assets/js/modules/hpc.js"></script>
   <script src="assets/js/modules/etab.js"></script>
   <script src="assets/js/modules/enseignants.js"></script>
+  <script src="assets/js/modules/repartition.js"></script>
   <script src="assets/js/modules/pilotage.js"></script>
   <script src="assets/js/modules/edt.js"></script>
   <script src="assets/js/modules/historique.js"></script>

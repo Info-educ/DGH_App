@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **3.5.0** — Dernière mise à jour : Sprint 8
+> Version courante : **4.2.0** — Dernière mise à jour : Sprint 12 (Répartition de service)
 
 ---
 
@@ -75,12 +75,25 @@ assets/js/calculs.js    → Moteur de calcul pur (ORS, DGH, besoins MEN, service
 assets/js/app.js        → Contrôleur UI (navigation, rendu vues, délégation événements)
 assets/js/modules/
   dashboard.js          → DGHDashboard
-  structures.js         → DGHStructures
+  structures.js         → DGHStructures (divisions + groupes référentiel, ppEnsId)
   dotation.js           → DGHDotation
   hpc.js                → DGHHPC
   etab.js               → DGHEtab
   enseignants.js        → DGHEnseignants (3 vues : liste / par discipline / HPC)
-data/exemple.json       → Données fictives anonymisées (schéma v3.3)
+  repartition.js        → DGHRepartition (v4.2 : affectations classe×discipline, PP) ← NOUVEAU
+  pilotage.js           → DGHPilotage (scénarios, récap, impact, synthèse)
+  edt.js                → DGHEdt (barrettes, co-interventions)
+  historique.js         → DGHHistorique (comparaison N/N-1, snapshots)
+  missions.js           → DGHMissions (PACTE / IMP)
+  instances.js          → DGHInstances (Synthèse CA, Dialogue, Services — impression/projection)
+data/exemple.json       → Données fictives anonymisées (schéma v4.2)
+```
+
+### Ordre de chargement des scripts (index.html — app.js TOUJOURS en dernier)
+```
+data.js → calculs.js → dashboard.js → structures.js → dotation.js → hpc.js →
+etab.js → enseignants.js → repartition.js → pilotage.js → edt.js →
+historique.js → missions.js → instances.js → app.js
 ```
 
 ---
@@ -370,7 +383,78 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 
 *Ce fichier fait partie intégrante du projet DGH App.*
 *Le mettre à jour à chaque évolution structurelle.*
-*Version : 3.4.0 — Dernière mise à jour : Sprint 7*
+*Version : 4.2.0 — Dernière mise à jour : Sprint 12*
+
+## Modèle de données — Répartition de service (v4.2)
+
+```js
+// AffectationObject — annees[].affectations[]
+{ id, divisionId, disciplineId, ensId, heures }
+// Plusieurs affectations sur un même (divisionId, disciplineId) = classe partagée
+// (co-titularité), ex : 4A Français = Mme Briant + Mme Forgeais.
+
+// Division (structures[]) — champ ajouté v4.2
+{ ..., ppEnsId }   // professeur principal de la classe (ensId | null)
+```
+
+### Règle d'or — heures de service dérivées (non destructif)
+- Dès qu'il existe ≥ 1 affectation pour un couple (enseignant, discipline),
+  `ens.disciplines[].heures` de cette discipline est **écrasé** par la somme des
+  affectations (via `_recomputeHeuresFromAffectations` dans `data.js`).
+- Sans affectation → la saisie manuelle (vue « Par discipline ») reste maîtresse.
+- Conséquence : tout le reste de l'app (serviceTotalEnseignant, bilanParDiscipline,
+  recapServices…) lit `ens.disciplines[].heures` **sans modification** — la dérivation
+  est transparente. La vue « Par discipline » passe la cellule en lecture seule + badge « auto ».
+- **Étape facultative** : pensée mai/juin (postes connus). Les scénarios de février
+  fonctionnent sans aucune affectation. Ne jamais en faire un prérequis.
+
+### Cascades obligatoires (déjà implémentées)
+- `deleteDivision`   → supprime ses affectations.
+- `deleteDiscipline` → supprime ses affectations.
+- `deleteEnseignant` → supprime ses affectations, `ppEnsId` qui le réfèrent,
+  ses entrées dans `hpc.enseignants[]` et dans `modificateur.affectations[]`, puis recalcule.
+
+### API publique — data.js (v4.2)
+```js
+DGHData.getAffectations(annee?)                       // → [AffectationObject]
+DGHData.getAffectationsCell(divisionId, disciplineId) // → [AffectationObject]
+DGHData.getAffectationsEnseignant(ensId)              // → [AffectationObject]
+DGHData.addAffectation({divisionId,disciplineId,ensId,heures})  // → AffectationObject|null
+DGHData.updateAffectation(id, fields)                 // → boolean (recalcule)
+DGHData.deleteAffectation(id)                         // → boolean (recalcule)
+DGHData.setProfesseurPrincipal(divisionId, ensId)     // → boolean
+DGHData.disciplinePiloteeParAffectation(ensId, discNom) // → boolean
+```
+
+### API publique — calculs.js (v4.2, fonctions pures)
+```js
+Calculs.heuresGrille(niveau, discNom)                 // → heures MEN (0 si hors grille)
+Calculs.affectationsExistent(anneeData)               // → boolean
+Calculs.profsDeClasseDiscipline(anneeData, disciplineId, classeIds) // → [ensId]
+Calculs.grilleRepartition(anneeData)                  // → { divisions, disciplines, cells }
+Calculs.controlesRepartition(anneeData)               // → [{severite, message, ref}]
+```
+
+### Délégation globale — Répartition (app.js)
+```js
+// _onGlobalClick — data-action
+'rep-mode'    → DGHRepartition.setMode(mode)
+'rep-del-aff' → DGHRepartition.deleteAff(id)
+// _onGlobalChange — data-action
+'rep-sel-disc'          → selectDiscipline(el)
+'rep-sel-ens'           → selectEnseignant(el)
+'rep-add'               → addFromSelect(el)        // select : ensId, data-division-id, data-discipline-id
+'rep-add-disc-ens'      → addDiscToEns(el)
+'rep-toggle-ens-classe' → toggleEnsClasse(el)
+'rep-aff-h'             → setHeures(el)            // input number, data-id = affId
+'rep-set-pp'            → setPP(el)                // select PP, data-division-id
+```
+
+### Intégration Pilotage (onglet Impact)- Si `Calculs.affectationsExistent(data)` → chaque modalité est **pré-cochée**
+  sur les profs retournés par `profsDeClasseDiscipline(data, mod.disciplineId, mod.classeIds)`.
+- `mod.affectations[]` (override manuel) reste prioritaire sur l'auto.
+- Aucune écriture auto en base : l'auto n'est qu'un défaut d'affichage tant que
+  l'utilisateur n'a pas coché/décoché (ce qui crée alors un `mod.affectations[]`).
 
 ## API publique — Scénarios (v3.5)
 
@@ -426,3 +510,24 @@ Calculs.comparerScenarios(anneeData, scenarios)
 '.scen-nom-input'    → DGHPilotage.saveNom(el)
 ```
 
+
+## Scénarios — Mode Grille de saisie (v4.3)
+
+L'onglet Scénarios propose deux modes de saisie des modalités (état `_scenViewMode` dans `pilotage.js`, bascule `data-action="scen-view-mode"`) :
+- **Liste** : formulaire classique (1 modalité = 1 type + N classes).
+- **Grille** : tableau disciplines (lignes) × classes (colonnes). Chaque case remplie = **une modalité mono-classe** `{ type, disciplineId, classeIds:[divId], heuresParGroupe, typeHeure }`.
+
+Délégation (app.js) :
+```
+// change
+'grid-cell-h'    → DGHPilotage.gridCellH(el)    // crée (>0) / met à jour / supprime (=0) la modalité ; data-scen-id, data-disc-id, data-div-id, [data-mod-id]
+'grid-cell-type' → DGHPilotage.gridCellType(el) // change le type (data-mod-id requis)
+'grid-cell-th'   → DGHPilotage.gridCellTH(el)   // change HP/HSA (data-mod-id requis)
+// click
+'scen-view-mode' → DGHPilotage.setScenView(mode)
+```
+
+Règles :
+- La grille ne gère que les modalités **mono-classe** ; les multi-classes (vue Liste) sont comptées dans le bilan mais signalées comme éditables uniquement en Liste.
+- Toute mutation appelle `_renderOngletScenarios()` + `renderBannerAndDashboard()` (rafraîchit bandeau actif + dashboard).
+- Type par défaut à la création : `dedoublement` ; HP/HSA par défaut : `hsa`. Titre recalculé via `_titreModificateur`.

@@ -5,7 +5,63 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
-## v4.1.0 — Export Excel/CSV (2026-06-10)
+## v4.3.0 — Saisie des scénarios en grille (2026-06-13)
+
+### Nouveau
+- **Mode Grille** dans l'onglet Scénarios (bascule Liste / Grille) : tableau **disciplines en lignes × classes en colonnes**. Chaque case = un nombre d'heures + un **type** de modalité (Déd. / Co-ens. / G.E.R. / G.B.I. / Autre) + **HP/HSA**, tous réglables par case.
+  - Taper des heures dans une case crée la modalité (dédoublement par défaut) ; la passer à 0 la supprime.
+  - Colonne Σ par discipline ; impact sur la dotation mis à jour en direct dans l'en-tête du panneau.
+  - Les modalités multi-classes (créées en vue Liste) restent comptées et éditables en vue Liste ; un repère l'indique.
+- La saisie en grille rafraîchit immédiatement le bandeau scénario et le tableau de bord si le scénario est actif.
+
+---
+
+### Amélioré
+- **Tableau de bord** : l'encart HP/HSA devient deux **jauges visuelles** distinctes au format demandé — *Dotation / Consommé / Marge* — avec pourcentage de consommation, barre colorée selon l'état (vert : marge ; ambre : marge nulle ; rouge : dépassement) et la marge signée mise en évidence.
+- **Surcouche simulation** : si un scénario est actif, chaque jauge affiche un repère ⊕ à la position de consommation simulée et une ligne « avec scénario : consommé X h · marge Y h ».
+
+---
+
+### Amélioré
+- **Tableau de bord** : le bandeau « Scénario actif » est enrichi — nom, coût (HP/HSA), et **solde de référence → solde simulé** avec l'écart. Le sous-titre du KPI *Solde disponible* affiche désormais le solde simulé, et son infobulle détaille le coût et le solde simulés.
+- **Synthèse CA** : ajout d'un bloc « Scénario en simulation » (coût, total et solde simulés) clairement étiqueté. La répartition par discipline reste fondée sur la ventilation de référence (votée) — la simulation est une surcouche explicite, jamais un écrasement silencieux.
+- **Onglet Scénarios** : le panneau d'édition d'un scénario affiche en en-tête l'**impact courant sur la dotation** (solde réf. → solde simulé + écart), mis à jour au fil de l'ajout des modalités — pour savoir immédiatement où en est la ventilation.
+
+### Note
+- Aucun changement de schéma de données (les figures « de référence » de la dotation restent inchangées ; le scénario est affiché en parallèle, avec mention « simulation »).
+
+---
+
+### Nouveau module — Répartition de service
+- **Affectation classe × discipline → enseignant** : on attribue chaque classe à un enseignant pour une discipline (ex : 6eA en Maths → M. Petit, 4eB en Maths → Mme Bodeau)
+- **Deux modes de saisie** (bascule au choix) :
+  - *Par discipline* : on choisit une discipline → toutes les classes → un enseignant par classe
+  - *Par enseignant* : on choisit un enseignant → on coche ses classes par discipline
+- **Classe partagée** : plusieurs enseignants d'une même discipline sur une même classe (ex : 4A Français = Mme Briant + Mme Forgeais), avec répartition des heures
+- **Heures pré-remplies** depuis la grille réglementaire MEN du niveau (ajustables) — saisie minimale
+- **Professeurs principaux** : désignation par classe, parmi les enseignants affectés ; le PP est marqué « responsable » (★) sur sa discipline dans la grille
+- **Grille récapitulative** classe × discipline (lecture seule)
+- **Contrôles de cohérence** : classes sans enseignant sur une discipline attendue, écart aux heures grille, classes sans PP
+
+### Propagation automatique (zéro double saisie)
+- Les **heures de service par discipline** sont désormais **recalculées automatiquement** à partir des affectations dès qu'il en existe ; sinon la saisie manuelle reste maîtresse (non destructif). La vue « Par discipline » de l'équipe affiche un badge « auto » en lecture seule
+- **Pilotage / onglet Impact** : les modalités (dédoublement, co-enseignement, groupe à effectif réduit…) sont **pré-attribuées automatiquement** au(x) professeur(s) de la classe concernée, avec surcharge manuelle possible
+- Étape **facultative** : pensée pour mai/juin (après vote du CA, postes connus) — les scénarios de février continuent de fonctionner sans aucune affectation
+
+### Données & schéma
+- Nouvel objet `AffectationObject` `{ id, divisionId, disciplineId, ensId, heures }` (tableau `annees[].affectations[]`)
+- Champ `ppEnsId` sur chaque division (professeur principal)
+- Migration automatique v4.2 + nettoyage des affectations orphelines (références supprimées)
+- Cascades de suppression : supprimer une division / discipline / enseignant nettoie les affectations, le PP et les affectations d'impact des scénarios
+- **Correction de la dérive de version** : `data.js`, `index.html`, `data/exemple.json` synchronisés sur **4.2.0**
+
+### Technique
+- Nouveau module `assets/js/modules/repartition.js` (`DGHRepartition`)
+- `calculs.js` : `heuresGrille`, `affectationsExistent`, `profsDeClasseDiscipline`, `grilleRepartition`, `controlesRepartition`
+- `data.js` : CRUD affectations, `setProfesseurPrincipal`, recalcul `_recomputeHeuresFromAffectations`, `disciplinePiloteeParAffectation`
+- Nouvelle entrée de menu « Répartition de service » (section Équipe) + vue + délégation d'événements
+
+---
 
 ### Nouveau
 - **⬇ Exporter Excel** : export CSV (séparateur `;`, BOM UTF-8, décimales à virgule — ouverture native dans Excel français, zéro dépendance, 100% local/RGPD)

@@ -663,13 +663,111 @@ function recapServices(anneeData, etab) {
   return { etab, annee: anneeData._annee || '', rows, bilan, nbEns: rows.length };
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════
+ * RÉPARTITION DE SERVICE (v4.2) — fonctions pures
+ * ══════════════════════════════════════════════════════════════════
+ */
+
+/** Heures réglementaires MEN pour un (niveau, discipline). 0 si hors grille. */
+function heuresGrille(niveau, discNom) {
+  return (GRILLES_MEN[niveau] && GRILLES_MEN[niveau][discNom]) || 0;
+}
+
+/** true si au moins une affectation existe (toute l'année). */
+function affectationsExistent(anneeData) {
+  return Array.isArray(anneeData.affectations) && anneeData.affectations.length > 0;
+}
+
+/**
+ * Liste des ensId qui enseignent une discipline donnée dans un ensemble de classes.
+ * Sert au pilotage : un dédoublement de Maths sur 6eA retombe sur le(s) prof(s)
+ * de Maths affecté(s) à 6eA. Si classeIds vide → tous les profs de la discipline.
+ * @returns {string[]} ensIds (sans doublon)
+ */
+function profsDeClasseDiscipline(anneeData, disciplineId, classeIds) {
+  const affs = anneeData.affectations || [];
+  const setCl = Array.isArray(classeIds) && classeIds.length > 0 ? new Set(classeIds) : null;
+  const out = new Set();
+  affs.forEach(a => {
+    if (disciplineId && a.disciplineId !== disciplineId) return;
+    if (setCl && !setCl.has(a.divisionId)) return;
+    if (a.ensId) out.add(a.ensId);
+  });
+  return Array.from(out);
+}
+
+/**
+ * Construit les données de la grille récap classe × discipline.
+ * @returns {{ divisions, disciplines, cells }}
+ *   cells[divisionId][disciplineId] = [{ ensId, nom, heures }]
+ */
+function grilleRepartition(anneeData) {
+  const divisions   = (anneeData.structures   || []);
+  const disciplines = (anneeData.disciplines  || []);
+  const enseignants = (anneeData.enseignants  || []);
+  const ensById = {};
+  enseignants.forEach(e => { ensById[e.id] = e; });
+  const cells = {};
+  (anneeData.affectations || []).forEach(a => {
+    if (!cells[a.divisionId]) cells[a.divisionId] = {};
+    if (!cells[a.divisionId][a.disciplineId]) cells[a.divisionId][a.disciplineId] = [];
+    const ens = ensById[a.ensId];
+    cells[a.divisionId][a.disciplineId].push({
+      affId: a.id,
+      ensId: a.ensId,
+      nom:   ens ? ((ens.nom || '') + (ens.prenom ? ' ' + ens.prenom.charAt(0) + '.' : '')).trim() : '?',
+      heures: a.heures || 0
+    });
+  });
+  return { divisions, disciplines, cells };
+}
+
+/**
+ * Contrôles de cohérence de la répartition de service.
+ * @returns {Array<{severite, message, ref}>}
+ */
+function controlesRepartition(anneeData) {
+  const out = [];
+  const divisions   = (anneeData.structures  || []);
+  const disciplines = (anneeData.disciplines || []);
+  const affs        = (anneeData.affectations|| []);
+  if (affs.length === 0) return out;
+  const discById = {};
+  disciplines.forEach(d => { discById[d.id] = d; });
+
+  // Couverture par (division, discipline obligatoire de la grille) :
+  // une discipline est "attendue" sur un niveau si la grille MEN lui donne des heures.
+  divisions.forEach(div => {
+    const grille = GRILLES_MEN[div.niveau] || {};
+    disciplines.forEach(disc => {
+      const hMEN = grille[disc.nom] || 0;
+      if (hMEN <= 0) return; // discipline non attendue à ce niveau
+      const cell = affs.filter(a => a.divisionId === div.id && a.disciplineId === disc.id);
+      const somme = Math.round(cell.reduce((s,a)=>s+(a.heures||0),0)*2)/2;
+      if (cell.length === 0) {
+        out.push({ severite:'warning', ref:div.id,
+          message: div.nom + ' — ' + disc.nom + ' : aucun enseignant affecté (' + hMEN + 'h attendues).' });
+      } else if (Math.abs(somme - hMEN) >= 0.5) {
+        out.push({ severite:'info', ref:div.id,
+          message: div.nom + ' — ' + disc.nom + ' : ' + somme + 'h affectées pour ' + hMEN + 'h grille (écart ' + (somme>hMEN?'+':'') + Math.round((somme-hMEN)*2)/2 + 'h).' });
+      }
+    });
+    if (!div.ppEnsId) {
+      out.push({ severite:'info', ref:div.id, message: div.nom + ' : aucun professeur principal désigné.' });
+    }
+  });
+  return out;
+}
+
   return {
-    ORS, GRILLES_MEN, H_THEORIQUES_NIV,
     getORS, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
     resumeStructures, bilanDotation, besoinsParDiscipline,
     suggererRepartition, bilanHPC, genererAlertes, serviceTotalEnseignant,
     bilanScenario, comparerScenarios, comparatifDisciplines,
-    syntheseCA, dialogueGestion, recapServices
+    syntheseCA, dialogueGestion, recapServices,
+    heuresGrille, affectationsExistent, profsDeClasseDiscipline,
+    grilleRepartition, controlesRepartition
   };
 
 })();

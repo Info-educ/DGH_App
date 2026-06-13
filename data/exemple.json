@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "version": "3.4.0",
+    "version": "4.3.0",
     "createdAt": "2025-09-01T00:00:00.000Z",
     "updatedAt": "2025-09-01T00:00:00.000Z",
     "note": "Fichier d'exemple anonymisé — données fictives pour démonstration"
@@ -29,7 +29,8 @@
           "nom": "6eA",
           "effectif": 28,
           "options": [],
-          "dispositif": null
+          "dispositif": null,
+          "ppEnsId": null
         },
         {
           "id": "div_6eb",
@@ -37,7 +38,8 @@
           "nom": "6eB",
           "effectif": 27,
           "options": [],
-          "dispositif": null
+          "dispositif": null,
+          "ppEnsId": null
         },
         {
           "id": "div_5ea",
@@ -45,7 +47,8 @@
           "nom": "5eA",
           "effectif": 29,
           "options": [],
-          "dispositif": null
+          "dispositif": null,
+          "ppEnsId": null
         },
         {
           "id": "div_5eb",
@@ -53,7 +56,8 @@
           "nom": "5eB",
           "effectif": 28,
           "options": [],
-          "dispositif": null
+          "dispositif": null,
+          "ppEnsId": null
         },
         {
           "id": "div_4ea",
@@ -61,7 +65,8 @@
           "nom": "4eA",
           "effectif": 28,
           "options": [],
-          "dispositif": null
+          "dispositif": null,
+          "ppEnsId": null
         },
         {
           "id": "div_4eb",
@@ -69,7 +74,8 @@
           "nom": "4eB",
           "effectif": 27,
           "options": [],
-          "dispositif": null
+          "dispositif": null,
+          "ppEnsId": null
         },
         {
           "id": "div_3ea",
@@ -77,7 +83,8 @@
           "nom": "3eA",
           "effectif": 27,
           "options": [],
-          "dispositif": null
+          "dispositif": null,
+          "ppEnsId": null
         },
         {
           "id": "div_3eb",
@@ -85,7 +92,8 @@
           "nom": "3eB",
           "effectif": 26,
           "options": [],
-          "dispositif": null
+          "dispositif": null,
+          "ppEnsId": null
         }
       ],
       "grilles": {},
@@ -329,7 +337,8 @@
         "repartition": [],
         "enseignants": []
       },
-      "alertes": []
+      "alertes": [],
+      "affectations": []
     }
   }
 }
