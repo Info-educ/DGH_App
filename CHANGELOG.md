@@ -5,6 +5,14 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.3.2 — Correctif défilement de la barre latérale (2026-06-13)
+
+### Corrigé
+- **Barre latérale non défilable** : sur les écrans dont la hauteur est inférieure à celle du menu complet, les derniers items de navigation (Outils, boutons Exporter/Importer, pied de page) passaient sous l'écran sans possibilité de scroller. Cause : `.sidebar` était bornée en `min-height: 100vh` (qui autorise le débordement) au lieu de `height`, si bien que le conteneur flex grandissait au-delà de l'écran et que `.nav-list` (pourtant en `overflow-y:auto`) n'avait aucune contrainte de hauteur à respecter. Corrigé en `height: 100vh` + `height: 100dvh` (hauteur dynamique, robuste à la barre d'adresse mobile).
+- **Cache-busting** : suffixe `?v=` incrémenté à `4.3.2` pour forcer le rechargement de `style.css` après déploiement.
+
+---
+
 ## v4.3.1 — Cache-busting des fichiers (2026-06-13)
 
 ### Corrigé

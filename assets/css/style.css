@@ -124,7 +124,8 @@ input::placeholder { color: var(--c-text-dim); }
 /* ── SIDEBAR ────────────────────────────────────────────────────── */
 .sidebar {
   width: var(--sb-w);
-  min-height: 100vh;
+  height: 100vh;       /* borne la sidebar à l'écran : indispensable pour que .nav-list (flex:1; overflow-y:auto) devienne défilable */
+  height: 100dvh;      /* hauteur dynamique : gère la barre d'adresse mobile (ignoré par les navigateurs qui ne supportent pas dvh) */
   background: var(--c-sb-bg);
   border-right: 1px solid var(--c-sb-border);
   display: flex;
