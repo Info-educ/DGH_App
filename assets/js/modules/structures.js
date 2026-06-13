@@ -236,12 +236,179 @@ const DGHStructures = (() => {
   function _setVal(id,val){const el=document.getElementById(id);if(el)el.value=val;}
   function _esc(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
+  // ══════════════════════════════════════════════════════════════════
+  // SECTION GROUPES (v3.8)
+  // ══════════════════════════════════════════════════════════════════
+
+  let _editGroupeId = null;
+
+  /**
+   * Rend la section groupes dans la vue Structures.
+   * Appelé par renderStructures() et directement après chaque CRUD.
+   */
+  function renderGroupes() {
+    const el = document.getElementById('structGroupesWrap');
+    if (!el) return;
+    const groupes     = DGHData.getGroupes();
+    const structures  = DGHData.getStructures();
+    const disciplines = DGHData.getDisciplines();
+
+    const formHtml = _editGroupeId
+      ? _htmlFormGroupe(structures, disciplines, groupes.find(g => g.id === _editGroupeId) || null)
+      : '';
+
+    let listHtml = '';
+    if (groupes.length === 0 && !_editGroupeId) {
+      listHtml = '<div class="struct-groupes-empty">'
+        + '<p>Aucun groupe défini.</p>'
+        + '<p class="struct-groupes-hint">Les groupes permettent de représenter des demi-classes (dédoublements) '
+        + 'ou des groupes inter-classes (bilangue, groupes de besoins…). '
+        + 'Ils sont utilisés dans les barrettes EDT et le Pilotage pédagogique.</p>'
+        + '</div>';
+    } else {
+      // Séparer mono-classe et inter-classes
+      const mono  = groupes.filter(g => (g.classeIds||[]).length <= 1);
+      const inter = groupes.filter(g => (g.classeIds||[]).length  > 1);
+
+      listHtml = '<div class="struct-groupes-list">';
+
+      if (inter.length > 0) {
+        listHtml += '<div class="struct-groupes-section-label">Groupes inter-classes / inter-niveaux</div>';
+        listHtml += inter.map(g => _htmlGroupeCard(g, structures, disciplines)).join('');
+      }
+      if (mono.length > 0) {
+        listHtml += '<div class="struct-groupes-section-label">Groupes mono-classe (dédoublements)</div>';
+        // Regrouper par classe
+        const parClasse = {};
+        mono.forEach(g => {
+          const cid = (g.classeIds||[])[0] || '__libre__';
+          if (!parClasse[cid]) parClasse[cid] = [];
+          parClasse[cid].push(g);
+        });
+        Object.keys(parClasse).forEach(cid => {
+          const cls = structures.find(s => s.id === cid);
+          listHtml += '<div class="struct-groupes-classe-bloc">';
+          if (cls) listHtml += '<span class="struct-groupes-classe-label">' + _esc(cls.nom) + '</span>';
+          listHtml += parClasse[cid].map(g => _htmlGroupeCard(g, structures, disciplines)).join('');
+          listHtml += '</div>';
+        });
+      }
+      listHtml += '</div>';
+    }
+
+    el.innerHTML = formHtml + listHtml;
+  }
+
+  function _htmlGroupeCard(g, structures, disciplines) {
+    if (g.id === _editGroupeId) return '';
+    const clsNoms  = (g.classeIds||[]).map(id => structures.find(s=>s.id===id)?.nom||'?').join(', ') || '—';
+    const discNoms = (g.disciplineIds||[]).map(id => disciplines.find(d=>d.id===id)?.nom||'?').join(', ') || '—';
+    const isInter  = (g.classeIds||[]).length > 1;
+    return '<div class="struct-groupe-card' + (isInter ? ' struct-groupe-inter' : '') + '">'
+      + '<div class="struct-groupe-header">'
+        + '<span class="struct-groupe-nom">' + _esc(g.nom||'Groupe sans nom') + '</span>'
+        + (g.effectif > 0 ? '<span class="struct-groupe-effectif">' + g.effectif + ' élèves</span>' : '')
+        + '<div class="struct-groupe-actions">'
+          + '<button class="btn-icon" data-action="struct-edit-groupe" data-id="' + g.id + '" title="Modifier">✎</button>'
+          + '<button class="btn-icon btn-icon-danger" data-action="struct-delete-groupe" data-id="' + g.id + '" title="Supprimer">✕</button>'
+        + '</div>'
+      + '</div>'
+      + '<div class="struct-groupe-meta">'
+        + '<span class="struct-groupe-meta-item"><span class="struct-groupe-meta-lbl">Classes</span> ' + _esc(clsNoms) + '</span>'
+        + (discNoms !== '—' ? '<span class="struct-groupe-meta-item"><span class="struct-groupe-meta-lbl">Disciplines</span> ' + _esc(discNoms) + '</span>' : '')
+        + (g.commentaire ? '<span class="struct-groupe-meta-item edt-barrette-comment">' + _esc(g.commentaire) + '</span>' : '')
+      + '</div>'
+    + '</div>';
+  }
+
+  function _htmlFormGroupe(structures, disciplines, editData) {
+    const nom     = editData?.nom || '';
+    const effectif = editData?.effectif ?? '';
+    const comment = editData?.commentaire || '';
+    const clsSel  = new Set(editData?.classeIds    || []);
+    const discSel = new Set(editData?.disciplineIds || []);
+
+    // Classes groupées par niveau
+    const parNiv = {};
+    structures.forEach(s => { if (!parNiv[s.niveau]) parNiv[s.niveau]=[]; parNiv[s.niveau].push(s); });
+    const niveauxOrd = ['6e','5e','4e','3e','SEGPA','ULIS','UPE2A'];
+    const clsHtml = niveauxOrd.filter(n => parNiv[n]?.length).map(niv =>
+      '<div class="edt-form-niv"><span class="edt-form-niv-label">' + niv + '</span>'
+        + parNiv[niv].map(s =>
+            '<label class="mod-classe-label"><input type="checkbox" class="sg-classe-check" value="' + s.id + '"'
+              + (clsSel.has(s.id)?' checked':'') + '> ' + _esc(s.nom) + '</label>'
+          ).join('')
+      + '</div>'
+    ).join('') || '<span class="edt-empty-hint">Aucune division. Créez d\'abord vos classes.</span>';
+
+    const discHtml = disciplines.length === 0
+      ? '<span class="edt-empty-hint">Aucune discipline.</span>'
+      : disciplines.map(d =>
+          '<label class="mod-classe-label"><input type="checkbox" class="sg-disc-check" value="' + d.id + '"'
+            + (discSel.has(d.id)?' checked':'') + '> ' + _esc(d.nom) + '</label>'
+        ).join('');
+
+    const saveAttr = editData ? ' data-id="' + editData.id + '"' : '';
+
+    return '<div class="edt-form" id="structGroupeForm">'
+      + '<div class="edt-form-title">' + (editData ? 'Modifier le groupe' : 'Nouveau groupe') + '</div>'
+      + '<div class="edt-form-grid">'
+        + '<div class="edt-form-col">'
+          + '<div class="edt-form-field"><label>Nom du groupe <span class="edt-form-req">*</span></label>'
+            + '<input type="text" id="sgNom" value="' + _esc(nom) + '" placeholder="Ex : Gp1 3eA, Bilangue 6e…" /></div>'
+          + '<div class="edt-form-field"><label>Effectif</label>'
+            + '<input type="number" id="sgEffectif" value="' + _esc(String(effectif)) + '" min="0" max="200" placeholder="Nb élèves" /></div>'
+          + '<div class="edt-form-field"><label>Commentaire</label>'
+            + '<input type="text" id="sgComment" value="' + _esc(comment) + '" placeholder="Précisions…" /></div>'
+          + '<div class="edt-form-field"><label>Disciplines concernées</label>'
+            + '<div class="edt-check-list">' + discHtml + '</div></div>'
+        + '</div>'
+        + '<div class="edt-form-col">'
+          + '<div class="edt-form-field"><label>Classes concernées <span class="edt-form-req">*</span>'
+            + ' <span class="edt-form-hint">(plusieurs = inter-classes)</span></label>'
+            + '<div class="edt-check-list">' + clsHtml + '</div></div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="edt-form-actions">'
+        + '<button class="btn-primary" data-action="struct-save-groupe"' + saveAttr + '>Enregistrer ✓</button>'
+        + '<button class="btn-secondary" data-action="struct-cancel-groupe">Annuler</button>'
+      + '</div>'
+    + '</div>';
+  }
+
+  function startAddGroupe()  { _editGroupeId = '__new__'; renderGroupes(); document.getElementById('sgNom')?.focus(); }
+  function editGroupe(id)    { _editGroupeId = id;        renderGroupes(); document.getElementById('sgNom')?.focus(); }
+  function cancelGroupe()    { _editGroupeId = null;      renderGroupes(); }
+
+  function saveGroupe(id) {
+    const nom      = document.getElementById('sgNom')?.value.trim() || '';
+    const effectif = parseInt(document.getElementById('sgEffectif')?.value || '0', 10) || 0;
+    const comment  = document.getElementById('sgComment')?.value.trim() || '';
+    const classeIds    = Array.from(document.querySelectorAll('.sg-classe-check:checked')).map(c => c.value);
+    const disciplineIds= Array.from(document.querySelectorAll('.sg-disc-check:checked')).map(c => c.value);
+    if (!nom)                 { app.toast('Le nom du groupe est obligatoire.', 'warning'); return; }
+    if (classeIds.length === 0){ app.toast('Sélectionnez au moins une classe.', 'warning'); return; }
+    const fields = { nom, classeIds, effectif, disciplineIds, commentaire: comment };
+    if (id && id !== '__new__') { DGHData.updateGroupe(id, fields); app.toast('Groupe mis à jour.', 'success'); }
+    else                        { DGHData.addGroupe(fields);        app.toast('Groupe ajouté.', 'success'); }
+    _editGroupeId = null;
+    renderGroupes();
+  }
+
+  function deleteGroupe(id) {
+    if (!confirm('Supprimer ce groupe ?')) return;
+    DGHData.deleteGroupe(id);
+    renderGroupes();
+    app.toast('Groupe supprimé.', 'info');
+  }
+
   return {
     renderStructures,
     openModalMatrice, closeModalMatrice, saveModalMatrice,
     openModalDiv, closeModalDiv, saveModalDiv,
     confirmDeleteDiv, closeConfirmDiv, execDeleteDiv,
-    updateDupPreview
+    updateDupPreview,
+    renderGroupes, startAddGroupe, editGroupe, cancelGroupe, saveGroupe, deleteGroupe
   };
 
 })();

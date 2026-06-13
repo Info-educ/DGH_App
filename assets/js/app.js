@@ -21,13 +21,16 @@ const app = (() => {
   const VIEWS = {
     dashboard:   'Tableau de bord',
     structures:  'Structures',
-    dotation:    'DGH + Vol. Horaire',
+    dotation:    'Dotation DGH',
     hpc:         'H. péda. complémentaires',
     enseignants: 'Équipe pédagogique',
-    pilotage:    'Pilotage pédagogique',
+    scenarios:   'Scénarios',
+    pilotage:    'Scénarios',
+    edt:         'Contraintes EDT',
     alertes:     'Alertes',
-    synthese:    'Synthèses',
-    historique:  'Historique'
+    historique:  'Historique',
+    missions:    'PACTE / IMP',
+    instances:   'Préparer les instances'
   };
 
   // ── INIT ─────────────────────────────────────────────────────────
@@ -48,24 +51,52 @@ const app = (() => {
   }
 
   // ── NAVIGATION ───────────────────────────────────────────────────
-  function navigate(viewId) {
+  function navigate(viewId, tab) {
     if (!VIEWS[viewId]) return;
+    // scenarios est un alias de pilotage (même view HTML)
+    const realViewId = viewId === 'scenarios' ? 'pilotage' : viewId;
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-item[data-view]').forEach(n => n.classList.remove('active'));
-    const viewEl = document.getElementById('view-' + viewId);
-    const navEl  = document.querySelector('.nav-item[data-view="' + viewId + '"]');
+    const viewEl = document.getElementById('view-' + realViewId);
+    // Nav : activer l'item exact (avec data-tab si fourni)
+    let navEl;
+    if (tab) {
+      navEl = document.querySelector(`.nav-item[data-view="${viewId}"][data-tab="${tab}"]`);
+    }
+    if (!navEl) navEl = document.querySelector(`.nav-item[data-view="${viewId}"]`);
     if (viewEl) viewEl.classList.add('active');
     if (navEl)  navEl.classList.add('active');
     const bc = document.getElementById('breadcrumb');
     if (bc) bc.textContent = VIEWS[viewId];
     if (window.innerWidth <= 768) document.getElementById('sidebar')?.classList.remove('open');
-    if (viewId === 'dashboard')  DGHDashboard.renderDashboard();
-    if (viewId === 'alertes')    DGHEtab.renderAlertes();
-    if (viewId === 'structures') DGHStructures.renderStructures();
-    if (viewId === 'dotation')   DGHDotation.renderDotation();
-    if (viewId === 'hpc')        DGHHPC.renderHPC();
-    if (viewId === 'enseignants') DGHEnseignants.renderEnseignants();
-    if (viewId === 'pilotage')    DGHPilotage.renderPilotage();
+    if (realViewId === 'dashboard')  DGHDashboard.renderDashboard();
+    if (realViewId === 'alertes')    DGHEtab.renderAlertes();
+    if (realViewId === 'dotation')   DGHDotation.renderDotation();
+    if (realViewId === 'hpc')        DGHHPC.renderHPC();
+    if (realViewId === 'enseignants') DGHEnseignants.renderEnseignants();
+    if (realViewId === 'pilotage')    DGHPilotage.renderPilotage();
+    if (realViewId === 'edt')         DGHEdt.renderEdt();
+    if (realViewId === 'structures')  { DGHStructures.renderStructures(); DGHStructures.renderGroupes(); }
+    if (realViewId === 'historique')  DGHHistorique.render();
+    if (realViewId === 'missions')    DGHMissions.renderMissions();
+    if (viewId === 'instances')       DGHInstances.renderInstances(tab || null);
+  }
+
+  // ── EXPORT CSV (Excel FR : séparateur ; · BOM UTF-8 · décimales ,) ──
+  function downloadCSV(filename, rows) {
+    const cell = v => {
+      if (v === null || v === undefined) return '';
+      if (typeof v === 'number') return String(v).replace('.', ',');
+      const s = String(v);
+      return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const csv  = '\ufeff' + rows.map(r => r.map(cell).join(';')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   // ── RENDU GLOBAL ─────────────────────────────────────────────────
@@ -101,7 +132,9 @@ const app = (() => {
       modalCSV:           DGHEnseignants.closeModalCSV,
       confirmEns:         DGHEnseignants.closeConfirmEns,
       confirmEnsAll:      DGHEnseignants.closeConfirmAll,
-      modalSelEns:        DGHEnseignants.closeModalSelEns
+      modalSelEns:        DGHEnseignants.closeModalSelEns,
+      modalMission:       DGHMissions.closeModal,
+      confirmMission:     DGHMissions.closeConfirmMission
     };
     if (M[id]) M[id]();
   }
@@ -109,7 +142,7 @@ const app = (() => {
   // ── DÉLÉGATION GLOBALE CLICK ──────────────────────────────────────
   function _onGlobalClick(e) {
     const navItem = e.target.closest('.nav-item[data-view]');
-    if (navItem) { navigate(navItem.dataset.view); return; }
+    if (navItem) { navigate(navItem.dataset.view, navItem.dataset.tab || null); return; }
     const navBtn = e.target.closest('[data-navigate]');
     if (navBtn)  { navigate(navBtn.dataset.navigate); return; }
 
@@ -148,6 +181,43 @@ const app = (() => {
       if (action === 'duplicate-scenario'){ DGHPilotage.dupliquerScenario(actionBtn.dataset.id);                       return; }
       if (action === 'delete-scenario')   { DGHPilotage.confirmDeleteScenario(actionBtn.dataset.id);                   return; }
       if (action === 'set-actif-scenario'){ DGHPilotage.setActif(actionBtn.dataset.id);                                return; }
+      // ── Groupes (Structures) ──
+      if (action === 'struct-edit-groupe')   { DGHStructures.editGroupe(id);                        return; }
+      if (action === 'struct-save-groupe')   { DGHStructures.saveGroupe(id);                        return; }
+      if (action === 'struct-cancel-groupe') { DGHStructures.cancelGroupe();                         return; }
+      if (action === 'struct-delete-groupe') { DGHStructures.deleteGroupe(id);                      return; }
+      // ── EDT ──
+      if (action === 'edt-tab')                  { DGHEdt.switchTab(actionBtn.dataset.tab);         return; }
+      if (action === 'edt-edit-barrette')         { DGHEdt.editBarrette(id);                        return; }
+      if (action === 'edt-save-barrette')         { DGHEdt.saveBarrette(id);                        return; }
+      if (action === 'edt-cancel-barrette')       { DGHEdt.cancelBarrette();                         return; }
+      if (action === 'edt-delete-barrette')       { DGHEdt.deleteBarrette(id);                      return; }
+      if (action === 'edt-barr-add-slot')         { DGHEdt.barrAddSlot();                            return; }
+      if (action === 'edt-barr-remove-slot')      { DGHEdt.barrRemoveSlot(actionBtn.dataset.slotIdx); return; }
+      if (action === 'edt-barr-slot-type-change') { DGHEdt.barrSlotTypeChange();                    return; }
+      if (action === 'edt-edit-cointerv')         { DGHEdt.editCoInterv(id);                        return; }
+      if (action === 'edt-save-cointerv')         { DGHEdt.saveCoInterv(id);                        return; }
+      if (action === 'edt-cancel-cointerv')       { DGHEdt.cancelCoInterv();                         return; }
+      if (action === 'edt-delete-cointerv')       { DGHEdt.deleteCoInterv(id);                      return; }
+      // ── Instances ──
+      if (action === 'inst-tab')        { DGHInstances.switchTab(actionBtn.dataset.tab); return; }
+      if (action === 'inst-projeter')   { DGHInstances.toggleProjection();               return; }
+      if (action === 'inst-imprimer')   { DGHInstances.imprimer();                        return; }
+      if (action === 'inst-export-csv') { DGHInstances.exporterCSV();                     return; }
+      if (action === 'dot-export-csv')  { DGHDotation.exporterCSV();                      return; }
+      if (action === 'inst-sort-serv')  { DGHInstances.sortServices(actionBtn.dataset.col); return; }
+      // ── Historique ──
+      if (action === 'hist-select-gauche')    { DGHHistorique.selectGauche(actionBtn.value || actionBtn.dataset.annee); return; }
+      if (action === 'hist-select-droite')    { DGHHistorique.selectDroite(actionBtn.value || actionBtn.dataset.annee); return; }
+      if (action === 'hist-figer')            { DGHHistorique.demanderFiger(actionBtn.dataset.annee);            return; }
+      if (action === 'hist-del-snapshot')     { DGHHistorique.demanderSupprimerSnapshot(actionBtn.dataset.annee); return; }
+      if (action === 'hist-confirm-ok')       { DGHHistorique.confirmerAction();                                   return; }
+      if (action === 'hist-confirm-cancel')   { DGHHistorique.annulerConfirm();                                    return; }
+      if (action === 'hist-sort')             { DGHHistorique.sortBy(actionBtn.dataset.col);                       return; }
+      // ── Missions ──
+      if (action === 'edit-mission')          { DGHMissions.openModal(id);                      return; }
+      if (action === 'delete-mission')        { DGHMissions.confirmDelete(id);                  return; }
+      if (action === 'missions-filtre')       { DGHMissions.filtrer(actionBtn.dataset.filtre);   return; }
     }
 
     // btn-toggle-gc (généré dynamiquement) — délégué ici
@@ -167,8 +237,13 @@ const app = (() => {
     // Boutons statiques
     if (e.target.closest('#btnAddScenario'))    { DGHPilotage.startNewScenario();    return; }
     if (e.target.closest('#btnDesactiverScen')) { DGHPilotage.desactiverScenario();  return; }
+    if (e.target.closest('#btnAddGroupe'))      { DGHStructures.startAddGroupe();    return; }
+    if (e.target.closest('#btnAddBarrette'))    { DGHEdt.startAddBarrette();         return; }
+    if (e.target.closest('#btnAddCoInterv'))    { DGHEdt.startAddCoInterv();         return; }
+    if (e.target.closest('#btnPrintEdt'))       { DGHEdt.printSynthese();            return; }
     const selNivBtn = e.target.closest('.mod-sel-niv');
     if (selNivBtn) { DGHPilotage.selectionnerNiveau(selNivBtn); return; }
+    if (e.target.closest('#btnAddMission'))     { DGHMissions.openModal(null);         return; }
     if (e.target.closest('#btnAddDiv'))       { DGHStructures.openModalDiv(null);    return; }
     if (e.target.closest('#btnMatrice'))      { DGHStructures.openModalMatrice();     return; }
     if (e.target.closest('#btnAddDisc'))      { DGHDotation.openModalDisc(null);      return; }
@@ -188,7 +263,7 @@ const app = (() => {
     if (e.target.closest('#btnEtab'))         { DGHEtab.openModal();                      return; }
 
     // Fermeture modales par clic overlay
-    const overlays = ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice','confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee','modalEns','modalCSV','confirmEns','confirmEnsAll','modalSelEns'];
+    const overlays = ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice','confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee','modalEns','modalCSV','confirmEns','confirmEnsAll','modalSelEns','modalMission','confirmMission'];
     for (const oid of overlays) {
       if (e.target === document.getElementById(oid)) { _closeModalById(oid); return; }
     }
@@ -262,6 +337,13 @@ const app = (() => {
     if (e.target.closest('#confirmEnsAnnuler')){ DGHEnseignants.closeConfirmEns();   return; }
     if (e.target.closest('#confirmEnsOk'))     { DGHEnseignants.execDeleteEns();     return; }
 
+    if (e.target.closest('#modalMissionClose'))   { DGHMissions.closeModal();               return; }
+    if (e.target.closest('#modalMissionCancel'))  { DGHMissions.closeModal();               return; }
+    if (e.target.closest('#modalMissionSave'))    { DGHMissions.saveMission();              return; }
+    if (e.target.closest('#confirmMissionCancel')){ DGHMissions.closeConfirmMission();      return; }
+    if (e.target.closest('#confirmMissionAnnuler')){ DGHMissions.closeConfirmMission();     return; }
+    if (e.target.closest('#confirmMissionOk'))    { DGHMissions.execDeleteMission();        return; }
+
     // Sidebar mobile
     if (window.innerWidth <= 768) {
       const sb=document.getElementById('sidebar'), mb=document.getElementById('mobileMenuBtn');
@@ -291,7 +373,16 @@ const app = (() => {
     if (e.target.classList.contains('impact-aff-check')) { const d=e.target.dataset; DGHPilotage.saveAffectation(d.ensId,d.modId,d.scenId,'affecte',e.target.checked); return; }
     if (e.target.classList.contains('impact-th-radio'))  { const d=e.target.dataset; DGHPilotage.saveAffectation(d.ensId,d.modId,d.scenId,'typeHeure',e.target.value); return; }
     if (e.target.classList.contains('mod-type-select'))  { DGHPilotage.onTypeChange(e.target); return; }
-    if (e.target.id === 'recapScenSelect')                { DGHPilotage.setRecapScen(e.target.value); return; }
+    if (e.target.id === 'recapScenSelect')                { DGHPilotage.setRecapScen(e.target.value);  return; }
+    if (e.target.id === 'impactScenSelect')               { DGHPilotage.setImpactScen(e.target.value); return; }
+    if (e.target.id === 'edtBarretteDiscs')               { DGHEdt.onBarrDiscChange(); return; }
+    if (e.target.id === 'inputMissionHeures')              { DGHMissions.updateHHebdo(); return; }
+    if (e.target.id === 'inputMissionEns')                 { DGHMissions.updateEnsInfo(); return; }
+    if (e.target.classList.contains('hist-year-sel')) {
+      const action = e.target.dataset.action;
+      if (action === 'hist-select-gauche') { DGHHistorique.selectGauche(e.target.value); return; }
+      if (action === 'hist-select-droite') { DGHHistorique.selectDroite(e.target.value); return; }
+    }
   }
 
   // ── DÉLÉGATION GLOBALE DBLCLICK ───────────────────────────────────
@@ -357,6 +448,26 @@ const app = (() => {
       fileImport.value='';
     });
     document.addEventListener('dgh:storage-error', ()=>toast('Erreur de sauvegarde locale','error',6000));
+
+    // ── LOGO ÉTABLISSEMENT ────────────────────────────────────────
+    document.addEventListener('click', e => {
+      if (e.target.id === 'btnLogoUpload') document.getElementById('fileLogoInput')?.click();
+      if (e.target.id === 'btnLogoDelete') _deleteLogo();
+    });
+    document.getElementById('fileLogoInput')?.addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 200 * 1024) { toast('Image trop lourde (max 200 Ko)', 'warning'); return; }
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const b64 = ev.target.result;
+        DGHData.setEtab({ logo: b64 });
+        _updateLogoPreview(b64);
+        toast('Logo enregistré', 'success');
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    });
 
     document.addEventListener('keydown', e => {
       if (e.key==='Escape') {
@@ -444,7 +555,22 @@ const app = (() => {
     setTimeout(()=>{ el.style.cssText+='opacity:0;transform:translateX(10px);transition:.2s ease;'; setTimeout(()=>el.remove(),200); }, duration);
   }
 
-  return { init, navigate, toast, renderAll, renderYearSelect };
+  function _updateLogoPreview(src) {
+    const preview = document.getElementById('logoPreview');
+    const previewWrap = document.getElementById('logoPreviewWrap');
+    const emptyWrap   = document.getElementById('logoEmptyWrap');
+    if (preview && src) { preview.src = src; }
+    if (previewWrap) previewWrap.classList.toggle('is-hidden', !src);
+    if (emptyWrap)   emptyWrap.classList.toggle('is-hidden', !!src);
+  }
+
+  function _deleteLogo() {
+    DGHData.setEtab({ logo: null });
+    _updateLogoPreview(null);
+    toast('Logo supprimé', 'info');
+  }
+
+  return { init, navigate, toast, renderAll, renderYearSelect, downloadCSV };
 
 })();
 

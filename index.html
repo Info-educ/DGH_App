@@ -25,18 +25,37 @@
       <select id="yearSelect" class="year-select"></select>
     </div>
     <ul class="nav-list" aria-label="Navigation principale">
-      <li class="nav-section-label">Pilotage</li>
+
+      <!-- TABLEAU DE BORD -->
       <li class="nav-item active" data-view="dashboard"><span class="nav-icon">⬡</span><span class="nav-label">Tableau de bord</span></li>
+
+      <!-- CADRE DE L'ANNÉE -->
+      <li class="nav-section-label">Cadre de l'année</li>
       <li class="nav-item" data-view="structures"><span class="nav-icon">⊞</span><span class="nav-label">Structures</span></li>
-      <li class="nav-item" data-view="dotation"><span class="nav-icon">◎</span><span class="nav-label">DGH + Vol. Horaire</span></li>
+      <li class="nav-item" data-view="dotation"><span class="nav-icon">◎</span><span class="nav-label">Dotation DGH</span></li>
       <li class="nav-item" data-view="hpc"><span class="nav-icon">◈</span><span class="nav-label">H. péda. complémentaires</span></li>
-      <li class="nav-item" data-view="enseignants"><span class="nav-icon">◉</span><span class="nav-label">Équipe pédagogique</span></li>
-      <li class="nav-item" data-view="pilotage"><span class="nav-icon">⊕</span><span class="nav-label">Pilotage</span><span class="nav-badge-scen is-hidden" id="badge-pilotage"></span></li>
-      <li class="nav-section-label">Analyse</li>
-      <li class="nav-item" data-view="alertes"><span class="nav-icon">◬</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
-      <li class="nav-section-label">Restitution</li>
-      <li class="nav-item" data-view="synthese"><span class="nav-icon">▤</span><span class="nav-label">Synthèses</span></li>
+
+      <!-- PILOTER -->
+      <li class="nav-section-label">Piloter</li>
+      <li class="nav-item" data-view="scenarios"><span class="nav-icon">⊕</span><span class="nav-label">Scénarios</span><span class="nav-badge-scen is-hidden" id="badge-pilotage"></span></li>
       <li class="nav-item" data-view="historique"><span class="nav-icon">◷</span><span class="nav-label">Historique</span></li>
+      <li class="nav-item" data-view="alertes"><span class="nav-icon">◬</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
+
+      <!-- PRÉPARER LES INSTANCES -->
+      <li class="nav-section-label">Préparer les instances</li>
+      <li class="nav-item" data-view="instances" data-tab="synthese-ca"><span class="nav-icon">▤</span><span class="nav-label">Synthèse CA</span></li>
+      <li class="nav-item" data-view="instances" data-tab="dialogue"><span class="nav-icon">◈</span><span class="nav-label">Dialogue de gestion</span></li>
+      <li class="nav-item" data-view="instances" data-tab="services"><span class="nav-icon">◉</span><span class="nav-label">Services enseignants</span></li>
+
+      <!-- ÉQUIPE -->
+      <li class="nav-section-label">Équipe</li>
+      <li class="nav-item" data-view="enseignants"><span class="nav-icon">◉</span><span class="nav-label">Équipe pédagogique</span></li>
+      <li class="nav-item" data-view="missions"><span class="nav-icon">◑</span><span class="nav-label">PACTE / IMP</span></li>
+
+      <!-- OUTILS -->
+      <li class="nav-section-label">Outils</li>
+      <li class="nav-item" data-view="edt"><span class="nav-icon">⊟</span><span class="nav-label">Contraintes EDT</span></li>
+
     </ul>
     <div class="sidebar-actions">
       <button class="btn-data" id="btnExport"><span>↓</span><span class="btn-data-label">Exporter</span></button>
@@ -44,7 +63,7 @@
       <input type="file" id="fileImport" accept=".json" style="display:none" />
     </div>
     <div class="sidebar-footer">
-      <span>v3.4.0</span>
+      <span>v4.0.0</span>
       <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -190,6 +209,27 @@
         </div>
       </section>
 
+<!-- ══ EDT — CONTRAINTES ══════════════════════════════════════════════ -->
+      <section class="view" id="view-edt">
+        <div class="view-header">
+          <div class="view-header-row">
+            <div>
+              <h1 class="view-title">Contraintes EDT</h1>
+              <p class="view-subtitle">Préparez la saisie dans Index Education</p>
+            </div>
+            <div class="view-header-actions" id="edtHeaderActions"></div>
+          </div>
+        </div>
+        <div class="pil-tabs" id="edtTabs">
+          <button class="pil-tab active" data-action="edt-tab" data-tab="barrettes">⊞ Barrettes</button>
+          <button class="pil-tab" data-action="edt-tab" data-tab="cointerv">◉ Co-interventions</button>
+          <button class="pil-tab" data-action="edt-tab" data-tab="synthese">▤ Fiche synthèse</button>
+        </div>
+        <div class="pil-panel active" id="edt-panel-barrettes"><div id="edtBarrettesWrap"></div></div>
+        <div class="pil-panel" id="edt-panel-cointerv"><div id="edtCoIntervWrap"></div></div>
+        <div class="pil-panel" id="edt-panel-synthese"><div id="edtSyntheseWrap"></div></div>
+      </section>
+
             <!-- ══ STRUCTURES ══════════════════════════════════════════════ -->
       <section class="view" id="view-structures">
         <div class="view-header">
@@ -223,6 +263,15 @@
           <div class="struct-by-niveau" id="struct-by-niveau"></div>
         </div>
         <div class="section-card"><div class="section-card-header"><h2>Liste des divisions</h2></div><div id="struct-list"></div></div>
+
+        <!-- Section Groupes -->
+        <div class="section-card" id="structGroupesCard">
+          <div class="section-card-header">
+            <h2>Groupes</h2>
+            <button class="btn-primary" id="btnAddGroupe">+ Nouveau groupe</button>
+          </div>
+          <div id="structGroupesWrap"></div>
+        </div>
       </section>
 
       <!-- ══ DOTATION DGH ════════════════════════════════════════════ -->
@@ -234,6 +283,7 @@
               <p class="view-subtitle">Enveloppe HP/HSA · répartition par discipline · groupes de cours</p>
             </div>
             <div class="view-header-actions">
+              <button class="btn-secondary" data-action="dot-export-csv" title="Exporter la dotation en CSV (Excel)">⬇ Exporter Excel</button>
               <button class="btn-secondary" id="btnSuggerer">💡 Suggérer HP</button>
               <button class="btn-secondary" id="btnInitDisc">★ Disciplines MEN</button>
               <button class="btn-primary" id="btnAddDisc">+ Discipline</button>
@@ -392,10 +442,24 @@
         <div class="placeholder-view"><div class="placeholder-icon">▤</div><p><strong>Module Synthèses</strong> — Sprint 7</p></div>
       </section>
 
+      <!-- ══ INSTANCES ══════════════════════════════════════════════ -->
+      <section class="view" id="view-instances">
+        <!-- Rendu dynamique par DGHInstances.renderInstances() -->
+      </section>
+
+      <!-- ══ SCÉNARIOS (ex-Pilotage) ════════════════════════════════ -->
+      <section class="view" id="view-scenarios">
+        <!-- Alias : redirige vers view-pilotage via navigate() -->
+      </section>
+
       <!-- ══ HISTORIQUE ══════════════════════════════════════════════ -->
       <section class="view" id="view-historique">
-        <div class="view-header"><h1 class="view-title">Historique</h1><p class="view-subtitle">Suivi pluriannuel de la DGH</p></div>
-        <div class="placeholder-view"><div class="placeholder-icon">◷</div><p><strong>Module Historique</strong> — Sprint 8</p></div>
+        <!-- Rendu dynamique par DGHHistorique.render() -->
+      </section>
+
+      <!-- ══ MISSIONS (PACTE / IMP) ══════════════════════════════════ -->
+      <section class="view" id="view-missions">
+        <!-- Rendu dynamique par DGHMissions.renderMissions() -->
       </section>
 
     </div>
@@ -420,6 +484,21 @@
         <!-- Onglet 1 : Établissement + Dotation -->
         <div class="modal-tab-panel active" id="tab-etab">
           <div class="form-group"><label for="inputNomEtab">Nom de l'établissement</label><input type="text" id="inputNomEtab" placeholder="Collège Jean Moulin" /></div>
+          <!-- Logo -->
+          <div class="form-group">
+            <label>Logo de l'établissement</label>
+            <div class="logo-upload-area" id="logoUploadArea">
+              <div id="logoPreviewWrap" class="logo-preview-wrap is-hidden">
+                <img id="logoPreview" src="" alt="Logo" class="logo-preview-img" />
+                <button class="btn-link-danger" id="btnLogoDelete">Supprimer</button>
+              </div>
+              <div id="logoEmptyWrap">
+                <button class="btn-secondary btn-sm" id="btnLogoUpload">↑ Choisir une image</button>
+                <span class="form-hint">PNG, JPG ou SVG · max 200 Ko · stocké dans votre fichier local</span>
+              </div>
+            </div>
+            <input type="file" id="fileLogoInput" accept="image/png,image/jpeg,image/svg+xml" style="display:none" />
+          </div>
           <div class="form-row-2">
             <div class="form-group"><label for="inputUAI">UAI / RNE</label><input type="text" id="inputUAI" placeholder="0750001A" maxlength="8" /></div>
             <div class="form-group"><label for="inputAcademie">Académie</label><input type="text" id="inputAcademie" placeholder="Paris" /></div>
@@ -438,6 +517,19 @@
             </div>
           </div>
           <div class="dot-env-total-hint" id="modalDotTotal"></div>
+          <div class="modal-section-title modal-section-sep">Enveloppes PACTE / IMP <span class="form-hint">— hors DGH</span></div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="inputEnvPacte">Enveloppe PACTE (h/an)</label>
+              <input type="number" id="inputEnvPacte" placeholder="0" min="0" step="0.5" />
+              <span class="form-hint">Laisser à 0 si non renseignée</span>
+            </div>
+            <div class="form-group">
+              <label for="inputEnvImp">Enveloppe IMP (h/an)</label>
+              <input type="number" id="inputEnvImp" placeholder="0" min="0" step="0.5" />
+              <span class="form-hint">Laisser à 0 si non renseignée</span>
+            </div>
+          </div>
         </div>
 
         <!-- Onglet 2 : Années scolaires -->
@@ -755,6 +847,75 @@
   <div id="kpiFloatTip"></div>
   <div id="discFloatTip"></div>
 
+  <!-- ══ MODAL MISSION (PACTE / IMP) ═══════════════════════════════ -->
+  <div class="modal-overlay is-hidden" id="modalMission" role="dialog" aria-modal="true">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="modalMissionTitle">Nouvelle mission</h2>
+        <button class="modal-close" id="modalMissionClose">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Type -->
+        <div class="form-group">
+          <label>Type de mission <span class="form-required">*</span></label>
+          <div class="missions-type-radios">
+            <label class="radio-label"><input type="radio" class="mission-type-radio" name="missionType" value="pacte" checked /> <span class="badge-pacte">PACTE</span> — Pacte enseignant</label>
+            <label class="radio-label"><input type="radio" class="mission-type-radio" name="missionType" value="imp" /> <span class="badge-imp">IMP</span> — Indemnité pour mission particulière</label>
+          </div>
+        </div>
+        <!-- Intitulé -->
+        <div class="form-group">
+          <label for="inputMissionIntitule">Intitulé <span class="form-required">*</span></label>
+          <input type="text" id="inputMissionIntitule" placeholder="ex. Devoirs faits 6e A, Coordinateur EPS…" maxlength="120" />
+        </div>
+        <!-- Enseignant -->
+        <div class="form-group">
+          <label for="inputMissionEns">Enseignant <span class="form-required">*</span></label>
+          <select id="inputMissionEns"></select>
+          <span class="form-hint missions-ens-info" id="missionEnsInfo"></span>
+        </div>
+        <!-- Heures -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="inputMissionHeures">Heures annuelles <span class="form-required">*</span></label>
+            <input type="number" id="inputMissionHeures" placeholder="ex. 72" min="0" max="999" step="0.5" />
+          </div>
+          <div class="form-group">
+            <label>Équivalent hebdomadaire</label>
+            <div class="missions-h-hebdo" id="missionHHebdo">&#x2014;</div>
+            <span class="form-hint">Calculé automatiquement (÷ 36 semaines)</span>
+          </div>
+        </div>
+        <!-- Discipline (optionnel) -->
+        <div class="form-group">
+          <label for="inputMissionDisc">Discipline liée <span class="form-hint">— optionnel</span></label>
+          <select id="inputMissionDisc"></select>
+        </div>
+        <!-- Commentaire -->
+        <div class="form-group">
+          <label for="inputMissionComment">Commentaire</label>
+          <input type="text" id="inputMissionComment" placeholder="Notes éventuelles…" maxlength="200" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="modalMissionCancel">Annuler</button>
+        <button class="btn-primary" id="modalMissionSave">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CONFIRMATION SUPPRESSION MISSION ══════════════════════════ -->
+  <div class="modal-overlay is-hidden" id="confirmMission" role="dialog" aria-modal="true">
+    <div class="modal modal-sm">
+      <div class="modal-header"><h2>Supprimer cette mission ?</h2><button class="modal-close" id="confirmMissionCancel">&#x2715;</button></div>
+      <div class="modal-body"><p class="confirm-msg" id="confirmMissionMsg"></p><p class="confirm-sub">Cette action est irréversible.</p></div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="confirmMissionAnnuler">Annuler</button>
+        <button class="btn-danger" id="confirmMissionOk">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
   <script src="assets/js/data.js"></script>
   <script src="assets/js/calculs.js"></script>
   <script src="assets/js/modules/dashboard.js"></script>
@@ -764,6 +925,10 @@
   <script src="assets/js/modules/etab.js"></script>
   <script src="assets/js/modules/enseignants.js"></script>
   <script src="assets/js/modules/pilotage.js"></script>
+  <script src="assets/js/modules/edt.js"></script>
+  <script src="assets/js/modules/historique.js"></script>
+  <script src="assets/js/modules/missions.js"></script>
+  <script src="assets/js/modules/instances.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

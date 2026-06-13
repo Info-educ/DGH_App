@@ -187,7 +187,10 @@ const DGHDotation = (() => {
       const tfEcCls = tfEcart > 0 ? 'dot-ecart-over' : tfEcart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
       tfootHtml += '<td class="col-num"><span class="dot-ecart ' + tfEcCls + '"><strong>' + (tfEcart >= 0 ? '+' : '') + tfEcart + ' h</strong></span></td>';
       tfootHtml += '<td class="col-bar"></td><td class="col-actions"></td></tr></tfoot>';
-      listEl.innerHTML = html + '</tbody>' + tfootHtml + '</table>';
+      const noteHGEMC = '<p class="dot-note-reglementaire">'
+        + '\u24d8 Rappel r\u00e9glementaire (arr\u00eat\u00e9 du 19 mai 2015 modifi\u00e9)\u00a0: Histoire-G\u00e9ographie-EMC = ligne unique de 3\u00a0h (6e/5e/4e) et 3,5\u00a0h (3e), dont 0,5\u00a0h d\u2019EMC \u2014 r\u00e9partie ici sur deux lignes pour la ventilation des services et l\u2019ouverture du service de notation Pronote.'
+        + '</p>';
+      listEl.innerHTML = html + '</tbody>' + tfootHtml + '</table>' + noteHGEMC;
 
       // Total bar
       const totalBar = document.getElementById('dotTotalBar');
@@ -451,6 +454,38 @@ const DGHDotation = (() => {
   // ── UTILITAIRES LOCAUX ────────────────────────────────────────────
   function _set(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
   function _setVal(id,val){const el=document.getElementById(id);if(el)el.value=val;}
+
+  // ── EXPORT CSV (Excel) ────────────────────────────────────────────
+  function exporterCSV() {
+    const anneeData   = DGHData.getAnnee();
+    const etab        = DGHData.getEtab();
+    const annee       = DGHData.getAnneeActive();
+    const bilan       = Calculs.bilanDotation(anneeData);
+    const besoins     = Calculs.besoinsParDiscipline(
+      DGHData.getStructures(), DGHData.getDisciplines(), DGHData.getRepartition(), DGHData.getGrilles());
+    const slug = (etab.nom || 'dgh').replace(/\s+/g, '_').toLowerCase();
+    const rows = [
+      ['Dotation DGH — ' + (etab.nom || '') + ' — ' + annee],
+      [],
+      ['Enveloppe HP', bilan.hPosteEnv], ['Enveloppe HSA', bilan.hsaEnv],
+      ['Total alloué', bilan.totalAlloue], ['Solde', bilan.solde],
+      [],
+      ['Discipline', 'Besoin réel', 'Besoin MEN', 'H-Poste', 'HSA', 'Total', 'Écart', 'Heures groupes', 'Commentaire']
+    ];
+    besoins.forEach(b => rows.push([
+      b.nom, b.besoinTheorique, b.besoinMEN, b.hPoste, b.hsa, b.total, b.ecart,
+      b.hasGroupes ? b.heuresGroupesReel : '', b.commentaire || ''
+    ]));
+    const hpcs = DGHData.getHeuresPedaComp();
+    if (hpcs.length > 0) {
+      rows.push([]);
+      rows.push(['Heure péda. complémentaire', 'Heures', 'Type']);
+      hpcs.forEach(h => rows.push([h.nom, h.heures || 0, (h.typeHeure || 'hp') === 'hsa' ? 'HSA' : 'HP']));
+    }
+    app.downloadCSV(slug + '_dotation_' + annee + '.csv', rows);
+    app.toast('Export CSV de la dotation généré.');
+  }
+
   function _esc(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
   return {
@@ -461,6 +496,6 @@ const DGHDotation = (() => {
     suggererHP, ecartZero,
     openModalGC, closeModalGC, saveModalGC, updateGCEffectif, gcSelectAllClasses,
     confirmDeleteGC, closeConfirmGC, execDeleteGC
-  };
+ , exporterCSV };
 
 })();

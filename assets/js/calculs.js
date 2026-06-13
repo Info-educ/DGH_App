@@ -20,14 +20,26 @@ const Calculs = (() => {
     documentaliste: { label: 'Prof. documentaliste', ors: 0  },
     cpe:            { label: 'CPE',                  ors: 0  },
     psy_en:         { label: 'Psy-EN',               ors: 0  },
-    contractuel:    { label: 'Contractuel',          ors: 18 }
+    contractuel:    { label: 'Contractuel',          ors: 0  }  // ORS = quotité contractuelle → saisir orsManuel
   };
 
+  /**
+   * Grilles réglementaires — arrêté du 19 mai 2015 modifié (v. en vigueur 2025-2026).
+   * Total = 26h obligatoires par division (25h en 6e depuis l'arrêté du
+   * 4 avril 2025 : l'heure de soutien/approfondissement obligatoire est
+   * remplacée par des heures de soutien facultatives, hors grille).
+   * AP/EPI = modalités prises DANS ces heures,
+   * donc absentes du besoin (la discipline AP reste disponible pour la ventilation).
+   * HG-EMC = ligne réglementaire unique (3h / 3h / 3h / 3,5h dont 0,5h EMC) :
+   * répartie ici HG + EMC 0,5h pour la ventilation des services et Pronote.
+   * 6e : sciences globalisées SVT + Physique-Chimie 3h (techno supprimée en 6e
+   * depuis la rentrée 2023) — réparti 1,5 + 1,5 par défaut, modifiable (overrides).
+   */
   const GRILLES_MEN = {
-    '6e': { 'Français':4.5,'Mathématiques':4.5,'Histoire-Géographie':3,'LV1':4,'SVT':1.5,'Sciences et Technologie':1.5,'Arts plastiques':1,'Éducation musicale':1,'EPS':3,'EMC':0.5,'AP':3 },
-    '5e': { 'Français':4.5,'Mathématiques':3.5,'Histoire-Géographie':3,'LV1':3,'LV2':2.5,'SVT':1.5,'Physique-Chimie':1.5,'Technologie':1.5,'Arts plastiques':1,'Éducation musicale':1,'EPS':3,'EMC':0.5,'AP':2 },
-    '4e': { 'Français':4.5,'Mathématiques':3.5,'Histoire-Géographie':3,'LV1':3,'LV2':2.5,'SVT':1.5,'Physique-Chimie':1.5,'Technologie':1.5,'Arts plastiques':1,'Éducation musicale':1,'EPS':3,'EMC':0.5,'AP':2 },
-    '3e': { 'Français':4,'Mathématiques':4,'Histoire-Géographie':3.5,'LV1':3,'LV2':2.5,'SVT':1.5,'Physique-Chimie':1.5,'Technologie':1.5,'Arts plastiques':1,'Éducation musicale':1,'EPS':3,'EMC':0.5,'AP':2 }
+    '6e': { 'Français':4.5,'Mathématiques':4.5,'Histoire-Géographie':2.5,'EMC':0.5,'LV1':4,'SVT':1.5,'Physique-Chimie':1.5,'Arts plastiques':1,'Éducation musicale':1,'EPS':4 },
+    '5e': { 'Français':4.5,'Mathématiques':3.5,'Histoire-Géographie':2.5,'EMC':0.5,'LV1':3,'LV2':2.5,'SVT':1.5,'Physique-Chimie':1.5,'Technologie':1.5,'Arts plastiques':1,'Éducation musicale':1,'EPS':3 },
+    '4e': { 'Français':4.5,'Mathématiques':3.5,'Histoire-Géographie':2.5,'EMC':0.5,'LV1':3,'LV2':2.5,'SVT':1.5,'Physique-Chimie':1.5,'Technologie':1.5,'Arts plastiques':1,'Éducation musicale':1,'EPS':3 },
+    '3e': { 'Français':4,'Mathématiques':3.5,'Histoire-Géographie':3,'EMC':0.5,'LV1':3,'LV2':2.5,'SVT':1.5,'Physique-Chimie':1.5,'Technologie':1.5,'Arts plastiques':1,'Éducation musicale':1,'EPS':3 }
   };
 
   const H_THEORIQUES_NIV = {};
@@ -263,7 +275,10 @@ const Calculs = (() => {
     const repartition = anneeData.repartition || [];
     const enseignants = anneeData.enseignants || [];
     const structures  = anneeData.structures  || [];
-    const allouees    = repartition.reduce((s,r) => s+(r.hPoste||0)+(r.hsa||0), 0);
+    // Allouées = disciplines (HP+HSA) + HPC — même périmètre que bilanDotation
+    const hpcs        = anneeData.heuresPedaComp || [];
+    const allouees    = repartition.reduce((s,r) => s+(r.hPoste||0)+(r.hsa||0), 0)
+                      + hpcs.reduce((s,h) => s+(h.heures||0), 0);
 
     if (enveloppe === 0)
       alertes.push({type:'dotation', severite:'info', message:'L\'enveloppe DGH (HP + HSA) n\'a pas encore été saisie.', ref:'dotation'});
@@ -524,12 +539,137 @@ function comparerScenarios(anneeData, scenarios) {
     .sort((a, b) => b.bilan.soldeSimule - a.bilan.soldeSimule);
 }
 
+/**
+ * Comparatif des disciplines entre deux jeux de données annuels.
+ * anneeN et anneeN1 sont des objets { disciplines[], repartition[], heuresPedaComp[] }
+ * (données vivantes ou snapshot).
+ * Retourne un tableau trié alphabétiquement.
+ */
+function comparatifDisciplines(anneeN, anneeN1) {
+  function hParDisc(annee) {
+    const map = {};
+    (annee.disciplines || []).forEach(d => { map[d.id] = { id: d.id, nom: d.nom, hp: 0, hsa: 0 }; });
+    (annee.repartition || []).forEach(r => {
+      if (map[r.disciplineId]) {
+        map[r.disciplineId].hp  += r.hPoste || 0;
+        map[r.disciplineId].hsa += r.hsa    || 0;
+      }
+    });
+    return map;
+  }
+
+  const mapN  = hParDisc(anneeN  || {});
+  const mapN1 = hParDisc(anneeN1 || {});
+  const allIds = new Set([...Object.keys(mapN), ...Object.keys(mapN1)]);
+  const rows = [];
+
+  allIds.forEach(id => {
+    const n  = mapN[id];
+    const n1 = mapN1[id];
+    const hpN    = n  ? Math.round((n.hp )  *2)/2 : null;
+    const hsaN   = n  ? Math.round((n.hsa)  *2)/2 : null;
+    const totalN  = n  ? Math.round((hpN  + hsaN ) *2)/2 : null;
+    const hpN1   = n1 ? Math.round((n1.hp) *2)/2 : null;
+    const hsaN1  = n1 ? Math.round((n1.hsa)*2)/2 : null;
+    const totalN1 = n1 ? Math.round((hpN1 + hsaN1)*2)/2 : null;
+    const delta  = (totalN !== null && totalN1 !== null) ? Math.round((totalN - totalN1)*2)/2 : null;
+    const pct    = (delta !== null && totalN1 > 0) ? Math.round((delta / totalN1) * 100) : null;
+    const statut = !n1 ? 'nouveau' : !n ? 'supprime' : 'stable';
+    const nom    = (n ? n.nom : n1 ? n1.nom : '') || '';
+    rows.push({ id, nom, hpN, hsaN, totalN, hpN1, hsaN1, totalN1, delta, pct, statut });
+  });
+
+  return rows.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+}
+
+/**
+ * Données pour la Synthèse CA.
+ */
+function syntheseCA(anneeData, etab) {
+  const bilan  = bilanDotation(anneeData);
+  const stru   = resumeStructures(anneeData.structures || []);
+  const discs  = (anneeData.disciplines || []).map(d => {
+    const rep  = (anneeData.repartition || []).find(r => r.disciplineId === d.id);
+    const hp   = rep ? Math.round((rep.hPoste || 0) * 2) / 2 : 0;
+    const hsa  = rep ? Math.round((rep.hsa    || 0) * 2) / 2 : 0;
+    return { id: d.id, nom: d.nom, couleur: d.couleur || '#94a3b8', hp, hsa, total: Math.round((hp + hsa) * 2) / 2 };
+  }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  const hpcs = (anneeData.heuresPedaComp || []).map(h => ({
+    nom: h.nom, heures: h.heures || 0, typeHeure: h.typeHeure || 'hp'
+  }));
+  const missions   = anneeData.missions || [];
+  const totalPacte = missions.filter(m => m.type === 'pacte').reduce((s, m) => s + (m.heures || 0), 0);
+  const totalImp   = missions.filter(m => m.type === 'imp')  .reduce((s, m) => s + (m.heures || 0), 0);
+  return { etab, annee: anneeData._annee || '', bilan, stru, discs, hpcs, totalPacte, totalImp };
+}
+
+/**
+ * Données pour le Dialogue de gestion.
+ */
+function dialogueGestion(anneeData, etab) {
+  const bilan = bilanDotation(anneeData);
+  const stru  = resumeStructures(anneeData.structures || []);
+  const hParEleve = stru.effectifTotal > 0
+    ? Math.round((bilan.totalAlloue / stru.effectifTotal) * 100) / 100 : null;
+  const tauxHSA = bilan.totalAlloue > 0
+    ? Math.round((bilan.totalHSA / bilan.totalAlloue) * 1000) / 10 : 0;
+  const niveaux = Object.keys(H_THEORIQUES_NIV);
+  const ecartsMEN = niveaux.map(niv => {
+    const divs = (anneeData.structures || []).filter(d => d.niveau === niv);
+    const nbDiv = divs.length;
+    const eff   = divs.reduce((s, d) => s + (d.effectif || 0), 0);
+    const hMEN  = H_THEORIQUES_NIV[niv] || 0;
+    const hMENTotal = Math.round(hMEN * nbDiv * 2) / 2;
+    const totalDiv = (anneeData.structures || []).length;
+    const hDotees = totalDiv === 0 ? 0 : Object.entries(GRILLES_MEN[niv] || {}).reduce((s, [discNom]) => {
+      const disc = (anneeData.disciplines || []).find(d => d.nom === discNom);
+      if (!disc) return s;
+      const rep = (anneeData.repartition || []).find(r => r.disciplineId === disc.id);
+      if (!rep) return s;
+      return s + Math.round(((rep.hPoste || 0) + (rep.hsa || 0)) * (nbDiv / totalDiv) * 2) / 2;
+    }, 0);
+    const delta = nbDiv > 0 ? Math.round((hDotees - hMENTotal) * 2) / 2 : null;
+    return { niv, nbDiv, eff, hMEN, hMENTotal, hDotees: Math.round(hDotees * 2) / 2, delta };
+  }).filter(e => e.nbDiv > 0);
+  const enseignants = anneeData.enseignants || [];
+  const statutsMap = {};
+  enseignants.forEach(e => { const s = e.grade || 'Inconnu'; statutsMap[s] = (statutsMap[s] || 0) + 1; });
+  const statuts = Object.entries(statutsMap).map(([grade, nb]) => ({ grade, nb })).sort((a, b) => b.nb - a.nb);
+  return { etab, annee: anneeData._annee || '', bilan, stru, hParEleve, tauxHSA, ecartsMEN, statuts, nbEns: enseignants.length };
+}
+
+/**
+ * Récapitulatif de service par enseignant.
+ */
+function recapServices(anneeData, etab) {
+  const hpcs     = anneeData.heuresPedaComp || [];
+  const missions = anneeData.missions || [];
+  const rows = (anneeData.enseignants || []).map(ens => {
+    const svc  = serviceTotalEnseignant(ens, hpcs);
+    const mEns = missions.filter(m => m.enseignantId === ens.id);
+    const totalPacte = mEns.filter(m => m.type === 'pacte').reduce((s, m) => s + (m.heures || 0), 0);
+    const totalImp   = mEns.filter(m => m.type === 'imp')  .reduce((s, m) => s + (m.heures || 0), 0);
+    return {
+      id: ens.id, nom: ens.nom || '', prenom: ens.prenom || '',
+      grade: ens.grade || '', disciplinePrincipale: ens.disciplinePrincipale || '',
+      hpDisc: svc.hpDisc, hpHPC: svc.hpHPC, hpTotal: svc.hpTotal,
+      hsaTotal: svc.hsaTotal, totalGeneral: svc.totalGeneral,
+      ors: svc.ors, ecartORS: svc.ecartORS, statutORS: svc.statutORS,
+      totalPacte, totalImp,
+      totalAvecMissions: Math.round((svc.totalGeneral + totalPacte + totalImp) * 2) / 2
+    };
+  }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  const bilan = bilanDotation(anneeData);
+  return { etab, annee: anneeData._annee || '', rows, bilan, nbEns: rows.length };
+}
+
   return {
     ORS, GRILLES_MEN, H_THEORIQUES_NIV,
     getORS, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
     resumeStructures, bilanDotation, besoinsParDiscipline,
     suggererRepartition, bilanHPC, genererAlertes, serviceTotalEnseignant,
-    bilanScenario, comparerScenarios
+    bilanScenario, comparerScenarios, comparatifDisciplines,
+    syntheseCA, dialogueGestion, recapServices
   };
 
 })();

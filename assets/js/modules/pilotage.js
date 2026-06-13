@@ -19,8 +19,9 @@ const DGHPilotage = (() => {
   let _tabActif    = 'scenarios'; // 'scenarios' | 'recap' | 'synthese'
   let _scenEditId  = null;        // scénario ouvert en accordéon
   let _scenRecapId = null;        // scénario affiché dans le récap (null = scénario actif)
-  let _modEditId   = null;        // id du modificateur en cours d'édition (null = ajout)
+  let _modEditId   = null;        // id du modificateur en cours d\'édition (null = ajout)
   let _modEditScenId = null;      // scénario du modificateur en édition
+  let _scenImpactId = null;       // scénario affiché dans l\'onglet Impact
 
   const TYPES_MOD = {
     'dedoublement':           { label: 'Dédoublement',                     css: 'mod-t-ded',   short: 'Déd.',    defH: 1   },
@@ -33,7 +34,7 @@ const DGHPilotage = (() => {
   const NIVEAUX_ORD = ['6e','5e','4e','3e','SEGPA','ULIS','UPE2A'];
 
   // ══════════════════════════════════════════════════════════════════
-  // POINT D'ENTRÉE
+  // POINT D\'ENTRÉE
   // ══════════════════════════════════════════════════════════════════
   function renderPilotage() {
     try {
@@ -203,7 +204,7 @@ const DGHPilotage = (() => {
     + '</div>';
   }
 
-  // ── Formulaire d'ÉDITION d'une modalité existante ─────────────────
+  // ── Formulaire d\'ÉDITION d\'une modalité existante ─────────────────
   function _htmlFormModaliteEdit(scenId, mod, disciplines, structures) {
     const typeOpts = Object.entries(TYPES_MOD).map(([k,v]) =>
       '<option value="' + k + '"' + (mod.type === k ? ' selected' : '') + '>' + v.label + '</option>'
@@ -620,41 +621,69 @@ const DGHPilotage = (() => {
    *   - le service simulé (ORS, écart)
    * Si aucun scénario actif → invitation à en activer un.
    * Filtrage automatique : seules les modalités dont la discipline
-   * correspond à une discipline de l'enseignant sont proposées.
+   * correspond à une discipline de l\'enseignant sont proposées.
    */
   function _renderOngletImpact() {
     const el = document.getElementById('scenImpactWrap');
     if (!el) return;
 
     const data      = DGHData.getAnnee();
-    const scenActif = DGHData.getScenarioActif();
+    const scenarios = DGHData.getScenarios();
 
-    if (!scenActif) {
-      el.innerHTML = '<div class="scen-empty">'
-        + '<p>Aucun scénario actif.</p>'
-        + '<p class="scen-empty-hint">Activez un scénario dans l\'onglet <strong>⊕ Scénarios</strong> pour visualiser son impact sur l\'équipe.</p>'
+    // Scénario affiché : _scenImpactId > scénario actif > premier scénario dispo
+    if (_scenImpactId && !scenarios.find(sc => sc.id === _scenImpactId)) _scenImpactId = null;
+    const scenChoisi = _scenImpactId
+      ? scenarios.find(sc => sc.id === _scenImpactId)
+      : (DGHData.getScenarioActif() || (scenarios.length > 0 ? scenarios[0] : null));
+
+    // ── Sélecteur de scénario ────────────────────────────────────
+    const selectOpts = '<option value="">— Choisir un scénario —</option>'
+      + scenarios.map(sc =>
+          '<option value="' + sc.id + '"' + (scenChoisi && sc.id === scenChoisi.id ? ' selected' : '') + '>'
+          + _esc(sc.nom) + (sc.actif ? ' ●' : '') + '</option>'
+        ).join('');
+
+    const selectorHtml = '<div class="recap-scen-selector">'
+      + '<label class="recap-scen-select-label">Scénario analysé :</label>'
+      + '<select class="impact-scen-select" id="impactScenSelect">' + selectOpts + '</select>'
+      + (scenChoisi && scenChoisi.actif ? '<span class="impact-actif-badge">● Actif</span>' : '')
+    + '</div>';
+
+    if (scenarios.length === 0) {
+      el.innerHTML = selectorHtml
+        + '<div class="scen-empty">'
+        + '<p>Aucun scénario créé.</p>'
+        + '<p class="scen-empty-hint">Créez un scénario dans l\'onglet <strong>⊕ Scénarios</strong> puis revenez ici.</p>'
         + '</div>';
       return;
     }
 
-    const mods        = scenActif.modificateurs || [];
+    if (!scenChoisi) {
+      el.innerHTML = selectorHtml + '<div class="scen-empty"><p>Sélectionnez un scénario ci-dessus.</p></div>';
+      return;
+    }
+
+    const mods        = scenChoisi.modificateurs || [];
     const enseignants = DGHData.getEnseignants();
     const hpcs        = DGHData.getHeuresPedaComp();
     const disciplines = DGHData.getDisciplines();
     const structures  = DGHData.getStructures();
 
     if (mods.length === 0) {
-      el.innerHTML = '<div class="scen-empty"><p>Le scénario <strong>' + _esc(scenActif.nom) + '</strong> n\'a aucune modalité.</p></div>';
+      el.innerHTML = selectorHtml
+        + '<div class="scen-empty"><p>Le scénario <strong>' + _esc(scenChoisi.nom) + '</strong> n\'a aucune modalité.</p>'
+        + '<p class="scen-empty-hint">Ajoutez des modalités dans l\'onglet <strong>⊕ Scénarios</strong>.</p></div>';
       return;
     }
 
     if (enseignants.length === 0) {
-      el.innerHTML = '<div class="scen-empty"><p>Aucun enseignant renseigné. Ajoutez votre équipe dans le module Équipe pédagogique.</p></div>';
+      el.innerHTML = selectorHtml
+        + '<div class="scen-empty"><p>Aucun enseignant renseigné.</p>'
+        + '<p class="scen-empty-hint">Ajoutez votre équipe dans le module <strong>Équipe pédagogique</strong>.</p></div>';
       return;
     }
 
-    // Pour chaque enseignant, chercher les modalités qui le concernent
-    // (discipline de la modalité ∈ disciplines de l'enseignant, ou modalité sans discipline)
+    // ── Calcul de l\'impact par enseignant ────────────────────────
     const lignesEns = enseignants.map(ens => {
       const discsEns = new Set(
         (Array.isArray(ens.disciplines) ? ens.disciplines : [])
@@ -662,63 +691,74 @@ const DGHPilotage = (() => {
       );
       if (ens.disciplinePrincipale) discsEns.add(ens.disciplinePrincipale);
 
-      // Modalités concernant cet enseignant
+      // Toutes les modalités sont proposées à tous les enseignants.
+      // Celles avec une discipline sont pré-filtrées sur la discipline de l\'ens,
+      // mais l\'utilisateur peut quand même cocher manuellement.
       const modsConcernes = mods.filter(mod => {
-        if (!mod.disciplineId) return true; // sans discipline → concerne tout le monde
+        if (!mod.disciplineId) return true;
         const disc = disciplines.find(d => d.id === mod.disciplineId);
         return disc && discsEns.has(disc.nom);
       });
 
-      if (modsConcernes.length === 0) return null; // cet enseignant n'est pas concerné
+      // Si aucune modalité ne correspond à cet enseignant → on l\'affiche quand même
+      // avec toutes les modalités (sans discipline) pour permettre l\'affectation manuelle
+      const modsAffiches = modsConcernes.length > 0 ? modsConcernes : mods.filter(m => !m.disciplineId);
+      if (modsAffiches.length === 0) return null;
 
-      // Service actuel (sans scénario)
       const svcBase = Calculs.serviceTotalEnseignant(ens, hpcs);
-
-      // Calculer le service simulé selon les affectations choisies
       let deltaHP = 0, deltaHSA = 0;
-      const affRows = modsConcernes.map(mod => {
-        const tInfo = TYPES_MOD[mod.type] || { label: mod.type, css: '', short: mod.type };
-        const aff   = (mod.affectations || []).find(a => a.ensId === ens.id);
-        const th    = aff ? aff.typeHeure : 'hsa'; // défaut HSA
-        const affecte = aff ? aff.affecte !== false : false; // pas affecté par défaut
-        // Coût de cette modalité pour 1 enseignant = heuresParGroupe × nb groupes/classes (1 prof = 1 service)
+
+      const affRows = modsAffiches.map(mod => {
+        const tInfo     = TYPES_MOD[mod.type] || { label: mod.type, css: '', short: mod.type };
+        const aff       = (mod.affectations || []).find(a => a.ensId === ens.id);
+        const th        = aff ? aff.typeHeure : (mod.typeHeure || 'hsa');
+        const affecte   = aff ? aff.affecte !== false : false;
         const hParSemaine = mod.heuresParGroupe || 0;
-        const titre = mod.titre || _titreModificateur(mod.type, mod.disciplineId, mod.classeIds, structures, disciplines, mod.nomAutre);
+        const titre     = mod.titre || _titreModificateur(mod.type, mod.disciplineId, mod.classeIds, structures, disciplines, mod.nomAutre);
+        const estLieeDisc = mod.disciplineId
+          ? (disciplines.find(d => d.id === mod.disciplineId)?.nom || '')
+          : null;
 
         if (affecte) {
           if (th === 'hp') deltaHP  += hParSemaine;
           else             deltaHSA += hParSemaine;
         }
-
-        return { mod, tInfo, th, affecte, hParSemaine, titre };
+        return { mod, tInfo, th, affecte, hParSemaine, titre, estLieeDisc };
       });
 
-      const hpSim  = Math.round((svcBase.hpTotal  + deltaHP)  * 2) / 2;
-      const hsaSim = Math.round((svcBase.hsaTotal + deltaHSA) * 2) / 2;
-      const ors    = svcBase.ors;
+      const hpSim    = Math.round((svcBase.hpTotal  + deltaHP)  * 2) / 2;
+      const hsaSim   = Math.round((svcBase.hsaTotal + deltaHSA) * 2) / 2;
+      const ors      = svcBase.ors;
       const ecartSim = ors > 0 ? Math.round((hpSim - ors) * 2) / 2 : null;
-      const statSim  = ecartSim === null ? 'sans-ors' : ecartSim > 0 ? 'hsa' : ecartSim < 0 ? 'sous-service' : 'equilibre';
+      const statSim  = ecartSim === null ? 'sans-ors'
+        : ecartSim > 0  ? 'hsa'
+        : ecartSim < 0  ? 'sous-service'
+        : 'equilibre';
 
       return { ens, svcBase, affRows, hpSim, hsaSim, ors, ecartSim, statSim };
     }).filter(Boolean);
 
     if (lignesEns.length === 0) {
-      el.innerHTML = '<div class="scen-empty"><p>Aucun enseignant n\'est concerné par les disciplines de ce scénario.</p>'
-        + '<p class="scen-empty-hint">Vérifiez que les modalités ont des disciplines correspondant aux matières de votre équipe.</p></div>';
+      el.innerHTML = selectorHtml
+        + '<div class="scen-empty"><p>Aucune modalité ne correspond aux disciplines de votre équipe.</p>'
+        + '<p class="scen-empty-hint">Vérifiez les disciplines renseignées dans les modalités ou ajoutez des enseignants.</p></div>';
       return;
     }
 
-    // ── En-tête ──
-    const html = '<div class="impact-header">'
-      + '<h3 class="synth-section-title">Impact du scénario <span class="impact-scen-nom">' + _esc(scenActif.nom) + '</span> sur l\'équipe</h3>'
-      + '<p class="impact-subtitle">Pour chaque enseignant concerné, cochez les modalités qui lui sont attribuées et choisissez HP ou HSA. Les services simulés se mettent à jour en temps réel.</p>'
-    + '</div>'
-    + lignesEns.map(row => _htmlImpactEnseignant(row, scenActif.id)).join('');
-
-    el.innerHTML = html;
+    el.innerHTML = selectorHtml
+      + '<div class="impact-header">'
+        + '<p class="impact-subtitle">Cochez les modalités attribuées à chaque enseignant et choisissez HP ou HSA. Le service simulé se met à jour immédiatement.</p>'
+      + '</div>'
+      + lignesEns.map(row => _htmlImpactEnseignant(row, scenChoisi.id)).join('');
   }
 
-  function _htmlImpactEnseignant(row, scenId) {
+  // ── Changer le scénario affiché dans l\'onglet Impact ─────────────
+  function setImpactScen(id) {
+    _scenImpactId = id || null;
+    _renderOngletImpact();
+  }
+
+    function _htmlImpactEnseignant(row, scenId) {
     const { ens, svcBase, affRows, hpSim, hsaSim, ors, ecartSim, statSim } = row;
     const nomEns   = _esc((ens.nom||'') + (ens.prenom ? ' ' + ens.prenom : ''));
     const statCls  = { 'hsa':'ens-stat-hsa','sous-service':'ens-stat-ss','equilibre':'ens-stat-eq','sans-ors':'ens-stat-na' }[statSim] || '';
@@ -1025,7 +1065,7 @@ const DGHPilotage = (() => {
     _renderOngletScenarios();
   }
 
-  // ── Ouvrir formulaire d'édition d'une modalité ──────────────────
+  // ── Ouvrir formulaire d\'édition d\'une modalité ──────────────────
   function openEditMod(scenId, modId) {
     _modEditScenId = scenId;
     _modEditId     = modId;
@@ -1121,7 +1161,7 @@ const DGHPilotage = (() => {
   }
 
   /**
-   * Appelé quand l'utilisateur change le type de modalité dans le formulaire.
+   * Appelé quand l\'utilisateur change le type de modalité dans le formulaire.
    * - Affiche/masque le champ "Nom" pour le type 'autre'
    * - Met à jour la valeur H par défaut selon le type
    */
@@ -1237,7 +1277,8 @@ const DGHPilotage = (() => {
     setRecapScen,
     openEditMod,
     cancelEditMod,
-    saveEditMod
+    saveEditMod,
+    setImpactScen
   };
 
 })();

@@ -5,6 +5,34 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.1.0 — Export Excel/CSV (2026-06-10)
+
+### Nouveau
+- **⬇ Exporter Excel** : export CSV (séparateur `;`, BOM UTF-8, décimales à virgule — ouverture native dans Excel français, zéro dépendance, 100% local/RGPD)
+  - Module **Dotation** : enveloppe, tableau complet par discipline (besoin réel/MEN, HP, HSA, écart, groupes, commentaires) + liste des HPC
+  - Module **Instances** : export de l'onglet actif — Services enseignants (service complet par enseignant avec ORS, écart, Pacte/IMP), Synthèse CA, Dialogue de gestion
+- Nouvel utilitaire public `app.downloadCSV(filename, rows)` (app.js)
+- Nouvelles actions globales : `dot-export-csv`, `inst-export-csv`
+
+---
+
+## v4.0.1 — Lot P1 : corrections réglementaires & fiabilité (2026-06-10)
+
+### Réglementaire
+- **Grilles MEN corrigées** (arrêté du 19 mai 2015 modifié, en vigueur 2025-2026) :
+  - 6e : EPS 4h (au lieu de 3h) ; sciences globalisées SVT 1,5h + Physique-Chimie 1,5h (la ligne « Sciences et Technologie » 6e est supprimée) ; total 25h (arrêté du 4 avril 2025)
+  - HG-EMC : la ligne réglementaire unique (3h / 3h / 3h / 3,5h dont 0,5h EMC) est répartie HG 2,5h (3h en 3e) + EMC 0,5h — fin du double compte de 0,5h/division
+  - 3e : Mathématiques 3,5h (au lieu de 4h)
+  - AP retiré du besoin théorique (modalité prise dans les heures obligatoires) ; la discipline AP reste disponible pour la ventilation
+- Note réglementaire HG-EMC affichée sous le tableau Dotation (`.dot-note-reglementaire`)
+
+### Bugs corrigés
+- `Calculs.ORS.contractuel` : 18 → 0, conforme au comportement documenté (ORS = quotité contractuelle via orsManuel)
+- `genererAlertes` : les heures allouées intègrent désormais les HPC — alertes de dépassement cohérentes avec le solde du dashboard
+- `importJSON` : acceptation par extension `.json` (file.type est souvent vide sous Windows/Firefox) — l'import de sauvegardes fonctionne sur tous les navigateurs
+
+---
+
 ## v3.5.0 — Sprint 8 : Module Pilotage pédagogique (2026-04-18)
 
 ### Nouveau module

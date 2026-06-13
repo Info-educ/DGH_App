@@ -15,6 +15,15 @@ const DGHEtab = (() => {
       _setVal('inputNomEtab',etab.nom||''); _setVal('inputUAI',etab.uai||''); _setVal('inputAcademie',etab.academie||'');
       _setVal('inputDGH_HP',  dot.hPosteEnveloppe != null ? dot.hPosteEnveloppe : '');
       _setVal('inputDGH_HSA', dot.hsaEnveloppe    != null ? dot.hsaEnveloppe    : '');
+      _setVal('inputEnvPacte', etab.enveloppePacte != null ? etab.enveloppePacte : '');
+      _setVal('inputEnvImp',   etab.enveloppeImp   != null ? etab.enveloppeImp   : '');
+      // Logo
+      const preview    = document.getElementById('logoPreview');
+      const prevWrap   = document.getElementById('logoPreviewWrap');
+      const emptyWrap  = document.getElementById('logoEmptyWrap');
+      if (preview && etab.logo)  { preview.src = etab.logo; }
+      if (prevWrap)  prevWrap.classList.toggle('is-hidden',  !etab.logo);
+      if (emptyWrap) emptyWrap.classList.toggle('is-hidden', !!etab.logo);
       updateModalDotTotal();
       renderModalYearSelect(); renderYearListAdmin();
       switchModalTab('etab');
@@ -32,9 +41,11 @@ const DGHEtab = (() => {
       const ms = document.getElementById('modalYearSelect');
       if (ms && ms.value && ms.value !== DGHData.getAnneeActive()) DGHData.setAnneeActive(ms.value);
       DGHData.setEtab({
-        nom:      document.getElementById('inputNomEtab')?.value?.trim()||'',
-        uai:      document.getElementById('inputUAI')?.value?.trim()||'',
-        academie: document.getElementById('inputAcademie')?.value?.trim()||''
+        nom:            document.getElementById('inputNomEtab')?.value?.trim()||'',
+        uai:            document.getElementById('inputUAI')?.value?.trim()||'',
+        academie:       document.getElementById('inputAcademie')?.value?.trim()||'',
+        enveloppePacte: parseFloat(document.getElementById('inputEnvPacte')?.value)||0,
+        enveloppeImp:   parseFloat(document.getElementById('inputEnvImp')?.value)||0
       });
       DGHData.setDotation(
         parseFloat(document.getElementById('inputDGH_HP')?.value)||0,

@@ -10,7 +10,7 @@
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '3.5.0';
+  const VERSION = '4.1.0';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   const DISCIPLINES_MEN = [
@@ -47,10 +47,14 @@ const DGHData = (() => {
   function _schema() {
     return {
       _meta: { version: VERSION, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-      etablissement: { nom: '', uai: '', academie: '', commune: '', typeEtab: 'college' },
+      etablissement: { nom: '', uai: '', academie: '', commune: '', typeEtab: 'college', enveloppePacte: 0, enveloppeImp: 0, logo: null },
       annees: { '2025-2026': _annee('2025-2026') },
       anneeActive: '2025-2026'
     };
+  }
+
+  function _contraintesVides() {
+    return { barrettes: [], coInterventions: [] };
   }
 
   function _annee(annee) {
@@ -59,12 +63,16 @@ const DGHData = (() => {
       createdAt: new Date().toISOString(),
       dotation: { hPosteEnveloppe: 0, hsaEnveloppe: 0, commentaire: '' },
       structures: [],
+      groupes: [],          // Sprint 11 — référentiel groupes (mono/inter-classes)
       grilles: {},
       disciplines: [],
-      repartition: [],   // [{ disciplineId, hPoste, hsa, commentaire, groupesCours[] }]
+      repartition: [],
       heuresPedaComp: [],
       enseignants: [],
-      scenarios: [],   // Sprint 8 — liste des ScenarioObjects
+      scenarios: [],
+      contraintesEDT: _contraintesVides(),
+      missions: [],
+      snapshot: null,
       alertes: []
     };
   }
@@ -174,12 +182,40 @@ const DGHData = (() => {
     if (!_data.etablissement.typeEtab) {
       _data.etablissement.typeEtab = 'college';
     }
-    // Migration v3.5 : scenarios[] remplace simulation (stub inutilisé)
+    // Migration v3.9 : enveloppePacte / enveloppeImp
+    if (_data.etablissement.enveloppePacte === undefined) _data.etablissement.enveloppePacte = 0;
+    if (_data.etablissement.enveloppeImp    === undefined) _data.etablissement.enveloppeImp    = 0;
+    // Migration v4.0 : logo
+    if (_data.etablissement.logo === undefined) _data.etablissement.logo = null;
+    // Migration v3.5 : scenarios[]
     Object.values(_data.annees).forEach(ann => {
-      if (!Array.isArray(ann.scenarios)) {
-        ann.scenarios = [];
-        delete ann.simulation; // stub jamais utilisé en production
-      }
+      if (!Array.isArray(ann.scenarios)) { ann.scenarios = []; delete ann.simulation; }
+    });
+    // Migration v3.6 : contraintesEDT (barrettes + coInterventions)
+    Object.values(_data.annees).forEach(ann => {
+      if (!ann.contraintesEDT || typeof ann.contraintesEDT !== 'object') ann.contraintesEDT = _contraintesVides();
+      if (!Array.isArray(ann.contraintesEDT.barrettes))       ann.contraintesEDT.barrettes       = [];
+      if (!Array.isArray(ann.contraintesEDT.coInterventions)) ann.contraintesEDT.coInterventions = [];
+      // Nettoyer l'ancien champ indisponibilités (supprimé en v3.8)
+      delete ann.contraintesEDT.indisponibilites;
+    });
+    // Migration v3.7 : barrette.slots[] remplace classeIds[]/ensIds[]
+    Object.values(_data.annees).forEach(ann => {
+      ann.contraintesEDT.barrettes = (ann.contraintesEDT.barrettes || []).map(b => {
+        if (Array.isArray(b.slots)) return b;
+        const slots = (b.classeIds || []).map(cid => ({ type: 'classe', ref: cid, nomLibre: '', ensIds: [] }));
+        if (slots.length > 0 && Array.isArray(b.ensIds) && b.ensIds.length > 0) slots[0].ensIds = b.ensIds.slice();
+        return { id: b.id, nom: b.nom || '', disciplineIds: b.disciplineIds || [], commentaire: b.commentaire || '', slots };
+      });
+    });
+    // Migration v3.8 : groupes[] référentiel Structures
+    Object.values(_data.annees).forEach(ann => {
+      if (!Array.isArray(ann.groupes)) ann.groupes = [];
+    });
+    // Migration v3.9 : missions[] et snapshot
+    Object.values(_data.annees).forEach(ann => {
+      if (!Array.isArray(ann.missions)) ann.missions = [];
+      if (ann.snapshot === undefined) ann.snapshot = null;
     });
     _data._meta.version = VERSION;
     save();
@@ -722,6 +758,148 @@ const DGHData = (() => {
   }
   function _nextLetters(s){const c=s.split('');let i=c.length-1;while(i>=0){const code=c[i].charCodeAt(0);if(code<90){c[i]=String.fromCharCode(code+1);return c.join('');}c[i]='A';i--;}return 'A'+c.join('');}
 
+  // ══════════════════════════════════════════════════════════════════
+  // GROUPES — référentiel Structures (v3.8)
+  // ══════════════════════════════════════════════════════════════════
+  /**
+   * GroupeObject :
+   * { id, nom, classeIds[], effectif, disciplineIds[], commentaire }
+   * type est calculé : 'mono' si 1 classe, 'inter' si plusieurs
+   */
+  function getGroupes(annee) {
+    const ann = getAnnee(annee);
+    if (!Array.isArray(ann.groupes)) ann.groupes = [];
+    return ann.groupes.slice().sort((a, b) => (a.nom||'').localeCompare(b.nom||'','fr'));
+  }
+
+  function getGroupe(id, annee) {
+    return (getAnnee(annee).groupes || []).find(g => g.id === id) || null;
+  }
+
+  function addGroupe(fields) {
+    const ann  = getAnnee();
+    if (!Array.isArray(ann.groupes)) ann.groupes = [];
+    const g = {
+      id:           genId('grp'),
+      nom:          (fields.nom || '').trim(),
+      classeIds:    Array.isArray(fields.classeIds)    ? fields.classeIds.slice()    : [],
+      effectif:     typeof fields.effectif === 'number' ? fields.effectif            : 0,
+      disciplineIds:Array.isArray(fields.disciplineIds) ? fields.disciplineIds.slice(): [],
+      commentaire:  fields.commentaire || ''
+    };
+    ann.groupes.push(g);
+    save();
+    return g;
+  }
+
+  function updateGroupe(id, fields) {
+    const ann = getAnnee();
+    const idx = (ann.groupes || []).findIndex(g => g.id === id);
+    if (idx === -1) return false;
+    const g = ann.groupes[idx];
+    if (fields.nom           !== undefined) g.nom           = (fields.nom || '').trim();
+    if (fields.classeIds     !== undefined) g.classeIds     = Array.isArray(fields.classeIds)     ? fields.classeIds.slice()     : [];
+    if (fields.effectif      !== undefined) g.effectif      = typeof fields.effectif === 'number'  ? fields.effectif              : 0;
+    if (fields.disciplineIds !== undefined) g.disciplineIds = Array.isArray(fields.disciplineIds)  ? fields.disciplineIds.slice() : [];
+    if (fields.commentaire   !== undefined) g.commentaire   = fields.commentaire || '';
+    save();
+    return true;
+  }
+
+  function deleteGroupe(id) {
+    const ann    = getAnnee();
+    const before = (ann.groupes || []).length;
+    ann.groupes  = (ann.groupes || []).filter(g => g.id !== id);
+    if (ann.groupes.length < before) { save(); return true; }
+    return false;
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // CONTRAINTES EDT (v3.6+)
+  // ══════════════════════════════════════════════════════════════════
+  function getContraintesEDT(annee) {
+    const ann = getAnnee(annee);
+    if (!ann.contraintesEDT || typeof ann.contraintesEDT !== 'object') ann.contraintesEDT = _contraintesVides();
+    return ann.contraintesEDT;
+  }
+
+  // ── Barrettes (v3.7 — schéma slots[]) ────────────────────────────
+  function getBarrettes(annee)  { return getContraintesEDT(annee).barrettes.slice(); }
+
+  function addBarrette(fields) {
+    const ann  = getAnnee();
+    const barr = {
+      id:            genId('barr'),
+      nom:           (fields.nom || '').trim(),
+      disciplineIds: Array.isArray(fields.disciplineIds) ? fields.disciplineIds.slice() : [],
+      slots:         Array.isArray(fields.slots)         ? JSON.parse(JSON.stringify(fields.slots)) : [],
+      commentaire:   fields.commentaire || ''
+    };
+    ann.contraintesEDT.barrettes.push(barr);
+    save();
+    return barr;
+  }
+
+  function updateBarrette(id, fields) {
+    const c   = getContraintesEDT();
+    const idx = c.barrettes.findIndex(b => b.id === id);
+    if (idx === -1) return false;
+    const b = c.barrettes[idx];
+    if (fields.nom           !== undefined) b.nom           = (fields.nom || '').trim();
+    if (fields.disciplineIds !== undefined) b.disciplineIds = Array.isArray(fields.disciplineIds) ? fields.disciplineIds.slice() : [];
+    if (fields.slots         !== undefined) b.slots         = Array.isArray(fields.slots)         ? JSON.parse(JSON.stringify(fields.slots)) : [];
+    if (fields.commentaire   !== undefined) b.commentaire   = fields.commentaire || '';
+    save();
+    return true;
+  }
+
+  function deleteBarrette(id) {
+    const c = getContraintesEDT();
+    const before = c.barrettes.length;
+    c.barrettes  = c.barrettes.filter(b => b.id !== id);
+    if (c.barrettes.length < before) { save(); return true; }
+    return false;
+  }
+
+  // ── Co-interventions ──────────────────────────────────────────────
+  function getCoInterventions(annee) { return getContraintesEDT(annee).coInterventions.slice(); }
+
+  function addCoIntervention(fields) {
+    const ann   = getAnnee();
+    const coint = {
+      id:          genId('coint'),
+      nom:         (fields.nom || '').trim(),
+      ensIds:      Array.isArray(fields.ensIds)    ? fields.ensIds.slice()    : [],
+      classeIds:   Array.isArray(fields.classeIds) ? fields.classeIds.slice() : [],
+      commentaire: fields.commentaire || ''
+    };
+    ann.contraintesEDT.coInterventions.push(coint);
+    save();
+    return coint;
+  }
+
+  function updateCoIntervention(id, fields) {
+    const c   = getContraintesEDT();
+    const idx = c.coInterventions.findIndex(ci => ci.id === id);
+    if (idx === -1) return false;
+    const ci = c.coInterventions[idx];
+    if (fields.nom         !== undefined) ci.nom         = (fields.nom || '').trim();
+    if (fields.ensIds      !== undefined) ci.ensIds      = Array.isArray(fields.ensIds)    ? fields.ensIds.slice()    : [];
+    if (fields.classeIds   !== undefined) ci.classeIds   = Array.isArray(fields.classeIds) ? fields.classeIds.slice() : [];
+    if (fields.commentaire !== undefined) ci.commentaire = fields.commentaire || '';
+    save();
+    return true;
+  }
+
+  function deleteCoIntervention(id) {
+    const c      = getContraintesEDT();
+    const before = c.coInterventions.length;
+    c.coInterventions = c.coInterventions.filter(ci => ci.id !== id);
+    if (c.coInterventions.length < before) { save(); return true; }
+    return false;
+  }
+
+  // ── SAUVEGARDE ───────────────────────────────────────────────────
   function save() {
     if(!_data) return;
     _data._meta.updatedAt=new Date().toISOString();
@@ -740,7 +918,8 @@ const DGHData = (() => {
 
   function importJSON(file) {
     return new Promise((resolve,reject)=>{
-      if(!file||file.type!=='application/json') return reject(new Error('Fichier JSON requis (.json)'));
+      const isJson = file && (/\.json$/i.test(file.name||'') || file.type === 'application/json');
+      if(!isJson) return reject(new Error('Fichier JSON requis (.json)'));
       const r=new FileReader();
       r.onload=e=>{try{const d=JSON.parse(e.target.result);
         if(!d.annees||!d.etablissement) throw new Error('Format invalide');
@@ -753,6 +932,93 @@ const DGHData = (() => {
   }
 
   function genId(prefix){return(prefix||'id')+'_'+Date.now()+'_'+Math.random().toString(36).substr(2,6);}
+
+  // ══════════════════════════════════════════════════════════════════
+  // MISSIONS — PACTE & IMP (v3.9)
+  // ══════════════════════════════════════════════════════════════════
+  /**
+   * MissionObject :
+   * { id, type:'pacte'|'imp', intitule, enseignantId, heures, disciplineId, commentaire }
+   */
+  function getMissions(annee) {
+    const ann = getAnnee(annee);
+    return (ann.missions || []).slice();
+  }
+
+  function getMission(id, annee) {
+    return getMissions(annee).find(m => m.id === id) || null;
+  }
+
+  function getMissionsEnseignant(ensId, annee) {
+    return getMissions(annee).filter(m => m.enseignantId === ensId);
+  }
+
+  function addMission(fields, annee) {
+    const ann = getAnnee(annee);
+    if (!Array.isArray(ann.missions)) ann.missions = [];
+    const m = {
+      id:            genId('mission'),
+      type:          fields.type          || 'pacte',
+      intitule:      (fields.intitule     || '').trim(),
+      enseignantId:  fields.enseignantId  || null,
+      heures:        parseFloat(fields.heures) || 0,
+      disciplineId:  fields.disciplineId  || null,
+      commentaire:   (fields.commentaire  || '').trim()
+    };
+    ann.missions.push(m);
+    save();
+    return m;
+  }
+
+  function updateMission(id, fields, annee) {
+    const ann = getAnnee(annee);
+    const m   = (ann.missions || []).find(x => x.id === id);
+    if (!m) return false;
+    if (fields.type         !== undefined) m.type         = fields.type;
+    if (fields.intitule     !== undefined) m.intitule     = (fields.intitule || '').trim();
+    if (fields.enseignantId !== undefined) m.enseignantId = fields.enseignantId;
+    if (fields.heures       !== undefined) m.heures       = parseFloat(fields.heures) || 0;
+    if (fields.disciplineId !== undefined) m.disciplineId = fields.disciplineId;
+    if (fields.commentaire  !== undefined) m.commentaire  = (fields.commentaire || '').trim();
+    save();
+    return true;
+  }
+
+  function deleteMission(id, annee) {
+    const ann    = getAnnee(annee);
+    const before = (ann.missions || []).length;
+    ann.missions = (ann.missions || []).filter(m => m.id !== id);
+    if (ann.missions.length < before) { save(); return true; }
+    return false;
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // SNAPSHOT — Figer une année pour comparaison historique (v3.9)
+  // ══════════════════════════════════════════════════════════════════
+  function figerSnapshot(anneeId) {
+    const key = anneeId || _data.anneeActive;
+    if (!_data.annees[key]) return false;
+    // Copie profonde de l'année, sans le snapshot lui-même pour éviter la récursion
+    const copy = JSON.parse(JSON.stringify(_data.annees[key]));
+    delete copy.snapshot;
+    copy._figeLe = new Date().toISOString();
+    _data.annees[key].snapshot = copy;
+    save();
+    return true;
+  }
+
+  function getSnapshot(anneeId) {
+    const key = anneeId || _data.anneeActive;
+    return (_data.annees[key] && _data.annees[key].snapshot) || null;
+  }
+
+  function supprimerSnapshot(anneeId) {
+    const key = anneeId || _data.anneeActive;
+    if (!_data.annees[key]) return false;
+    _data.annees[key].snapshot = null;
+    save();
+    return true;
+  }
 
   function isEmpty() {
     const ann=getAnnee();
@@ -775,7 +1041,13 @@ const DGHData = (() => {
     getScenarios,getScenario,getScenarioActif,
     addScenario,updateScenario,deleteScenario,dupliquerScenario,setScenarioActif,
     addModificateur,updateModificateur,deleteModificateur,
+    getGroupes,getGroupe,addGroupe,updateGroupe,deleteGroupe,
+    getContraintesEDT,
+    getBarrettes,addBarrette,updateBarrette,deleteBarrette,
+    getCoInterventions,addCoIntervention,updateCoIntervention,deleteCoIntervention,
     resetAnnee,deleteAnnee,
+    figerSnapshot,getSnapshot,supprimerSnapshot,
+    getMissions,getMission,getMissionsEnseignant,addMission,updateMission,deleteMission,
     save,exportJSON,importJSON,genId,isEmpty
   };
 })();
