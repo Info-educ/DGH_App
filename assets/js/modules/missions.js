@@ -162,7 +162,8 @@ ${_htmlKpis(totalPacte, envPacte, totalImp, envImp)}
 
     const overlay = document.getElementById('modalMission');
     if (!overlay) return;
-    overlay.classList.remove('is-hidden');
+    overlay.classList.remove('is-hidden');   // au cas où le HTML en conserve une trace
+    overlay.classList.add('modal-open');
 
     const title = document.getElementById('modalMissionTitle');
     if (title) title.textContent = id ? 'Modifier la mission' : 'Nouvelle mission';
@@ -233,7 +234,7 @@ ${_htmlKpis(totalPacte, envPacte, totalImp, envImp)}
 
   function closeModal() {
     const overlay = document.getElementById('modalMission');
-    if (overlay) overlay.classList.add('is-hidden');
+    if (overlay) overlay.classList.remove('modal-open');
     _editId = null;
   }
 
@@ -269,13 +270,13 @@ ${_htmlKpis(totalPacte, envPacte, totalImp, envImp)}
     const msg = document.getElementById('confirmMissionMsg');
     if (msg && m) msg.textContent = `Supprimer la mission « ${m.intitule} » ?`;
     const overlay = document.getElementById('confirmMission');
-    if (overlay) overlay.classList.remove('is-hidden');
+    if (overlay) { overlay.classList.remove('is-hidden'); overlay.classList.add('modal-open'); }
   }
 
   function closeConfirmMission() {
     _confirmId = null;
     const overlay = document.getElementById('confirmMission');
-    if (overlay) overlay.classList.add('is-hidden');
+    if (overlay) overlay.classList.remove('modal-open');
   }
 
   function execDeleteMission() {

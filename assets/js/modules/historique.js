@@ -85,7 +85,7 @@ const DGHHistorique = (() => {
 <div id="histTableContainer" class="hist-table-wrap"></div>
 
 <!-- Modale confirmation snapshot -->
-<div class="modal-overlay${_confirmAction ? '' : ' is-hidden'}" id="histConfirm">
+<div class="modal-overlay${_confirmAction ? ' modal-open' : ''}" id="histConfirm">
   <div class="modal modal-sm">
     <div class="modal-header"><h2 id="histConfirmTitle">Confirmer</h2><button class="modal-close" data-action="hist-confirm-cancel">&#x2715;</button></div>
     <div class="modal-body"><p id="histConfirmMsg"></p></div>
@@ -254,7 +254,7 @@ const DGHHistorique = (() => {
     _confirmAction = { type: 'figer', anneeId };
     const overlay = document.getElementById('histConfirm');
     if (overlay) {
-      overlay.classList.remove('is-hidden');
+      overlay.classList.add('modal-open');
       const t = document.getElementById('histConfirmTitle');
       const m = document.getElementById('histConfirmMsg');
       if (t) t.textContent = 'Figer l\u2019année ' + anneeId.replace('-', '\u2013') + ' ?';
@@ -266,7 +266,7 @@ const DGHHistorique = (() => {
     _confirmAction = { type: 'del-snapshot', anneeId };
     const overlay = document.getElementById('histConfirm');
     if (overlay) {
-      overlay.classList.remove('is-hidden');
+      overlay.classList.add('modal-open');
       const t = document.getElementById('histConfirmTitle');
       const m = document.getElementById('histConfirmMsg');
       if (t) t.textContent = 'Supprimer le snapshot ?';
@@ -296,7 +296,7 @@ const DGHHistorique = (() => {
 
   function _fermerConfirm() {
     const overlay = document.getElementById('histConfirm');
-    if (overlay) overlay.classList.add('is-hidden');
+    if (overlay) overlay.classList.remove('modal-open');
   }
 
   function sortBy(col) {

@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **4.2.0** — Dernière mise à jour : Sprint 12 (Répartition de service)
+> Version courante : **4.3.4** — Dernière mise à jour : correctifs modales (mission, historique) + réconciliation sidebar
 
 ---
 
@@ -62,6 +62,23 @@ with open(path, 'w', encoding='utf-8') as f: f.write(content)
 ### 7. Jamais de `style="font-family:..."` inline dans les modules JS
 Utiliser uniquement la classe CSS `.font-mono` pour la police monospace (définie dans `style.css`).
 Toute valeur numérique DGH doit utiliser `.font-mono` — jamais d'attribut `style` pour la typographie.
+
+### 8. Modales — UNE SEULE convention d'affichage : `.modal-open`
+
+`.modal-overlay` est `display:none` par défaut ; une modale ne s'affiche QUE via la classe `.modal-open`.
+
+```js
+// ✅ Correct — ouvrir / fermer
+overlay.classList.add('modal-open');     // ouvrir
+overlay.classList.remove('modal-open');  // fermer
+
+// ❌ Interdit — n'a aucun effet d'affichage sur une modale
+overlay.classList.remove('is-hidden');   // .modal-overlay reste display:none
+```
+
+- **Ne jamais** poser `is-hidden` sur un `.modal-overlay` (HTML ou JS). `.is-hidden` est `display:none !important` : combiné à `.modal-open`, le `!important` l'emporte et la modale reste invisible.
+- Dans le HTML, un overlay de modale a `class="modal-overlay"` **seul** (jamais ` is-hidden`).
+- Régression historique : `missions.js` (bouton « Ajouter une mission ») et `historique.js` (« Figer l'année » / « Supprimer snapshot ») utilisaient `is-hidden` → modales jamais ouvertes. Corrigé en v4.3.4.
 
 ---
 
@@ -383,7 +400,7 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 
 *Ce fichier fait partie intégrante du projet DGH App.*
 *Le mettre à jour à chaque évolution structurelle.*
-*Version : 4.2.0 — Dernière mise à jour : Sprint 12*
+*Version : 4.3.4 — Dernière mise à jour : correctifs modales + réconciliation sidebar*
 
 ## Modèle de données — Répartition de service (v4.2)
 

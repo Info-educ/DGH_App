@@ -197,7 +197,7 @@ input::placeholder { color: var(--c-text-dim); }
 }
 .year-select:focus { border-color: var(--c-accent); box-shadow: none; }
 
-.nav-list { list-style: none; padding: .5rem 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+.nav-list { list-style: none; padding: .5rem 0; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
 .nav-section-label {
   font-size: .58rem; font-weight: 600;
   text-transform: uppercase; letter-spacing: .12em;

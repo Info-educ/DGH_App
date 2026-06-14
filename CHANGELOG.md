@@ -5,6 +5,22 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.3.4 — Correctifs d'affichage des modales (2026-06-14)
+
+### Corrigé
+- **Bouton « Ajouter une mission » (PACTE / IMP) sans effet** : la modale `modalMission` (et la confirmation de suppression `confirmMission`) s'affichaient via `is-hidden` au lieu de la convention `.modal-open` utilisée par toutes les autres modales. Or `.modal-overlay` est `display:none` par défaut et ne s'affiche qu'avec `.modal-open` ; de plus `.is-hidden` est en `display:none !important`, qui aurait masqué la modale même si `.modal-open` avait été ajouté. La fenêtre ne s'ouvrait donc jamais. Correctif : `is-hidden` retiré du HTML des deux overlays + bascule via `.modal-open` dans `missions.js`.
+- **Même bug latent dans l'Historique** : les confirmations **« Figer l'année »** et **« Supprimer le snapshot »** (`histConfirm`) reposaient sur le même mécanisme `is-hidden` et n'apparaissaient jamais. Corrigé dans `historique.js` (template + ouverture/fermeture) selon la même convention `.modal-open`.
+- **Pièce manquante du défilement sidebar (réconciliation de branche)** : ajout de `min-height: 0` sur `.nav-list`, absent de ce build. Sans cette règle, l'enfant flex refuse de rétrécir sous la hauteur de son contenu et déborde au lieu de déclencher son `overflow-y:auto`. Complète le correctif `.sidebar { height:100vh/100dvh }` de la v4.3.2.
+
+### Note de conception
+- **Convention unique des modales** désormais documentée dans `SKILL.md` : toute modale `.modal-overlay` s'ouvre **uniquement** via `classList.add('modal-open')` et se ferme via `classList.remove('modal-open')`. Ne jamais utiliser `is-hidden` sur un `.modal-overlay`.
+
+### Note de dette technique (non traité ici)
+- Blocs CSS en double repérés (`.scen-tableau`, `.scen-mods-table`, `.scen-comp-wrap`) — à consolider en livraison dédiée et tracée (règle SKILL : ne jamais supprimer un bloc « doublon » sans vérifier chaque règle individuellement).
+- **Cache-busting** : suffixe `?v=` incrémenté à `4.3.4`.
+
+---
+
 ## v4.3.2 — Correctif défilement de la barre latérale (2026-06-13)
 
 ### Corrigé
