@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **4.3.4** — Dernière mise à jour : correctifs modales (mission, historique) + réconciliation sidebar
+> Version courante : **4.4.0** — Dernière mise à jour : scénarios en grille uniquement (suppression du mode Liste)
 
 ---
 
@@ -400,7 +400,7 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 
 *Ce fichier fait partie intégrante du projet DGH App.*
 *Le mettre à jour à chaque évolution structurelle.*
-*Version : 4.3.4 — Dernière mise à jour : correctifs modales + réconciliation sidebar*
+*Version : 4.4.0 — Dernière mise à jour : scénarios en grille uniquement*
 
 ## Modèle de données — Répartition de service (v4.2)
 
@@ -504,50 +504,42 @@ Calculs.comparerScenarios(anneeData, scenarios)
   // → [{ scenario, bilan }]  // triés par soldeSimule décroissant
 ```
 
-### Délégation globale — `app.js` (Sprint 8)
+### Délégation globale — `app.js` (scénarios)
 
 ```js
 // Dans _onGlobalClick — data-action
-'add-mod'            → DGHPilotage.openModForm(type, scenId)
-'save-mod'           → DGHPilotage.saveModificateur(scenId)
-'cancel-mod'         → DGHPilotage.cancelModForm()
-'delete-mod'         → DGHPilotage.deleteModificateur(scenId, modId)
+'delete-mod'         → DGHPilotage.deleteModificateur(scenId, modId)  // suppr. modalité (grille à 0, ou liste de nettoyage multi-classes)
+'edit-scenario'      → DGHPilotage.toggleEditScenario(id)            // déplie/replie l'accordéon (= ouvre la grille)
 'duplicate-scenario' → DGHPilotage.dupliquerScenario(id)
 'delete-scenario'    → DGHPilotage.confirmDeleteScenario(id)
 'set-actif-scenario' → DGHPilotage.setActif(id)
 '#btnAddScenario'    → DGHPilotage.startNewScenario()
 '#btnDesactiverScen' → DGHPilotage.desactiverScenario()
 
-// Dans _onGlobalChange
-'.mod-disc-select'   → DGHPilotage.previewImpact()
-'.mod-classe-check'  → DGHPilotage.previewImpact()
-'.mod-h-input'       → DGHPilotage.previewImpact()
-
 // Dans _onGlobalBlur
 '.scen-nom-input'    → DGHPilotage.saveNom(el)
 ```
 
+> ⚠️ v4.4.0 : le mode **Liste** a été supprimé. Les handlers `add-mod`, `save-mod`, `cancel-mod`, `edit-mod`, `save-edit-mod`, `cancel-edit-mod`, `scen-view-mode`, `mod-sel-niv` et les change-handlers `mod-*` n'existent plus. Ne pas les réintroduire sans réintroduire la vue Liste.
 
-## Scénarios — Mode Grille de saisie (v4.3)
 
-L'onglet Scénarios propose deux modes de saisie des modalités (état `_scenViewMode` dans `pilotage.js`, bascule `data-action="scen-view-mode"`) :
-- **Liste** : formulaire classique (1 modalité = 1 type + N classes).
-- **Grille** : tableau disciplines (lignes) × classes (colonnes). Chaque case remplie = **une modalité mono-classe** `{ type, disciplineId, classeIds:[divId], heuresParGroupe, typeHeure }`.
+## Scénarios — Saisie en grille (v4.4)
+
+Déplier un scénario (▼) ouvre **directement la grille** (plus de bascule Liste/Grille). Tableau disciplines (lignes) × classes (colonnes). Chaque case remplie = **une modalité mono-classe** `{ type, disciplineId, classeIds:[divId], heuresParGroupe, typeHeure }`.
 
 Délégation (app.js) :
 ```
-// change
-'grid-cell-h'    → DGHPilotage.gridCellH(el)    // crée (>0) / met à jour / supprime (=0) la modalité ; data-scen-id, data-disc-id, data-div-id, [data-mod-id]
-'grid-cell-type' → DGHPilotage.gridCellType(el) // change le type (data-mod-id requis)
-'grid-cell-th'   → DGHPilotage.gridCellTH(el)   // change HP/HSA (data-mod-id requis)
-// click
-'scen-view-mode' → DGHPilotage.setScenView(mode)
+// change (déclenché par la CLASSE CSS, pas le data-action)
+'.grid-h'    → DGHPilotage.gridCellH(el)    // crée (>0) / met à jour / supprime (=0) la modalité ; data-scen-id, data-disc-id, data-div-id, [data-mod-id]
+'.grid-type' → DGHPilotage.gridCellType(el) // change le type (data-mod-id requis)
+'.grid-th'   → DGHPilotage.gridCellTH(el)   // change HP/HSA (data-mod-id requis)
 ```
 
 Règles :
-- La grille ne gère que les modalités **mono-classe** ; les multi-classes (vue Liste) sont comptées dans le bilan mais signalées comme éditables uniquement en Liste.
+- La grille ne gère que les modalités **mono-classe** (1 case = 1 classe × 1 discipline). Les modalités **multi-classes ou sans discipline** ne peuvent plus être créées ; les anciennes restent comptées dans le bilan et sont listées sous la grille avec un bouton ✕ (`data-action="delete-mod"`) pour les supprimer.
 - Toute mutation appelle `_renderOngletScenarios()` + `renderBannerAndDashboard()` (rafraîchit bandeau actif + dashboard).
 - Type par défaut à la création : `dedoublement` ; HP/HSA par défaut : `hsa`. Titre recalculé via `_titreModificateur`.
+- **Dette technique** : CSS de l'ancien formulaire Liste (`.scen-form-add`, `.scen-view-toggle`, `.scen-mods-table`, `.mod-niv-*`…) encore présent mais inutilisé — à nettoyer en livraison dédiée.
 
 ## Cache-busting des assets (v4.3.1)
 

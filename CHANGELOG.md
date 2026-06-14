@@ -5,6 +5,23 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.4.0 — Scénarios : saisie en grille uniquement (2026-06-14)
+
+### Changé
+- **Suppression du mode « Liste » des scénarios.** La saisie des modalités se fait désormais **exclusivement via la grille** (disciplines en lignes × classes en colonnes). Le sélecteur Liste / Grille a été retiré : déplier un scénario (▼) ouvre directement la grille.
+  - Tout le CRUD mono-classe reste couvert par la grille : saisir des heures crée la modalité, ajuster type / HP-HSA la modifie, mettre 0 la supprime.
+  - **Modalités multi-classes ou sans discipline** (qui ne peuvent exister que via l'ancienne vue Liste) : elles ne sont pas éditables dans la grille (une case = 1 classe × 1 discipline) mais **restent comptées dans le bilan** et sont désormais **listées sous la grille avec un bouton de suppression** (✕), pour pouvoir les nettoyer.
+
+### Retiré (code mort, conformité « zéro code zombie »)
+- `pilotage.js` : fonctions `_htmlFormModalite`, `_htmlFormModaliteEdit`, `previewImpact`, `selectionnerNiveau`, `setScenView`, `openEditMod`, `cancelEditMod`, `saveEditMod`, `saveModificateur`, `onTypeChange` ; états `_modEditId`, `_modEditScenId`, `_scenViewMode`.
+- `app.js` : handlers `edit-mod`, `save-edit-mod`, `cancel-edit-mod`, `save-mod`, `scen-view-mode`, `mod-sel-niv`, et les change-handlers `mod-disc-select` / `mod-classe-check` / `mod-h-input` / `mod-th-radio` / `mod-type-select`. Le handler `delete-mod` est **conservé** (réutilisé par la liste de nettoyage des modalités multi-classes).
+
+### Note de dette technique (non traité — à tracer)
+- **CSS désormais inutilisé** du formulaire Liste (`.scen-form-add`, `.scen-view-toggle`, `.scen-view-btn`, `.scen-mods-table`, `.mod-niv-*`, etc.) laissé en place volontairement (suppression CSS = risque de régression selon SKILL). À nettoyer en livraison dédiée, en même temps que les doublons `.scen-tableau` / `.scen-mods-table` / `.scen-comp-wrap`.
+- **Cache-busting** : suffixe `?v=` incrémenté à `4.4.0`.
+
+---
+
 ## v4.3.4 — Correctifs d'affichage des modales (2026-06-14)
 
 ### Corrigé

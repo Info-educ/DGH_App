@@ -174,16 +174,11 @@ const app = (() => {
       if (action==='toggle-hpc-cat')    { DGHEnseignants.toggleHPCCat(actionBtn.dataset.cat);                                     return; }
       if (action==='toggle-all-hpc')    { DGHEnseignants.toggleAllHPC(actionBtn.dataset.open==='1');                              return; }
       if (action === 'pil-tab')            { DGHPilotage.switchTab(actionBtn.dataset.tab);           return; }
-      if (action === 'edit-mod')          { DGHPilotage.openEditMod(actionBtn.dataset.scenId, actionBtn.dataset.modId); return; }
-      if (action === 'save-edit-mod')     { DGHPilotage.saveEditMod(actionBtn.dataset.scenId, actionBtn.dataset.modId); return; }
-      if (action === 'cancel-edit-mod')   { DGHPilotage.cancelEditMod(); return; }
       if (action === 'edit-scenario')     { DGHPilotage.toggleEditScenario(actionBtn.dataset.id);                                return; }
-      if (action === 'save-mod')          { DGHPilotage.saveModificateur(actionBtn.dataset.scenId);                    return; }
       if (action === 'delete-mod')        { DGHPilotage.deleteModificateur(actionBtn.dataset.scenId, actionBtn.dataset.modId); return; }
       if (action === 'duplicate-scenario'){ DGHPilotage.dupliquerScenario(actionBtn.dataset.id);                       return; }
       if (action === 'delete-scenario')   { DGHPilotage.confirmDeleteScenario(actionBtn.dataset.id);                   return; }
       if (action === 'set-actif-scenario'){ DGHPilotage.setActif(actionBtn.dataset.id);                                return; }
-      if (action === 'scen-view-mode')    { DGHPilotage.setScenView(actionBtn.dataset.mode);                          return; }
       // ── Groupes (Structures) ──
       if (action === 'struct-edit-groupe')   { DGHStructures.editGroupe(id);                        return; }
       if (action === 'struct-save-groupe')   { DGHStructures.saveGroupe(id);                        return; }
@@ -247,8 +242,6 @@ const app = (() => {
     if (e.target.closest('#btnAddBarrette'))    { DGHEdt.startAddBarrette();         return; }
     if (e.target.closest('#btnAddCoInterv'))    { DGHEdt.startAddCoInterv();         return; }
     if (e.target.closest('#btnPrintEdt'))       { DGHEdt.printSynthese();            return; }
-    const selNivBtn = e.target.closest('.mod-sel-niv');
-    if (selNivBtn) { DGHPilotage.selectionnerNiveau(selNivBtn); return; }
     if (e.target.closest('#btnAddMission'))     { DGHMissions.openModal(null);         return; }
     if (e.target.closest('#btnAddDiv'))       { DGHStructures.openModalDiv(null);    return; }
     if (e.target.closest('#btnMatrice'))      { DGHStructures.openModalMatrice();     return; }
@@ -372,13 +365,8 @@ const app = (() => {
     if (e.target.classList.contains('ens-inline-num'))    { DGHEnseignants.handleInlineEdit(e.target); return; }
     // H.discipline dans vue par discipline (field heures-disc)
     if (e.target.classList.contains('ens-inline-hdisc'))  { DGHEnseignants.handleInlineEdit(e.target); return; }
-    if (e.target.classList.contains('mod-disc-select'))  { const f=e.target.closest('.scen-form-add'); if(f) DGHPilotage.previewImpact(f.dataset.scenId); return; }
-    if (e.target.classList.contains('mod-classe-check')) { const f=e.target.closest('.scen-form-add'); if(f) DGHPilotage.previewImpact(f.dataset.scenId); return; }
-    if (e.target.classList.contains('mod-h-input'))      { const f=e.target.closest('.scen-form-add'); if(f) DGHPilotage.previewImpact(f.dataset.scenId); return; }
-    if (e.target.classList.contains('mod-th-radio'))     { const f=e.target.closest('.scen-form-add'); if(f) DGHPilotage.previewImpact(f.dataset.scenId); return; }
     if (e.target.classList.contains('impact-aff-check')) { const d=e.target.dataset; DGHPilotage.saveAffectation(d.ensId,d.modId,d.scenId,'affecte',e.target.checked); return; }
     if (e.target.classList.contains('impact-th-radio'))  { const d=e.target.dataset; DGHPilotage.saveAffectation(d.ensId,d.modId,d.scenId,'typeHeure',e.target.value); return; }
-    if (e.target.classList.contains('mod-type-select'))  { DGHPilotage.onTypeChange(e.target); return; }
     if (e.target.id === 'recapScenSelect')                { DGHPilotage.setRecapScen(e.target.value);  return; }
     if (e.target.id === 'impactScenSelect')               { DGHPilotage.setImpactScen(e.target.value); return; }
     if (e.target.id === 'edtBarretteDiscs')               { DGHEdt.onBarrDiscChange(); return; }

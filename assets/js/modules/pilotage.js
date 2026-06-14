@@ -19,10 +19,7 @@ const DGHPilotage = (() => {
   let _tabActif    = 'scenarios'; // 'scenarios' | 'recap' | 'synthese'
   let _scenEditId  = null;        // scénario ouvert en accordéon
   let _scenRecapId = null;        // scénario affiché dans le récap (null = scénario actif)
-  let _modEditId   = null;        // id du modificateur en cours d\'édition (null = ajout)
-  let _modEditScenId = null;      // scénario du modificateur en édition
   let _scenImpactId = null;       // scénario affiché dans l\'onglet Impact
-  let _scenViewMode = 'liste';    // 'liste' | 'grille' — mode de saisie des modalités
 
   const TYPES_MOD = {
     'dedoublement':           { label: 'Dédoublement',                     css: 'mod-t-ded',   short: 'Déd.',    defH: 1   },
@@ -161,55 +158,13 @@ const DGHPilotage = (() => {
 
   // ── Panneau accordéon des modalités ───────────────────────────────
   function _htmlPanneauModalites(scen, data) {
-    const mods        = scen.modificateurs || [];
-    const disciplines = DGHData.getDisciplines();
-    const structures  = DGHData.getStructures();
-    const bilan       = Calculs.bilanScenario(data, mods);
-
-    // Tableau des modalités existantes
-    let modsHtml = mods.length === 0
-      ? '<p class="scen-panel-empty">Aucune modalité — ajoutez-en ci-dessous.</p>'
-      : '<div class="scen-panel-table-wrap"><table class="scen-mods-table">'
-          + '<thead><tr><th>Titre</th><th>Type</th><th>Classes</th><th class="scen-th-r">H/gr</th><th>HP/HSA</th><th class="scen-th-r">Coût</th><th>Commentaire</th><th></th></tr></thead>'
-          + '<tbody>'
-          + mods.map(mod => {
-              const tInfo  = TYPES_MOD[mod.type] || { label: mod.type, css: '' };
-              const disc   = mod.disciplineId ? disciplines.find(d => d.id === mod.disciplineId) : null;
-              const detail = bilan.detailParMod.find(d => d.mod.id === mod.id);
-              const cout   = detail ? ('+' + (detail.coutHP + detail.coutHSA) + ' h') : '—';
-              // Titre : stocké ou regénéré à la volée pour les anciens modificateurs
-              const titreDisp = mod.titre || _titreModificateur(mod.type, mod.disciplineId, mod.classeIds, structures, disciplines);
-              const isEditing = (_modEditId === mod.id && _modEditScenId === scen.id);
-              const editFormHtml = isEditing ? _htmlFormModaliteEdit(scen.id, mod, disciplines, structures) : '';
-              return '<tr class="scen-mods-tr' + (isEditing ? ' scen-mods-tr-editing' : '') + '">'
-                + '<td class="mod-titre-cell"><strong>' + _esc(titreDisp) + '</strong></td>'
-                + '<td><span class="mod-badge ' + tInfo.css + '">' + tInfo.short + '</span></td>'
-                + '<td class="scen-td-cibles">' + _esc(_nomsCibles(mod, structures)) + '</td>'
-                + '<td class="scen-th-r font-mono">' + (mod.heuresParGroupe||0) + ' h</td>'
-                + '<td><span class="mod-th-badge mod-th-badge-' + (mod.typeHeure||'hsa') + '">' + ((mod.typeHeure||'hsa').toUpperCase()) + '</span></td>'
-                + '<td class="scen-th-r font-mono scen-cout-val">' + cout + '</td>'
-                + '<td>' + (mod.commentaire ? '<span class="mod-comment-cell">' + _esc(mod.commentaire) + '</span>' : '') + '</td>'
-                + '<td class="mod-actions-cell">'
-                  + '<button class="btn-icon mod-btn-edit" data-action="edit-mod" data-scen-id="' + scen.id + '" data-mod-id="' + mod.id + '" title="Modifier">✏</button>'
-                  + '<button class="btn-icon btn-icon-danger" data-action="delete-mod" data-scen-id="' + scen.id + '" data-mod-id="' + mod.id + '" title="Supprimer">✕</button>'
-                + '</td>'
-              + '</tr>'
-              + (isEditing ? '<tr class="scen-mods-tr-editrow"><td colspan="8">' + editFormHtml + '</td></tr>' : '');
-            }).join('')
-          + '</tbody></table></div>';
-
+    const bilan = Calculs.bilanScenario(data, scen.modificateurs || []);
     return '<div class="scen-panel">'
       + '<div class="scen-panel-header">'
-        + '<span class="scen-panel-titre">Modalités — <strong>' + _esc(scen.nom) + '</strong></span>'
+        + '<span class="scen-panel-titre">Modalit\u00e9s \u2014 <strong>' + _esc(scen.nom) + '</strong></span>'
         + _htmlImpactDotation(data, bilan)
       + '</div>'
-      + '<div class="scen-view-toggle">'
-        + '<button class="scen-view-btn' + (_scenViewMode==='liste'?' active':'') + '" data-action="scen-view-mode" data-mode="liste">☰ Liste</button>'
-        + '<button class="scen-view-btn' + (_scenViewMode==='grille'?' active':'') + '" data-action="scen-view-mode" data-mode="grille">▦ Grille</button>'
-      + '</div>'
-      + (_scenViewMode === 'grille'
-          ? _htmlGrilleModalites(scen, data)
-          : (modsHtml + _htmlFormModalite(scen.id, disciplines, structures)))
+      + _htmlGrilleModalites(scen, data)
     + '</div>';
   }
 
@@ -233,14 +188,14 @@ const DGHPilotage = (() => {
 
     // Index des modalités mono-classe : clé discId|divId → modificateur (le 1er)
     const mono = {};
-    let multiClasse = 0;
+    const multiMods = [];
     (scen.modificateurs || []).forEach(m => {
       const cl = m.classeIds || [];
       if (m.disciplineId && cl.length === 1) {
         const k = m.disciplineId + '|' + cl[0];
         if (!mono[k]) mono[k] = m; // garde le premier ; doublons éventuels édités en Liste
       } else {
-        multiClasse++;
+        multiMods.push(m);
       }
     });
 
@@ -285,8 +240,13 @@ const DGHPilotage = (() => {
       + '</tr>';
     }).join('');
 
-    const note = multiClasse > 0
-      ? '<p class="grid-note">ⓘ ' + multiClasse + ' modalité(s) multi-classes (créée(s) en vue Liste) ne sont pas affichées ici mais restent comptées. Éditez-les dans la vue Liste.</p>'
+    const note = multiMods.length > 0
+      ? '<div class="grid-note"><p>ⓘ ' + multiMods.length + ' modalité(s) multi-classes ou sans discipline ne sont pas éditables dans la grille (une case = 1 classe × 1 discipline) mais restent comptées dans le bilan. Supprimez-les ici si besoin :</p>'
+        + '<ul class="grid-multi-list">'
+        + multiMods.map(m => '<li><span>'
+            + _esc(m.titre || _titreModificateur(m.type, m.disciplineId, m.classeIds, structures, disciplines, m.nomAutre))
+            + '</span><button class="btn-icon btn-icon-danger" data-action="delete-mod" data-scen-id="' + scen.id + '" data-mod-id="' + m.id + '" title="Supprimer">✕</button></li>').join('')
+        + '</ul></div>'
       : '';
 
     return '<div class="grid-modalites">'
@@ -317,134 +277,6 @@ const DGHPilotage = (() => {
   }
 
   // ── Formulaire d\'ÉDITION d\'une modalité existante ─────────────────
-  function _htmlFormModaliteEdit(scenId, mod, disciplines, structures) {
-    const typeOpts = Object.entries(TYPES_MOD).map(([k,v]) =>
-      '<option value="' + k + '"' + (mod.type === k ? ' selected' : '') + '>' + v.label + '</option>'
-    ).join('');
-    const discOpts = disciplines.map(d =>
-      '<option value="' + d.id + '"' + (mod.disciplineId === d.id ? ' selected' : '') + '>' + _esc(d.nom) + '</option>'
-    ).join('');
-
-    const parNiv = {};
-    structures.forEach(s => { if (!parNiv[s.niveau]) parNiv[s.niveau] = []; parNiv[s.niveau].push(s); });
-    const selectedIds = new Set(mod.classeIds || []);
-
-    const classesHtml = NIVEAUX_ORD.filter(n => parNiv[n]?.length).map(niv => {
-      const cases = parNiv[niv].map(s =>
-        '<label class="mod-classe-label">'
-          + '<input type="checkbox" class="mod-edit-classe-check" value="' + s.id + '"'
-          + (selectedIds.has(s.id) ? ' checked' : '') + '> ' + _esc(s.nom)
-        + '</label>'
-      ).join('');
-      return '<div class="mod-niv-groupe">'
-        + '<span class="mod-niv-label">' + niv + '</span>'
-        + '<div class="mod-niv-cases">' + cases + '</div>'
-      + '</div>';
-    }).join('');
-
-    const isHSA = (mod.typeHeure || 'hsa') === 'hsa';
-    const nomAutreShow = mod.type === 'autre';
-
-    return '<div class="scen-form-add mod-edit-form" data-scen-id="' + scenId + '" data-mod-id="' + mod.id + '">'
-      + '<div class="scen-form-title mod-edit-title">✏ Modifier la modalité</div>'
-      + '<div class="scen-form-grid">'
-        + '<div class="scen-form-col">'
-          + '<div class="scen-form-field"><label>Type de modalité</label>'
-            + '<select class="mod-edit-type-select" id="modEditType_' + mod.id + '">' + typeOpts + '</select></div>'
-          + '<div class="scen-form-field' + (nomAutreShow ? '' : ' mod-nom-autre-wrap is-hidden') + '" id="modEditNomAutreWrap_' + mod.id + '"><label>Nom de la modalité</label>'
-            + '<input type="text" class="mod-edit-nom-autre" id="modEditNomAutre_' + mod.id + '" value="' + _esc(mod.nomAutre||'') + '" placeholder="ex: Aide aux devoirs" /></div>'
-          + '<div class="scen-form-field"><label>Discipline (optionnel)</label>'
-            + '<select class="mod-edit-disc-select" id="modEditDisc_' + mod.id + '">'
-              + '<option value="">— Toutes —</option>' + discOpts
-            + '</select></div>'
-          + '<div class="scen-form-field-row">'
-            + '<div class="scen-form-field"><label>H/groupe/semaine</label>'
-              + '<input type="number" class="mod-edit-h-input" id="modEditH_' + mod.id + '" min="0.5" max="20" step="0.5" value="' + (mod.heuresParGroupe||1) + '" /></div>'
-            + '<div class="scen-form-field"><label>Type d\'heure</label>'
-              + '<div class="mod-typeheure-toggle">'
-                + '<label class="mod-th-label"><input type="radio" class="mod-edit-th-radio" name="modEditTH_' + mod.id + '" value="hsa"' + (isHSA ? ' checked' : '') + '> HSA</label>'
-                + '<label class="mod-th-label"><input type="radio" class="mod-edit-th-radio" name="modEditTH_' + mod.id + '" value="hp"'  + (!isHSA ? ' checked' : '') + '> HP</label>'
-              + '</div></div>'
-          + '</div>'
-          + '<div class="scen-form-field"><label>Commentaire</label>'
-            + '<input type="text" class="mod-edit-comment" id="modEditComment_' + mod.id + '" value="' + _esc(mod.commentaire||'') + '" placeholder="Précisions éventuelles" /></div>'
-        + '</div>'
-        + '<div class="scen-form-col">'
-          + '<label class="scen-form-label-classes">Classes concernées</label>'
-          + '<div class="mod-classes-grid-niv" id="modEditGrid_' + mod.id + '">' + (classesHtml || '<span class="scen-cout-zero">Aucune division.</span>') + '</div>'
-        + '</div>'
-      + '</div>'
-      + '<div class="scen-form-actions">'
-        + '<button class="btn-secondary" data-action="cancel-edit-mod" data-scen-id="' + scenId + '" data-mod-id="' + mod.id + '">Annuler</button>'
-        + '<button class="btn-primary" data-action="save-edit-mod" data-scen-id="' + scenId + '" data-mod-id="' + mod.id + '">Enregistrer ✓</button>'
-      + '</div>'
-    + '</div>';
-  }
-
-  function _htmlFormModalite(scenId, disciplines, structures) {
-    const typeOpts = Object.entries(TYPES_MOD).map(([k,v]) =>
-      '<option value="' + k + '">' + v.label + '</option>'
-    ).join('');
-    const discOpts = disciplines.map(d =>
-      '<option value="' + d.id + '">' + _esc(d.nom) + '</option>'
-    ).join('');
-
-    // Classes groupées par niveau
-    const parNiv = {};
-    structures.forEach(s => { if (!parNiv[s.niveau]) parNiv[s.niveau] = []; parNiv[s.niveau].push(s); });
-    const classesHtml = NIVEAUX_ORD.filter(n => parNiv[n]?.length).map(niv => {
-      const cases = parNiv[niv].map(s =>
-        '<label class="mod-classe-label">'
-          + '<input type="checkbox" class="mod-classe-check" value="' + s.id + '"> ' + _esc(s.nom)
-        + '</label>'
-      ).join('');
-      return '<div class="mod-niv-groupe">'
-        + '<span class="mod-niv-label">' + niv + '</span>'
-        + '<div class="mod-niv-cases">' + cases + '</div>'
-      + '</div>';
-    }).join('') || '<span class="scen-cout-zero">Aucune division. Renseignez les structures d\'abord.</span>';
-
-    const selRapide = NIVEAUX_ORD.filter(n => parNiv[n]?.length).map(n =>
-      '<button type="button" class="btn-link mod-sel-niv" data-niveau="' + n + '">' + n + '</button>'
-    ).join(' · ')
-    + ' · <button type="button" class="btn-link mod-sel-niv" data-niveau="all">Tout</button>'
-    + ' · <button type="button" class="btn-link mod-sel-niv" data-niveau="none">Aucun</button>';
-
-    return '<div class="scen-form-add" data-scen-id="' + scenId + '">'
-      + '<div class="scen-form-title">+ Ajouter une modalité</div>'
-      + '<div class="scen-form-grid">'
-        + '<div class="scen-form-col">'
-          + '<div class="scen-form-field"><label>Type de modalité</label>'
-            + '<select class="mod-type-select" id="modType_' + scenId + '" data-scen-id="' + scenId + '">' + typeOpts + '</select></div>'
-          + '<div class="scen-form-field mod-nom-autre-wrap is-hidden" id="modNomAutreWrap_' + scenId + '"><label>Nom de la modalité</label>'
-            + '<input type="text" class="mod-nom-autre" id="modNomAutre_' + scenId + '" placeholder="ex: Aide aux devoirs" /></div>'
-          + '<div class="scen-form-field"><label>Discipline (optionnel)</label>'
-            + '<select class="mod-disc-select" id="modDisc_' + scenId + '">'
-              + '<option value="">— Toutes —</option>' + discOpts
-            + '</select></div>'
-          + '<div class="scen-form-field-row">'
-            + '<div class="scen-form-field"><label>H/groupe/semaine</label>'
-              + '<input type="number" class="mod-h-input" id="modH_' + scenId + '" min="0.5" max="20" step="0.5" value="1" /></div>'
-            + '<div class="scen-form-field"><label>Type d\'heure</label>'
-              + '<div class="mod-typeheure-toggle">'
-                + '<label class="mod-th-label"><input type="radio" class="mod-th-radio" name="modTH_' + scenId + '" value="hsa" checked> HSA</label>'
-                + '<label class="mod-th-label"><input type="radio" class="mod-th-radio" name="modTH_' + scenId + '" value="hp"> HP</label>'
-              + '</div></div>'
-          + '</div>'
-          + '<div class="scen-form-field"><label>Commentaire</label>'
-            + '<input type="text" class="mod-comment-input" id="modComment_' + scenId + '" placeholder="Précisions éventuelles" /></div>'
-          + '<div class="mod-form-preview" id="modPreview_' + scenId + '">Sélectionnez des classes pour voir l\'impact</div>'
-        + '</div>'
-        + '<div class="scen-form-col">'
-          + '<label class="scen-form-label-classes">Classes concernées <span class="mod-sel-rapide">' + selRapide + '</span></label>'
-          + '<div class="mod-classes-grid-niv" id="modGrid_' + scenId + '">' + classesHtml + '</div>'
-        + '</div>'
-      + '</div>'
-      + '<div class="scen-form-actions">'
-        + '<button class="btn-primary" data-action="save-mod" data-scen-id="' + scenId + '">Ajouter ✓</button>'
-      + '</div>'
-    + '</div>';
-  }
 
   // ══════════════════════════════════════════════════════════════════
   // ONGLET 2 — RÉCAPITULATIF DGH
@@ -1135,45 +967,10 @@ const DGHPilotage = (() => {
   // ══════════════════════════════════════════════════════════════════
   // PREVIEW IMPACT
   // ══════════════════════════════════════════════════════════════════
-  function previewImpact(scenId) {
-    const el = document.getElementById('modPreview_' + scenId);
-    if (!el) return;
-    const type    = document.getElementById('modType_'   + scenId)?.value || 'dedoublement';
-    const discId  = document.getElementById('modDisc_'   + scenId)?.value || '';
-    const h       = parseFloat(document.getElementById('modH_' + scenId)?.value) || 0;
-    const ids     = Array.from(document.querySelectorAll('#modGrid_' + scenId + ' .mod-classe-check:checked')).map(c => c.value);
-    if (!ids.length || h <= 0) { el.textContent = 'Sélectionnez des classes et des heures pour voir l\'impact'; return; }
-    const typeHeure2 = document.querySelector('input[name="modTH_' + scenId + '"]:checked')?.value || 'hsa';
-    const mod   = { type, disciplineId: discId||null, classeIds: ids, heuresParGroupe: h, typeHeure: typeHeure2 };
-    const data  = DGHData.getAnnee();
-    const bilan = Calculs.bilanScenario(data, [mod]);
-    const ref   = Calculs.bilanDotation(data);
-    const solde = Math.round((ref.solde - bilan.coutTotal) * 2) / 2;
-    const cls   = solde < 0 ? 'scen-solde-danger' : 'scen-solde-ok';
-    const sign  = solde >= 0 ? '+' : '';
-    el.innerHTML = 'Impact : <strong class="font-mono">+' + bilan.coutHP + ' h HP'
-      + (bilan.coutHSA > 0 ? ' / +' + bilan.coutHSA + ' h HSA' : '') + '</strong>'
-      + ' → Solde simulé : <strong class="font-mono ' + cls + '">' + sign + solde + ' h</strong>';
-  }
 
   // ══════════════════════════════════════════════════════════════════
   // SÉLECTION RAPIDE PAR NIVEAU
   // ══════════════════════════════════════════════════════════════════
-  function selectionnerNiveau(btn) {
-    const niv  = btn.dataset.niveau;
-    const form = btn.closest('.scen-form-add');
-    if (!form) return;
-    const sid  = form.dataset.scenId;
-    const grid = document.getElementById('modGrid_' + sid);
-    if (!grid) return;
-    grid.querySelectorAll('.mod-classe-check').forEach(cb => {
-      if (niv === 'all')  { cb.checked = true;  return; }
-      if (niv === 'none') { cb.checked = false; return; }
-      const grp = cb.closest('.mod-niv-groupe');
-      cb.checked = (grp?.querySelector('.mod-niv-label')?.textContent === niv);
-    });
-    previewImpact(sid);
-  }
 
   // ══════════════════════════════════════════════════════════════════
   // ACTIONS PUBLIQUES
@@ -1191,10 +988,6 @@ const DGHPilotage = (() => {
   }
 
   // ── Mode GRILLE ───────────────────────────────────────────────────
-  function setScenView(mode) {
-    _scenViewMode = (mode === 'grille') ? 'grille' : 'liste';
-    _renderOngletScenarios();
-  }
 
   function _titreCell(type, discId, divId) {
     return _titreModificateur(type, discId || null, [divId],
@@ -1246,66 +1039,6 @@ const DGHPilotage = (() => {
   }
 
   // ── Ouvrir formulaire d\'édition d\'une modalité ──────────────────
-  function openEditMod(scenId, modId) {
-    _modEditScenId = scenId;
-    _modEditId     = modId;
-    _renderOngletScenarios();
-  }
-
-  function cancelEditMod() {
-    _modEditId     = null;
-    _modEditScenId = null;
-    _renderOngletScenarios();
-  }
-
-  function saveEditMod(scenId, modId) {
-    const type    = document.getElementById('modEditType_'    + modId)?.value || 'dedoublement';
-    const discId  = document.getElementById('modEditDisc_'    + modId)?.value || '';
-    const h       = parseFloat(document.getElementById('modEditH_' + modId)?.value) || 0;
-    const comment = document.getElementById('modEditComment_' + modId)?.value.trim() || '';
-    const nomAutre= (type === 'autre') ? (document.getElementById('modEditNomAutre_' + modId)?.value.trim() || 'Autre') : '';
-    const typeHeure = document.querySelector('input[name="modEditTH_' + modId + '"]:checked')?.value || 'hsa';
-    const ids = Array.from(document.querySelectorAll('#modEditGrid_' + modId + ' .mod-edit-classe-check:checked')).map(c => c.value);
-
-    if (!ids.length || h <= 0) {
-      if (typeof app !== 'undefined' && app.toast) app.toast('Sélectionnez au moins une classe et des heures > 0.', 'warning');
-      return;
-    }
-
-    const structures  = DGHData.getStructures();
-    const disciplines = DGHData.getDisciplines();
-    const titre = _titreModificateur(type, discId||null, ids, structures, disciplines, nomAutre);
-
-    DGHData.updateModificateur(scenId, modId, {
-      type, disciplineId: discId||null, classeIds: ids,
-      heuresParGroupe: h, typeHeure, commentaire: comment, nomAutre, titre
-    });
-
-    _modEditId     = null;
-    _modEditScenId = null;
-    renderPilotage();
-    if (typeof app !== 'undefined' && app.toast) app.toast('Modalité "' + titre + '" mise à jour.', 'success');
-  }
-
-  function saveModificateur(scenId) {
-    const type      = document.getElementById('modType_'    + scenId)?.value || 'dedoublement';
-    const discId    = document.getElementById('modDisc_'    + scenId)?.value || '';
-    const h         = parseFloat(document.getElementById('modH_' + scenId)?.value) || 0;
-    const comment   = document.getElementById('modComment_' + scenId)?.value.trim() || '';
-    const nomAutre  = (type === 'autre') ? (document.getElementById('modNomAutre_' + scenId)?.value.trim() || 'Autre') : '';
-    const typeHeure = document.querySelector('input[name="modTH_' + scenId + '"]:checked')?.value || 'hsa';
-    const ids       = Array.from(document.querySelectorAll('#modGrid_' + scenId + ' .mod-classe-check:checked')).map(c => c.value);
-    if (!ids.length || h <= 0) {
-      if (typeof app !== 'undefined' && app.toast) app.toast('Sélectionnez au moins une classe et des heures > 0.', 'warning');
-      return;
-    }
-    const structures  = DGHData.getStructures();
-    const disciplines = DGHData.getDisciplines();
-    const titre = _titreModificateur(type, discId||null, ids, structures, disciplines, nomAutre);
-    DGHData.addModificateur(scenId, { type, disciplineId: discId||null, classeIds: ids, heuresParGroupe: h, typeHeure, commentaire: comment, nomAutre, titre });
-    renderPilotage();
-    if (typeof app !== 'undefined' && app.toast) app.toast('Modalité "' + titre + '" ajoutée.', 'success');
-  }
 
   function deleteModificateur(scenId, modId) {
     DGHData.deleteModificateur(scenId, modId);
@@ -1345,23 +1078,6 @@ const DGHPilotage = (() => {
    * - Affiche/masque le champ "Nom" pour le type 'autre'
    * - Met à jour la valeur H par défaut selon le type
    */
-  function onTypeChange(select) {
-    const form   = select.closest('.scen-form-add');
-    if (!form) return;
-    const sid    = form.dataset.scenId;
-    const type   = select.value;
-    const defH   = { 'dedoublement':1, 'co-enseignement':2, 'groupe-effectif-reduit':2, 'groupes-besoins':2, 'autre':1 }[type] || 1;
-
-    // Valeur H par défaut
-    const hInput = document.getElementById('modH_' + sid);
-    if (hInput) hInput.value = defH;
-
-    // Champ nom pour "autre"
-    const wrap = document.getElementById('modNomAutreWrap_' + sid);
-    if (wrap) wrap.classList.toggle('is-hidden', type !== 'autre');
-
-    previewImpact(sid);
-  }
 
   function saveNom(el) {
     const id  = el.dataset.scenId;
@@ -1443,23 +1159,15 @@ const DGHPilotage = (() => {
     switchTab,
     startNewScenario,
     toggleEditScenario,
-    saveModificateur,
     deleteModificateur,
     dupliquerScenario,
     confirmDeleteScenario,
     setActif,
     desactiverScenario,
     saveNom,
-    previewImpact,
-    selectionnerNiveau,
-    onTypeChange,
     saveAffectation,
     setRecapScen,
-    openEditMod,
-    cancelEditMod,
-    saveEditMod,
     setImpactScen,
-    setScenView,
     gridCellH,
     gridCellType,
     gridCellTH
