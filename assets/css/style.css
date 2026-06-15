@@ -313,6 +313,11 @@ input::placeholder { color: var(--c-text-dim); }
   padding: .22rem .6rem; border-radius: 6px;
 }
 .topbar-stat-val { color: var(--c-text); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: .78rem; }
+.topbar-stat-scen { background: var(--c-accent-light); }
+.topbar-stat-scen > span:first-child { color: var(--c-accent); font-weight: 600; }
+.topbar-solde-ok  { color: var(--c-green) !important; }
+.topbar-solde-neg { color: var(--c-red)   !important; }
+.scen-mods-count  { font-weight: 700; font-size: .75rem; color: var(--c-text-muted); margin-right: .35rem; white-space: nowrap; }
 
 .btn-theme {
   width: 34px; height: 34px; border-radius: var(--r);

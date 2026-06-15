@@ -114,20 +114,20 @@ const DGHPilotage = (() => {
       const ssign    = bilan.soldeSimule >= 0 ? '+' : '';
       const editing  = _scenEditId === scen.id;
       const rowCls   = (editing ? ' scen-row-editing' : '') + (scen.actif ? ' scen-row-actif' : '');
-      const types    = [...new Set((scen.modificateurs||[]).map(m => m.type))];
-      const badges   = types.map(t => '<span class="mod-badge ' + (TYPES_MOD[t]?.css||'') + '">' + (TYPES_MOD[t]?.short||t) + '</span>').join('');
+      // Résumé compact des modalités (le détail est dans l'accordéon ▼ et l'onglet Récapitulatif)
+      const modsList = scen.modificateurs || [];
+      const parType  = {};
+      modsList.forEach(m => { parType[m.type] = (parType[m.type] || 0) + 1; });
+      const chipsResume = Object.keys(parType).map(t => {
+        const ti = TYPES_MOD[t] || { css: '', short: t };
+        return '<span class="mod-badge ' + ti.css + '">' + ti.short + ' \u00d7' + parType[t] + '</span>';
+      }).join(' ');
 
       const ligne = '<tr class="scen-row' + rowCls + '">'
         + '<td class="scen-td-nom">'          + '<input class="scen-nom-input" data-scen-id="' + scen.id + '" value="' + _esc(scen.nom) + '" placeholder="Nom du scénario" title="Cliquez pour renommer" />'        + '</td>'
-        + '<td class="scen-td-mods-list">' + ((scen.modificateurs||[]).length === 0
+        + '<td class="scen-td-mods-list">' + (modsList.length === 0
             ? '<span class="scen-cout-zero">Aucune modalité</span>'
-            : (scen.modificateurs||[]).map(m => {
-                const structures2 = DGHData.getStructures();
-                const disciplines2 = DGHData.getDisciplines();
-                const t = TYPES_MOD[m.type] || { css: '', short: m.type };
-                const tit = m.titre || _titreModificateur(m.type, m.disciplineId, m.classeIds, structures2, disciplines2);
-                return '<span class="mod-ligne-titre"><span class="mod-badge ' + t.css + '">' + t.short + '</span> ' + _esc(tit.split(' · ').slice(1).join(' · ') || tit) + '</span>';
-              }).join('')
+            : '<span class="scen-mods-count">' + modsList.length + ' modalité' + (modsList.length > 1 ? 's' : '') + '</span> ' + chipsResume
           ) + '</td>'
         + '<td class="scen-th-r font-mono">' + (bilan.coutHP > 0 ? '<span class="scen-cout-val">+' + bilan.coutHP + ' h</span>' : '<span class="scen-cout-zero">—</span>') + '</td>'
         + '<td class="scen-th-r font-mono">' + (bilan.coutHSA > 0 ? '<span class="scen-cout-val">+' + bilan.coutHSA + ' h</span>' : '<span class="scen-cout-zero">—</span>') + '</td>'

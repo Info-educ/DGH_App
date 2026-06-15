@@ -5,6 +5,29 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.7.0 — Scénario actif propagé partout + listing modalités condensé (2026-06-15)
+
+### Ajouté
+- **Solde simulé dans la barre supérieure, sur toutes les vues.** Dès qu'un scénario est actif, la barre du haut (présente partout) remplace « Solde » par **« ⊕ Solde simulé »** (vert/rouge selon dépassement). La barre est désormais rafraîchie à chaque navigation.
+- **Vue Dotation DGH** : le KPI **Solde** affiche la valeur **simulée** (label « h solde simulé ») quand un scénario est actif.
+
+### Contexte
+- Le **tableau de bord** et les **synthèses (CA / Dialogue de gestion)** affichaient déjà le coût et le solde simulés — inchangés. Avec cette version, l'incidence du scénario actif est visible sur **toutes** les vues principales.
+- **Hors périmètre assumé** : les « Services enseignants » ne sont pas surchargés automatiquement (l'imputation HP/HSA par enseignant relève de l'onglet *Impact enseignants*, qui le gère déjà finement).
+
+### Modifié
+- **Onglet Scénarios — listing des modalités condensé.** La colonne « Modalités » n'affiche plus une ligne par dédoublement (illisible au-delà de quelques modalités). Elle affiche désormais le **nombre total** + un **résumé par type** (ex. « 64 modalités · Déd. ×64 »). Le détail reste accessible dans l'accordéon (▼) et l'onglet **Récapitulatif DGH**.
+
+### Détails techniques
+- `dashboard.js` : extraction de `_renderTopbar()` (exporté `renderTopbar`), appelé par `app.navigate()`.
+- `app.js` : 1 ligne (`DGHDashboard.renderTopbar()`) en fin de `navigate()`.
+- `dotation.js` : surcouche `bilanScenario` sur le KPI solde.
+- `pilotage.js` : `_renderOngletScenarios` — résumé par type, suppression du code mort (`types`/`badges` inutilisés).
+- `style.css` : `.topbar-stat-scen`, `.topbar-solde-ok/neg`, `.scen-mods-count`.
+- Aucune modification du modèle de données ni de `calculs.js`.
+
+---
+
 ## v4.6.1 — Récap DGH : scroll, bandeau d'onglets, HSA du scénario (2026-06-15)
 
 ### Corrigé

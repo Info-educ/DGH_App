@@ -82,6 +82,8 @@ const app = (() => {
     if (realViewId === 'historique')  DGHHistorique.render();
     if (realViewId === 'missions')    DGHMissions.renderMissions();
     if (viewId === 'instances')       DGHInstances.renderInstances(tab || null);
+    // Barre supérieure : rafraîchie sur chaque vue → solde simulé visible partout
+    DGHDashboard.renderTopbar();
   }
 
   // ── EXPORT CSV (Excel FR : séparateur ; · BOM UTF-8 · décimales ,) ──

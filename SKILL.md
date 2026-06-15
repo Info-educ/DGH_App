@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **4.6.1** — Dernière mise à jour : récap DGH (scroll, bandeau figé, HSA scénario)
+> Version courante : **4.7.0** — Dernière mise à jour : scénario actif propagé (barre + Dotation), listing modalités condensé
 
 ---
 

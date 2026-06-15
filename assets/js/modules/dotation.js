@@ -32,12 +32,17 @@ const DGHDotation = (() => {
       _set('dot-kpi-hposte', bilan.totalHP  || 0);
       _set('dot-kpi-hsa',    bilan.totalHSA || 0);
       _set('dot-kpi-nb',     bilan.nbDisciplines);
+      const scenA = DGHData.getScenarioActif();
+      const bScen = scenA ? Calculs.bilanScenario(anneeData, scenA.modificateurs) : null;
       const soldeEl  = document.getElementById('dot-kpi-solde');
       const soldeLbl = document.getElementById('dot-kpi-solde-label');
       if (soldeEl) {
-        soldeEl.textContent = bilan.enveloppe > 0 ? bilan.solde : '—';
-        soldeEl.className   = bilan.depassement ? 'struct-kpi-val dot-solde-neg' : 'struct-kpi-val dot-solde-pos';
+        const soldeShown = bScen ? bScen.soldeSimule : bilan.solde;
+        const danger     = bScen ? bScen.depassement : bilan.depassement;
+        soldeEl.textContent = bilan.enveloppe > 0 ? soldeShown : '—';
+        soldeEl.className   = danger ? 'struct-kpi-val dot-solde-neg' : 'struct-kpi-val dot-solde-pos';
       }
+      if (soldeLbl) soldeLbl.textContent = bScen ? 'h solde simulé' : 'h solde';
       if (soldeLbl) soldeLbl.textContent = bilan.depassement ? 'h dépassement' : 'h solde';
 
       // Barre duale

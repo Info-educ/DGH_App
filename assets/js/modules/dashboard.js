@@ -42,15 +42,8 @@ const DGHDashboard = (() => {
         badge.classList.toggle('badge-hidden', !nb);
       }
 
-      // Stats topbar
-      const stats = document.getElementById('topbarStats');
-      if (stats) {
-        stats.innerHTML = bilan.enveloppe > 0
-          ? '<div class="topbar-stat"><span>HP</span><span class="topbar-stat-val">' + bilan.hPosteEnv + 'h</span></div>'
-          + '<div class="topbar-stat"><span>HSA</span><span class="topbar-stat-val">' + bilan.hsaEnv + 'h</span></div>'
-          + '<div class="topbar-stat"><span>Solde</span><span class="topbar-stat-val">' + bilan.solde + 'h</span></div>'
-          : '';
-      }
+      // Stats topbar (présente sur toutes les vues — reflète le scénario actif)
+      _renderTopbar();
 
       // Barre progression duale
       const barHP  = document.getElementById('progressBarHP');
@@ -149,6 +142,29 @@ const DGHDashboard = (() => {
 
     } catch(e) { console.error('[DGH] renderDashboard:', e); }
     updateBtnEtab();
+  }
+
+  // Barre supérieure — rendue sur chaque navigation (app.navigate), donc visible
+  // partout. Affiche le solde SIMULÉ dès qu'un scénario est actif.
+  function _renderTopbar() {
+    const stats = document.getElementById('topbarStats');
+    if (!stats) return;
+    const data  = DGHData.getAnnee();
+    const bilan = Calculs.bilanDotation(data);
+    if (!(bilan.enveloppe > 0)) { stats.innerHTML = ''; return; }
+    const scen  = DGHData.getScenarioActif();
+    const bScen = scen ? Calculs.bilanScenario(data, scen.modificateurs) : null;
+    let html = '<div class="topbar-stat"><span>HP</span><span class="topbar-stat-val">' + bilan.hPosteEnv + 'h</span></div>'
+             + '<div class="topbar-stat"><span>HSA</span><span class="topbar-stat-val">' + bilan.hsaEnv + 'h</span></div>';
+    if (bScen) {
+      const sCls = bScen.depassement ? 'topbar-solde-neg' : 'topbar-solde-ok';
+      html += '<div class="topbar-stat topbar-stat-scen" title="Solde simul\u00e9 sous le sc\u00e9nario actif \u00ab ' + _esc(scen.nom) + ' \u00bb">'
+            + '<span>\u2295 Solde simul\u00e9</span>'
+            + '<span class="topbar-stat-val ' + sCls + '">' + (bScen.soldeSimule >= 0 ? '+' : '') + bScen.soldeSimule + 'h</span></div>';
+    } else {
+      html += '<div class="topbar-stat"><span>Solde</span><span class="topbar-stat-val">' + bilan.solde + 'h</span></div>';
+    }
+    stats.innerHTML = html;
   }
 
   function _renderDiscResume(bilan) {
@@ -296,6 +312,6 @@ const DGHDashboard = (() => {
   function _set(id, val)  { const el=document.getElementById(id); if(el) el.textContent=val; }
   function _esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  return { renderDashboard, updateBtnEtab };
+  return { renderDashboard, updateBtnEtab, renderTopbar: _renderTopbar };
 
 })();
