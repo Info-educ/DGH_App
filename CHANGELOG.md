@@ -5,6 +5,22 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.6.1 — Récap DGH : scroll, bandeau d'onglets, HSA du scénario (2026-06-15)
+
+### Corrigé
+- **Scroll horizontal du Récapitulatif DGH** : le tableau (très large quand un scénario porte de nombreuses modalités) débordait et étirait toute la page. Cause : piège flexbox `min-width: auto` sur `.main-content`. Ajout de `min-width: 0` (+ `.view-container`) → le débordement est désormais **confiné au tableau** via son `overflow-x: auto`.
+- **Bandeau d'onglets** (Scénarios / Récapitulatif DGH / Impact / Synthèse) : il s'élargissait avec le tableau et devenait partiellement inaccessible. Conséquence directe du même correctif : il reste **figé et cliquable**.
+
+### Modifié
+- **Récapitulatif DGH — impact du scénario visible dans le volume.** Sous scénario actif (ou sélectionné), les colonnes **Dotation allouée** (HP, HSA, Total, Écart) affichent désormais la **valeur simulée**, avec le **Δ du scénario en orange**. La barre de consommation et la ligne **Total** intègrent le coût du scénario (projets hors discipline comptés au Total). Légende explicative ajoutée. Revenir à « — Aucun scénario — » réaffiche la base.
+
+### Détails techniques
+- `style.css` : `min-width:0` sur `.main-content` et `.view-container` ; styles `.rc-delta`, `.rc-legende`.
+- `pilotage.js` (`_renderOngletRecap`) : coût HP/HSA **par discipline** reconstruit depuis `bilanScenario().detailParMod` (filtre `mod.disciplineId`) ; valeurs simulées HP/HSA/Total/Écart + badges Δ ; totaux simulés via `coutHP/coutHSA/coutTotal`.
+- Aucune modification du modèle de données ni de `calculs.js`.
+
+---
+
 ## v4.6.0 — Aide contextuelle embarquée (2026-06-15)
 
 ### Ajouté

@@ -473,6 +473,21 @@ const DGHPilotage = (() => {
       const tot   = b.total || 0;
       const ecart = b.ecart || 0;
 
+      // Impact du scénario affiché sur CETTE discipline (HP et HSA séparés)
+      let scenHP = 0, scenHSA = 0;
+      if (bilanScen) {
+        bilanScen.detailParMod.forEach(d => {
+          if (d.mod && d.mod.disciplineId === b.disciplineId) { scenHP += d.coutHP; scenHSA += d.coutHSA; }
+        });
+        scenHP  = Math.round(scenHP  * 2) / 2;
+        scenHSA = Math.round(scenHSA * 2) / 2;
+      }
+      const hpSim    = Math.round((hp    + scenHP)          * 2) / 2;
+      const hsaSim   = Math.round((hsa   + scenHSA)         * 2) / 2;
+      const totSim   = Math.round((tot   + scenHP + scenHSA) * 2) / 2;
+      const ecartSim = Math.round((ecart + scenHP + scenHSA) * 2) / 2;
+      const scenDisc = Math.round((scenHP + scenHSA) * 2) / 2;
+
       // Heures plancher MEN par niveau
       const tdNivs = nivsPresents.map(n => {
         const gl  = (b.grilleLignes||{})[n];
@@ -483,13 +498,13 @@ const DGHPilotage = (() => {
         + '</td>';
       }).join('');
 
-      // Barre de consommation HP/HSA inline
-      const pctHP  = bilanRef.hPosteEnv > 0 ? Math.min(100, Math.round(hp  / bilanRef.hPosteEnv  * 100)) : 0;
-      const pctHSA = bilanRef.hsaEnv    > 0 ? Math.min(100, Math.round(hsa / bilanRef.hsaEnv     * 100)) : 0;
+      // Barre de consommation HP/HSA inline (valeurs simulées si scénario actif)
+      const pctHP  = bilanRef.hPosteEnv > 0 ? Math.min(100, Math.round(hpSim  / bilanRef.hPosteEnv  * 100)) : 0;
+      const pctHSA = bilanRef.hsaEnv    > 0 ? Math.min(100, Math.round(hsaSim / bilanRef.hsaEnv     * 100)) : 0;
 
       // Écart
-      const ecartCls = ecart > 0 ? 'rc-pos' : ecart < 0 ? 'rc-neg' : '';
-      const ecartSign = ecart > 0 ? '+' : '';
+      const ecartCls = ecartSim > 0 ? 'rc-pos' : ecartSim < 0 ? 'rc-neg' : '';
+      const ecartSign = ecartSim > 0 ? '+' : '';
 
       // Colonnes modalités scénario
       let tdMods = '';
@@ -548,13 +563,21 @@ const DGHPilotage = (() => {
         + '<td class="rc-td rc-td-men font-mono">'
           + (b.besoinMEN > 0 ? b.besoinMEN + ' h' : '<span class="rc-zero">—</span>')
         + '</td>'
-        // HP / HSA / Total
-        + '<td class="rc-td rc-td-hp font-mono">' + (hp > 0 ? hp + ' h' : '<span class="rc-zero">—</span>') + '</td>'
-        + '<td class="rc-td rc-td-hsa font-mono">' + (hsa > 0 ? '<span class="rc-hsa-val">' + hsa + ' h</span>' : '<span class="rc-zero">—</span>') + '</td>'
-        + '<td class="rc-td rc-td-tot font-mono"><strong>' + (tot > 0 ? tot + ' h' : '—') + '</strong></td>'
-        // Écart
+        // HP / HSA / Total (valeurs simulées + Δ scénario si concerné)
+        + '<td class="rc-td rc-td-hp font-mono">'
+          + (hpSim > 0 ? hpSim + ' h' : '<span class="rc-zero">—</span>')
+          + (scenHP > 0 ? '<span class="rc-delta">+' + scenHP + '</span>' : '')
+        + '</td>'
+        + '<td class="rc-td rc-td-hsa font-mono">'
+          + (hsaSim > 0 ? '<span class="rc-hsa-val">' + hsaSim + ' h</span>' : '<span class="rc-zero">—</span>')
+          + (scenHSA > 0 ? '<span class="rc-delta">+' + scenHSA + '</span>' : '')
+        + '</td>'
+        + '<td class="rc-td rc-td-tot font-mono"><strong>' + (totSim > 0 ? totSim + ' h' : '—') + '</strong>'
+          + (scenDisc > 0 ? '<span class="rc-delta">+' + scenDisc + '</span>' : '')
+        + '</td>'
+        // Écart (simulé)
         + '<td class="rc-td rc-td-ecart font-mono ' + ecartCls + '">'
-          + (ecart !== 0 ? ecartSign + ecart + ' h' : '<span class="rc-eq">=</span>')
+          + (ecartSim !== 0 ? ecartSign + ecartSim + ' h' : '<span class="rc-eq">=</span>')
         + '</td>'
         // Modalités
         + tdMods
@@ -587,14 +610,24 @@ const DGHPilotage = (() => {
     const besoinTot = Math.round(besoins.reduce((s,b) => s + b.besoinMEN, 0) * 2) / 2;
     const ecartTot  = Math.round((bilanRef.totalAlloue - besoinTot) * 2) / 2;
 
+    // Totaux simulés (incluent les projets hors discipline)
+    const scTotHP    = bilanScen ? bilanScen.coutHP    : 0;
+    const scTotHSA   = bilanScen ? bilanScen.coutHSA   : 0;
+    const scTotAll   = bilanScen ? bilanScen.coutTotal : 0;
+    const totHPsim   = Math.round((bilanRef.totalHPDisc  + scTotHP)  * 2) / 2;
+    const totHSAsim  = Math.round((bilanRef.totalHSADisc + scTotHSA) * 2) / 2;
+    const totAllsim  = Math.round((bilanRef.totalAlloue  + scTotAll) * 2) / 2;
+    const ecartTotSim= Math.round((ecartTot + scTotAll) * 2) / 2;
+    const dlt = v => v > 0 ? '<span class="rc-delta">+' + (Math.round(v*2)/2) + '</span>' : '';
+
     const tbodyTotaux = '<tr class="rc-tr-total">'
       + '<td class="rc-td-disc"><strong>Total</strong></td>'
       + nivsPresents.map(() => '<td class="rc-td"></td>').join('')
       + '<td class="rc-td rc-td-men font-mono"><strong>' + besoinTot + ' h</strong></td>'
-      + '<td class="rc-td rc-td-hp font-mono"><strong>' + bilanRef.totalHPDisc + ' h</strong></td>'
-      + '<td class="rc-td rc-td-hsa font-mono"><strong>' + bilanRef.totalHSADisc + ' h</strong></td>'
-      + '<td class="rc-td rc-td-tot font-mono"><strong>' + bilanRef.totalAlloue + ' h</strong></td>'
-      + '<td class="rc-td rc-td-ecart font-mono ' + (ecartTot >= 0 ? 'rc-pos' : 'rc-neg') + '"><strong>' + (ecartTot >= 0 ? '+' : '') + ecartTot + ' h</strong></td>'
+      + '<td class="rc-td rc-td-hp font-mono"><strong>' + totHPsim + ' h</strong>' + dlt(scTotHP) + '</td>'
+      + '<td class="rc-td rc-td-hsa font-mono"><strong>' + totHSAsim + ' h</strong>' + dlt(scTotHSA) + '</td>'
+      + '<td class="rc-td rc-td-tot font-mono"><strong>' + totAllsim + ' h</strong>' + dlt(scTotAll) + '</td>'
+      + '<td class="rc-td rc-td-ecart font-mono ' + (ecartTotSim >= 0 ? 'rc-pos' : 'rc-neg') + '"><strong>' + (ecartTotSim >= 0 ? '+' : '') + ecartTotSim + ' h</strong></td>'
       + tdTotMods
     + '</tr>';
 
@@ -618,7 +651,10 @@ const DGHPilotage = (() => {
       + '<div class="rc-table-wrap"><table class="rc-table">'
       + thead
       + '<tbody>' + tbodyDisc + tbodyTotaux + tbodyEnv + '</tbody>'
-      + '</table></div>';
+      + '</table></div>'
+      + (bilanScen
+          ? '<p class="rc-legende">Sous le scénario « ' + _esc(scenChoisi.nom) + ' », les colonnes <strong>Dotation allouée</strong> (HP, HSA, Total, Écart) affichent la valeur <strong>simulée</strong> ; le <span class="rc-delta">+Δ</span> orange est l\'apport du scénario. Les modalités de type « projet » (sans discipline) ne s\'ajoutent qu\'à la ligne <strong>Total</strong>. Sélectionnez « — Aucun scénario — » pour revenir à la dotation de base.</p>'
+          : '');
   }
 
   // ── Changer le scénario affiché dans le récap ─────────────────────

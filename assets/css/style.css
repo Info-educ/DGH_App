@@ -275,7 +275,7 @@ input::placeholder { color: var(--c-text-dim); }
 /* ── MAIN ───────────────────────────────────────────────────────── */
 .main-content {
   margin-left: var(--sb-w);
-  flex: 1; min-height: 100vh;
+  flex: 1; min-width: 0; min-height: 100vh; /* min-width:0 : confine le scroll-x au tableau, évite que le contenu large étire la page et le bandeau d'onglets */
   display: flex; flex-direction: column;
   background: var(--c-bg);
   transition: margin-left var(--ts), background var(--tm);
@@ -333,7 +333,7 @@ input::placeholder { color: var(--c-text-dim); }
 .btn-etab:hover { color: var(--c-accent); border-color: var(--c-accent); background: var(--c-accent-light); }
 
 /* ── VUES ───────────────────────────────────────────────────────── */
-.view-container { flex: 1; padding: 1.75rem 2rem; }
+.view-container { flex: 1; min-width: 0; padding: 1.75rem 2rem; }
 .view { display: none; }
 .view.active { display: block; animation: fadeIn .2s ease; }
 @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
@@ -2936,6 +2936,14 @@ td.col-grille {
 
 /* Wrapper global */
 .rc-table-wrap { overflow-x: auto; margin-top: 1rem; }
+/* Badge Δ d'un scénario actif intégré au bloc Dotation allouée */
+.rc-delta {
+  margin-left: .25rem; font-size: .66rem; font-weight: 700;
+  color: var(--c-amber); background: var(--c-amber-bg);
+  border-radius: 3px; padding: 0 4px; white-space: nowrap;
+}
+.rc-legende { font-size: .78rem; color: var(--c-text-muted); margin-top: .75rem; line-height: 1.5; }
+.rc-legende .rc-delta { margin-left: 0; }
 
 /* Le tableau lui-même */
 .rc-table {
