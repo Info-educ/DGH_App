@@ -5,6 +5,26 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.7.1 — Consommation du scénario actif visible sur le tableau de bord (2026-06-15)
+
+### Corrigé
+- **Barre « Consommation DGH » du tableau de bord** : elle ignorait le scénario actif. Elle affiche désormais un **segment orange** correspondant aux heures consommées par le scénario, et le libellé indique le total simulé : « X / Y h (dont +Z h scénario) ».
+- **Jauges HP/HSA — surcouche simulation masquée à tort.** La ligne « ⊕ avec scénario » n'apparaissait que si l'enveloppe du type était > 0. Pour un scénario tout en HSA avec une enveloppe HSA à 0, la consommation devenait invisible. La surcouche s'affiche maintenant dès que le scénario consomme ce type (marge négative = surconsommation clairement visible).
+
+### Modifié
+- **Bandeau scénario du tableau de bord** : le coût n'affiche plus « +0 h HP » quand le scénario n'a pas d'impact HP ; seuls les types réellement consommés sont listés (ex. « Coût : +6 h HSA »).
+
+### Rappel d'usage
+- Le tableau de bord (comme toute l'app depuis v4.7.0) reflète le scénario **ACTIF** — celui marqué « ● Actif » dans l'onglet Scénarios, activé via « Activer ». Le menu déroulant de l'onglet *Récapitulatif DGH* ne sert qu'à la comparaison et n'active pas le scénario.
+
+### Détails techniques
+- `index.html` : 1 segment de barre (`#progressBarScen`).
+- `dashboard.js` : segment + libellé simulés dans la barre ; garde `dotation > 0` retirée dans `_renderJauge` (calcul de `pctSim` sécurisé) ; coût du bandeau conditionnel.
+- `style.css` : `.dash-bar-scen`.
+- Aucune modification du modèle de données ni de `calculs.js`.
+
+---
+
 ## v4.7.0 — Scénario actif propagé partout + listing modalités condensé (2026-06-15)
 
 ### Ajouté

@@ -925,6 +925,7 @@ input::placeholder { color: var(--c-text-dim); }
 .progress-track { position:relative; height:5px; background:var(--c-surface2); border-radius:99px; overflow:visible; border:1px solid var(--c-border); }
 .dot-bar-hp     { background:var(--c-accent)  !important; border-radius:99px; transition:width .6s ease; }
 .dot-bar-hsa-part { position:absolute; top:0; height:100%; background:var(--c-indigo) !important; border-radius:99px; transition:width .6s ease, margin-left .6s ease; }
+.dash-bar-scen { position:absolute; top:0; height:100%; background:var(--c-amber) !important; border-radius:99px; transition:width .6s ease, margin-left .6s ease; }
 .progress-legend { display:flex; gap:1.25rem; margin-top:.5rem; }
 .prog-leg-item { font-size:.72rem; color:var(--c-text-muted); }
 .prog-leg-hp  strong { color:var(--c-accent); font-family:'JetBrains Mono',monospace; }

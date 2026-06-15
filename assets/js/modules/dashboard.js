@@ -46,16 +46,33 @@ const DGHDashboard = (() => {
       _renderTopbar();
 
       // Barre progression duale
+      // Barre progression duale (+ segment scénario actif)
       const barHP  = document.getElementById('progressBarHP');
       const barHSA = document.getElementById('progressBarHSA');
+      const barScen= document.getElementById('progressBarScen');
       const lbl    = document.getElementById('progress-label');
+      const coutScenTot = bilanScen ? bilanScen.coutTotal : 0;
       if (bilan.enveloppe > 0) {
         const pctHP  = Math.min(100, Math.round((bilan.totalHP  / bilan.enveloppe) * 100));
         const pctHSA = Math.min(100 - pctHP, Math.round((bilan.totalHSA / bilan.enveloppe) * 100));
         if (barHP)  barHP.style.width = pctHP + '%';
         if (barHSA) { barHSA.style.width = pctHSA + '%'; barHSA.style.marginLeft = pctHP + '%'; }
+        if (barScen) {
+          if (coutScenTot > 0) {
+            const pctScen = Math.min(Math.max(0, 100 - pctHP - pctHSA), Math.round((coutScenTot / bilan.enveloppe) * 100));
+            barScen.style.width = pctScen + '%';
+            barScen.style.marginLeft = (pctHP + pctHSA) + '%';
+            barScen.classList.remove('is-hidden');
+          } else { barScen.classList.add('is-hidden'); }
+        }
+      } else if (barScen) { barScen.classList.add('is-hidden'); }
+      if (lbl) {
+        lbl.textContent = bilan.enveloppe > 0
+          ? (coutScenTot > 0
+              ? (Math.round((bilan.totalAlloue + coutScenTot) * 2) / 2) + ' / ' + bilan.enveloppe + ' h (dont +' + coutScenTot + ' h scénario)'
+              : bilan.totalAlloue + ' / ' + bilan.enveloppe + ' h')
+          : '0 / 0 h';
       }
-      if (lbl) lbl.textContent = bilan.enveloppe > 0 ? bilan.totalAlloue + ' / ' + bilan.enveloppe + ' h' : '0 / 0 h';
       _set('prog-leg-hp',  bilan.totalHP  + ' h');
       _set('prog-leg-hsa', bilan.totalHSA + ' h');
 
@@ -111,13 +128,16 @@ const DGHDashboard = (() => {
           const sCls  = bs.depassement ? 'scen-solde-danger' : 'scen-solde-ok';
           const ssign = bs.soldeSimule >= 0 ? '+' : '';
           const dsign = delta > 0 ? '+' : '';
+          const coutTxt = [
+            bs.coutHP  > 0 ? '+' + bs.coutHP  + ' h HP'  : '',
+            bs.coutHSA > 0 ? '+' + bs.coutHSA + ' h HSA' : ''
+          ].filter(Boolean).join(' / ') || '0 h';
           scenDashEl.classList.remove('is-hidden');
           scenDashEl.innerHTML =
             '<div class="dash-scen-line">'
             + '<span class="dash-scen-tag">⊕ Scénario actif</span>'
             + '<strong class="dash-scen-nom">' + _esc(scenActif.nom) + '</strong>'
-            + '<span class="dash-scen-cout">Coût : <span class="font-mono">+' + bs.coutHP + ' h HP'
-              + (bs.coutHSA > 0 ? ' / +' + bs.coutHSA + ' h HSA' : '') + '</span></span>'
+            + '<span class="dash-scen-cout">Coût : <span class="font-mono">' + coutTxt + '</span></span>'
             + '<span class="dash-scen-solde">Solde : <span class="font-mono">' + (bilan.solde >= 0 ? '+' : '') + bilan.solde + ' h</span>'
               + ' → <strong class="font-mono ' + sCls + '">' + ssign + bs.soldeSimule + ' h</strong>'
               + (delta !== 0 ? ' <span class="font-mono ' + sCls + '">(' + dsign + delta + ' h)</span>' : '') + '</span>'
@@ -282,10 +302,10 @@ const DGHDashboard = (() => {
     // Surcouche simulation (scénario actif) : marqueur + ligne
     const simMark = document.getElementById('dash-gauge-' + pfx + '-sim');
     const simLine = document.getElementById('dash-' + pfx + '-sim');
-    if (coutScen > 0 && dotation > 0) {
+    if (coutScen > 0) {
       const consoSim = Math.round((conso + coutScen) * 2) / 2;
       const margeSim = Math.round((dotation - consoSim) * 2) / 2;
-      const pctSim   = Math.max(0, Math.min(100, Math.round((consoSim / dotation) * 100)));
+      const pctSim   = dotation > 0 ? Math.max(0, Math.min(100, Math.round((consoSim / dotation) * 100))) : 100;
       if (simMark) { simMark.style.left = pctSim + '%'; simMark.classList.remove('is-hidden'); }
       if (simLine) {
         simLine.classList.remove('is-hidden');
