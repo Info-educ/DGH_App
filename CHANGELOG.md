@@ -5,6 +5,48 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.6.0 — Aide contextuelle embarquée (2026-06-15)
+
+### Ajouté
+- **Système d'aide contextuelle complet** — module autonome `assets/js/tutorial.js` (`DGHTutorial`), vanilla, zéro dépendance, zéro CDN.
+  - **Écran de bienvenue** au premier lancement (cadre RGPD + règle d'or de sauvegarde).
+  - **Pop-ups contextuelles par onglet** à la première visite : structure imposée *À faire / Pourquoi / Pas pour / Si ça bloque*, ton direct, ≤ 5 lignes.
+  - **Visite guidée** pas à pas avec spotlight (cibles statiques → jamais de blocage).
+  - **Aide situationnelle** branchée sur l'événement `dgh:storage-error` déjà émis par `data.js` (sauvegarde impossible → « Exporter maintenant »).
+  - **Bouton « ? » permanent** (bas-droite) ouvrant un panneau de réglages : aide de la page, relancer la visite, revoir la bienvenue, réafficher toutes les aides, **toggle global** des aides automatiques.
+  - **« Ne plus afficher les aides »** sur chaque pop-up + toggle global dans le panneau.
+- **Section CSS dédiée** dans `style.css` (« AIDE CONTEXTUELLE EMBARQUÉE »), 100 % variables de thème (clair/sombre).
+
+### Intégration (minimale, conforme SKILL.md)
+- `index.html` : **une seule ligne** ajoutée (`<script src="assets/js/tutorial.js?v=4.6.0">`), après `app.js`.
+- `app.js` : **aucune modification** — le module observe la vue active via `MutationObserver` et réutilise `app.navigate()`.
+- Délégation **unique** propre au module (attribut `data-help-action` sur son propre arbre DOM) — zéro `onclick` inline, zéro collision avec `_onGlobalClick`.
+
+### Données & RGPD
+- Préférences d'aide stockées sous la clé `dgh-tutorial` (booléens « vu / activé » uniquement) — **zéro donnée personnelle**. Même statut documenté que le thème UI.
+
+---
+
+## v4.5.0 — Encart aménagements multi-classes dans les scénarios (2026-06-14)
+
+### Ajouté
+- **Encart « Aménagement multi-classes »** au-dessus de la grille de saisie, dans le panneau accordéon d'un scénario.
+  - Couvre les cas que la grille mono-case ne peut pas exprimer : **groupes de besoins inter-classes**, **dédoublement sur plusieurs classes simultanément**, **barrette**, etc.
+  - Formulaire compact : type, discipline (optionnel), H/gr/sem, imputation HP/HSA, commentaire.
+  - **Sélection des classes** par cases à cocher groupées par niveau, avec raccourcis par niveau (clic sur le label du niveau pour l'ajouter à la sélection) et boutons Tout / Aucun.
+  - Validation : au moins 2 classes requises (sinon toast d'avertissement avec message explicatif). Une classe seule relève de la grille.
+  - **Liste des aménagements multi-classes enregistrés** affichée sous le formulaire, avec bouton ✕ de suppression individuelle.
+- Nouvelles fonctions dans `pilotage.js` : `_htmlEncartMultiClasse`, `saveMultiClasse`, `mcSelectNiveau`.
+- Nouveaux handlers dans `app.js` : `save-mc` → `DGHPilotage.saveMultiClasse`, `mc-sel-niv` → `DGHPilotage.mcSelectNiveau`.
+- CSS dédié : bloc `.mc-encart` / `.mc-form` / `.mc-classes-grid` / `.mc-liste` / `.mc-item`.
+
+### Changé
+- La note « modalités multi-classes » précédemment affichée en bas de la grille est **supprimée** (les aménagements multi-classes sont maintenant gérés dans l'encart, plus dans la grille).
+- `_htmlGrilleModalites` ne collecte plus les `multiMods` — simplification interne.
+- CSS mort `.scen-view-toggle` / `.scen-view-btn` (supprimés en v4.4.0) retirés du fichier CSS.
+
+---
+
 ## v4.4.0 — Scénarios : saisie en grille uniquement (2026-06-14)
 
 ### Changé

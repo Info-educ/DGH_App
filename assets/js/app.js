@@ -179,6 +179,8 @@ const app = (() => {
       if (action === 'duplicate-scenario'){ DGHPilotage.dupliquerScenario(actionBtn.dataset.id);                       return; }
       if (action === 'delete-scenario')   { DGHPilotage.confirmDeleteScenario(actionBtn.dataset.id);                   return; }
       if (action === 'set-actif-scenario'){ DGHPilotage.setActif(actionBtn.dataset.id);                                return; }
+      if (action === 'save-mc')           { DGHPilotage.saveMultiClasse(actionBtn.dataset.scenId);                     return; }
+      if (action === 'mc-sel-niv')        { DGHPilotage.mcSelectNiveau(actionBtn);                                     return; }
       // ── Groupes (Structures) ──
       if (action === 'struct-edit-groupe')   { DGHStructures.editGroupe(id);                        return; }
       if (action === 'struct-save-groupe')   { DGHStructures.saveGroupe(id);                        return; }

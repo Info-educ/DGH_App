@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **4.4.0** — Dernière mise à jour : scénarios en grille uniquement (suppression du mode Liste)
+> Version courante : **4.6.0** — Dernière mise à jour : aide contextuelle embarquée (module tutorial.js)
 
 ---
 
@@ -400,7 +400,7 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 
 *Ce fichier fait partie intégrante du projet DGH App.*
 *Le mettre à jour à chaque évolution structurelle.*
-*Version : 4.4.0 — Dernière mise à jour : scénarios en grille uniquement*
+*Version : 4.6.0 — Dernière mise à jour : aide contextuelle embarquée (tutorial.js)*
 
 ## Modèle de données — Répartition de service (v4.2)
 
@@ -523,23 +523,34 @@ Calculs.comparerScenarios(anneeData, scenarios)
 > ⚠️ v4.4.0 : le mode **Liste** a été supprimé. Les handlers `add-mod`, `save-mod`, `cancel-mod`, `edit-mod`, `save-edit-mod`, `cancel-edit-mod`, `scen-view-mode`, `mod-sel-niv` et les change-handlers `mod-*` n'existent plus. Ne pas les réintroduire sans réintroduire la vue Liste.
 
 
-## Scénarios — Saisie en grille (v4.4)
+## Scénarios — Saisie en grille + encart multi-classes (v4.5)
 
-Déplier un scénario (▼) ouvre **directement la grille** (plus de bascule Liste/Grille). Tableau disciplines (lignes) × classes (colonnes). Chaque case remplie = **une modalité mono-classe** `{ type, disciplineId, classeIds:[divId], heuresParGroupe, typeHeure }`.
+Déplier un scénario (▼) ouvre :
+1. **Encart « Aménagement multi-classes »** (au-dessus) — pour les modalités couvrant ≥ 2 classes : groupes de besoins inter-classes, dédoublement multi-classes, barrettes. Sélection par cases à cocher groupées par niveau. Minimum 2 classes requis.
+2. **Grille** (en-dessous) — tableau disciplines × classes, une case = une modalité mono-classe.
 
 Délégation (app.js) :
 ```
-// change (déclenché par la CLASSE CSS, pas le data-action)
-'.grid-h'    → DGHPilotage.gridCellH(el)    // crée (>0) / met à jour / supprime (=0) la modalité ; data-scen-id, data-disc-id, data-div-id, [data-mod-id]
-'.grid-type' → DGHPilotage.gridCellType(el) // change le type (data-mod-id requis)
-'.grid-th'   → DGHPilotage.gridCellTH(el)   // change HP/HSA (data-mod-id requis)
+// _onGlobalClick — data-action
+'save-mc'       → DGHPilotage.saveMultiClasse(scenId)      // ajoute modalité multi-classes
+'mc-sel-niv'    → DGHPilotage.mcSelectNiveau(btn)           // sélection rapide par niveau (btn.dataset.niveau = niv | 'all' | 'none')
+'delete-mod'    → DGHPilotage.deleteModificateur(scenId, modId)  // supprime toute modalité (grille à 0 ou bouton ✕ encart)
+
+// _onGlobalChange (déclenché par CLASSE CSS)
+'.grid-h'       → DGHPilotage.gridCellH(el)    // crée (>0) / màj / supprime (=0) mono-classe
+'.grid-type'    → DGHPilotage.gridCellType(el)  // change le type
+'.grid-th'      → DGHPilotage.gridCellTH(el)    // change HP/HSA
+
+// _onGlobalBlur
+'.scen-nom-input' → DGHPilotage.saveNom(el)
 ```
 
 Règles :
-- La grille ne gère que les modalités **mono-classe** (1 case = 1 classe × 1 discipline). Les modalités **multi-classes ou sans discipline** ne peuvent plus être créées ; les anciennes restent comptées dans le bilan et sont listées sous la grille avec un bouton ✕ (`data-action="delete-mod"`) pour les supprimer.
-- Toute mutation appelle `_renderOngletScenarios()` + `renderBannerAndDashboard()` (rafraîchit bandeau actif + dashboard).
-- Type par défaut à la création : `dedoublement` ; HP/HSA par défaut : `hsa`. Titre recalculé via `_titreModificateur`.
-- **Dette technique** : CSS de l'ancien formulaire Liste (`.scen-form-add`, `.scen-view-toggle`, `.scen-mods-table`, `.mod-niv-*`…) encore présent mais inutilisé — à nettoyer en livraison dédiée.
+- Encart : au moins 2 classes. Une seule classe = relève de la grille.
+- Grille : 1 case = 1 classe × 1 discipline (mono-classe uniquement).
+- Les modalités multi-classes existantes apparaissent dans la `mc-liste` sous le formulaire de l'encart (pas dans la grille).
+- Toute mutation appelle `_renderOngletScenarios()` + `renderBannerAndDashboard()`.
+- Type par défaut encart : `groupes-besoins` ; type par défaut grille : `dedoublement` ; HP/HSA par défaut : `hsa`.
 
 ## Cache-busting des assets (v4.3.1)
 
@@ -552,3 +563,21 @@ Checklist de version (à synchroniser à chaque release) :
 4. `data/exemple.json` → `_meta.version`
 5. `README.md` → titre + badge
 6. `CHANGELOG.md` → nouvelle entrée
+
+## Aide contextuelle embarquée — `tutorial.js` (v4.6.0)
+
+Module **100 % autonome** : accompagnement utilisateur uniquement. Chargé **après `app.js`**.
+
+### Règles propres au module
+- **Stockage** : une seule clé `localStorage 'dgh-tutorial'`, gérée *dans* `tutorial.js`. Contenu UI uniquement (`enabled`, `welcomeDone`, `tourDone`, `seen{}`) → **ZÉRO donnée personnelle**. Exception documentée, même statut que `dgh-theme`. Ne jamais y stocker de données métier ni nominatives.
+- **Délégation** : UNE seule délégation de clic sur l'arbre du module, via l'attribut **`data-help-action`** (distinct de `data-action` de l'app). Aucun `onclick` inline. **Ne pas** router l'aide par `_onGlobalClick` de `app.js`.
+- **Couplage** : `app.js` n'est **pas** modifié. Le module observe la vue active par `MutationObserver` sur `.view` et réutilise `app.navigate()`. L'aide situationnelle écoute l'événement `dgh:storage-error` déjà émis par `data.js`.
+- **Styles** : tout dans la section « AIDE CONTEXTUELLE EMBARQUÉE » de `style.css`, 100 % variables de thème. Le seul `style` inline JS autorisé concerne la **géométrie** du spotlight/carte de visite (positionnement), jamais la typographie ni les couleurs.
+
+### Ajouter l'aide d'un nouvel onglet
+1. Ajouter une entrée dans l'objet `HELP` de `tutorial.js` : `vueId: { titre, quoi, pourquoi, neFaitPas, siBloque }`.
+2. Rien d'autre : la pop-up s'affiche automatiquement à la première visite de la vue.
+3. Rédaction : ton direct, non technique, phrases courtes, **≤ 5 lignes** par message. Toujours renseigner les 4 champs (dont « si ça bloque » → jamais de cul-de-sac).
+
+### Reproposer l'aide après une refonte du contenu
+Incrémenter `CONTENT_VER` dans `tutorial.js` : réinitialise `seen{}` en conservant le choix `enabled` de l'utilisateur.

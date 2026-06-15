@@ -164,7 +164,88 @@ const DGHPilotage = (() => {
         + '<span class="scen-panel-titre">Modalit\u00e9s \u2014 <strong>' + _esc(scen.nom) + '</strong></span>'
         + _htmlImpactDotation(data, bilan)
       + '</div>'
+      + _htmlEncartMultiClasse(scen, data)
       + _htmlGrilleModalites(scen, data)
+    + '</div>';
+  }
+
+  /**
+   * Encart au-dessus de la grille : aménagements MULTI-CLASSES
+   * (groupes de besoins inter-classes, dédoublement sur plusieurs classes, barrette…).
+   * La grille gère le mono-classe ; cet encart gère tout ce qui couvre ≥ 2 classes.
+   */
+  function _htmlEncartMultiClasse(scen, data) {
+    const disciplines = DGHData.getDisciplines();
+    const structures  = DGHData.getStructures();
+    const sid = scen.id;
+
+    // Modalités multi-classes existantes (≥2 classes OU sans discipline)
+    const multiMods = (scen.modificateurs || []).filter(m =>
+      !(m.disciplineId && (m.classeIds || []).length === 1));
+
+    const typeOpts = Object.entries(TYPES_MOD).map(([k,v]) =>
+      '<option value="' + k + '"' + (k === 'groupes-besoins' ? ' selected' : '') + '>' + v.label + '</option>').join('');
+    const discOpts = disciplines.map(d => '<option value="' + d.id + '">' + _esc(d.nom) + '</option>').join('');
+
+    // Classes groupées par niveau (cases à cocher)
+    const parNiv = {};
+    structures.forEach(s => { (parNiv[s.niveau] = parNiv[s.niveau] || []).push(s); });
+    const niveaux = NIVEAUX_ORD.filter(n => parNiv[n] && parNiv[n].length);
+    const classesHtml = niveaux.length === 0
+      ? '<span class="scen-cout-zero">Aucune division. Renseignez les structures d\'abord.</span>'
+      : niveaux.map(niv =>
+          '<div class="mc-niv-groupe">'
+            + '<button type="button" class="btn-link mc-sel-niv" data-action="mc-sel-niv" data-niveau="' + niv + '" data-scen-id="' + sid + '">' + niv + '</button>'
+            + parNiv[niv].map(s =>
+                '<label class="mc-classe-label"><input type="checkbox" class="mc-classe-check" data-niveau="' + niv + '" value="' + s.id + '"> ' + _esc(s.nom) + '</label>'
+              ).join('')
+          + '</div>').join('');
+
+    // Liste des aménagements existants
+    let listeHtml = '';
+    if (multiMods.length > 0) {
+      listeHtml = '<div class="mc-liste"><div class="mc-liste-titre">Aménagements enregistrés (' + multiMods.length + ')</div>'
+        + multiMods.map(m => {
+            const t   = TYPES_MOD[m.type] || { short: m.type, css: '' };
+            const tit = m.titre || _titreModificateur(m.type, m.disciplineId, m.classeIds, structures, disciplines, m.nomAutre);
+            return '<div class="mc-item">'
+              + '<span class="mod-badge ' + t.css + '">' + t.short + '</span>'
+              + '<span class="mc-item-titre">' + _esc(tit) + '</span>'
+              + '<span class="mc-item-cibles">' + _esc(_nomsCibles(m, structures)) + '</span>'
+              + '<span class="mc-item-h font-mono">' + (m.heuresParGroupe||0) + ' h '
+                + '<span class="mod-th-badge mod-th-badge-' + (m.typeHeure||'hsa') + '">' + (m.typeHeure||'hsa').toUpperCase() + '</span></span>'
+              + '<button class="btn-icon btn-icon-danger" data-action="delete-mod" data-scen-id="' + sid + '" data-mod-id="' + m.id + '" title="Supprimer">✕</button>'
+            + '</div>';
+          }).join('')
+        + '</div>';
+    }
+
+    return '<div class="mc-encart">'
+      + '<div class="mc-encart-head">'
+        + '<span class="mc-encart-titre">＋ Aménagement multi-classes</span>'
+        + '<span class="mc-encart-hint">groupe de besoins inter-classes, dédoublement sur plusieurs classes, barrette…</span>'
+      + '</div>'
+      + '<div class="mc-form" data-scen-id="' + sid + '">'
+        + '<div class="mc-form-row">'
+          + '<label class="mc-field">Type<select class="mc-type" id="mcType_' + sid + '">' + typeOpts + '</select></label>'
+          + '<label class="mc-field">Discipline<select class="mc-disc" id="mcDisc_' + sid + '"><option value="">— Toutes —</option>' + discOpts + '</select></label>'
+          + '<label class="mc-field mc-field-sm">H/gr/sem<input type="number" class="mc-h" id="mcH_' + sid + '" min="0.5" max="20" step="0.5" value="2"></label>'
+          + '<label class="mc-field mc-field-sm">Imputation<select class="mc-th" id="mcTH_' + sid + '"><option value="hsa">HSA</option><option value="hp">HP</option></select></label>'
+        + '</div>'
+        + '<div class="mc-classes-block">'
+          + '<div class="mc-classes-label">Classes concernées <span class="mc-quick">'
+            + '(cliquez un niveau pour l\'ajouter · '
+            + '<button type="button" class="btn-link mc-sel-niv" data-action="mc-sel-niv" data-niveau="all" data-scen-id="' + sid + '">Tout</button> · '
+            + '<button type="button" class="btn-link mc-sel-niv" data-action="mc-sel-niv" data-niveau="none" data-scen-id="' + sid + '">Aucun</button>)'
+          + '</span></div>'
+          + '<div class="mc-classes-grid" id="mcGrid_' + sid + '">' + classesHtml + '</div>'
+        + '</div>'
+        + '<div class="mc-form-row">'
+          + '<label class="mc-field mc-field-grow">Commentaire<input type="text" class="mc-comment" id="mcComment_' + sid + '" placeholder="Précisions éventuelles"></label>'
+          + '<button class="btn-primary btn-sm mc-add-btn" data-action="save-mc" data-scen-id="' + sid + '">Ajouter ✓</button>'
+        + '</div>'
+      + '</div>'
+      + listeHtml
     + '</div>';
   }
 
@@ -187,15 +268,13 @@ const DGHPilotage = (() => {
     });
 
     // Index des modalités mono-classe : clé discId|divId → modificateur (le 1er)
+    // Les multi-classes sont gérées par l'encart au-dessus (cf. _htmlEncartMultiClasse).
     const mono = {};
-    const multiMods = [];
     (scen.modificateurs || []).forEach(m => {
       const cl = m.classeIds || [];
       if (m.disciplineId && cl.length === 1) {
         const k = m.disciplineId + '|' + cl[0];
-        if (!mono[k]) mono[k] = m; // garde le premier ; doublons éventuels édités en Liste
-      } else {
-        multiMods.push(m);
+        if (!mono[k]) mono[k] = m;
       }
     });
 
@@ -240,14 +319,7 @@ const DGHPilotage = (() => {
       + '</tr>';
     }).join('');
 
-    const note = multiMods.length > 0
-      ? '<div class="grid-note"><p>ⓘ ' + multiMods.length + ' modalité(s) multi-classes ou sans discipline ne sont pas éditables dans la grille (une case = 1 classe × 1 discipline) mais restent comptées dans le bilan. Supprimez-les ici si besoin :</p>'
-        + '<ul class="grid-multi-list">'
-        + multiMods.map(m => '<li><span>'
-            + _esc(m.titre || _titreModificateur(m.type, m.disciplineId, m.classeIds, structures, disciplines, m.nomAutre))
-            + '</span><button class="btn-icon btn-icon-danger" data-action="delete-mod" data-scen-id="' + scen.id + '" data-mod-id="' + m.id + '" title="Supprimer">✕</button></li>').join('')
-        + '</ul></div>'
-      : '';
+    const note = '';
 
     return '<div class="grid-modalites">'
       + '<p class="grid-help">Tapez les heures dans une case pour créer une modalité (type ' + TYPES_MOD['dedoublement'].short
@@ -1032,6 +1104,46 @@ const DGHPilotage = (() => {
     renderBannerAndDashboard();
   }
 
+  // ── Encart multi-classes : sélection rapide + enregistrement ───────
+  function mcSelectNiveau(btn) {
+    const niv = btn.dataset.niveau, sid = btn.dataset.scenId;
+    const grid = document.getElementById('mcGrid_' + sid);
+    if (!grid) return;
+    grid.querySelectorAll('.mc-classe-check').forEach(cb => {
+      if (niv === 'all')        cb.checked = true;
+      else if (niv === 'none')  cb.checked = false;
+      else if (cb.dataset.niveau === niv) cb.checked = true; // additif : ajoute le niveau à la sélection
+    });
+  }
+
+  function saveMultiClasse(scenId) {
+    const type      = document.getElementById('mcType_'    + scenId)?.value || 'groupes-besoins';
+    const discId    = document.getElementById('mcDisc_'    + scenId)?.value || '';
+    const h         = parseFloat(document.getElementById('mcH_' + scenId)?.value) || 0;
+    const typeHeure = document.getElementById('mcTH_'      + scenId)?.value || 'hsa';
+    const comment   = document.getElementById('mcComment_' + scenId)?.value.trim() || '';
+    const ids = Array.from(document.querySelectorAll('#mcGrid_' + scenId + ' .mc-classe-check:checked')).map(c => c.value);
+
+    if (ids.length < 2) {
+      if (typeof app !== 'undefined' && app.toast) app.toast('Sélectionnez au moins 2 classes. Pour une seule classe, utilisez directement la grille.', 'warning');
+      return;
+    }
+    if (h <= 0) {
+      if (typeof app !== 'undefined' && app.toast) app.toast('Indiquez un nombre d\'heures supérieur à 0.', 'warning');
+      return;
+    }
+    const structures  = DGHData.getStructures();
+    const disciplines = DGHData.getDisciplines();
+    const titre = _titreModificateur(type, discId || null, ids, structures, disciplines, '');
+    DGHData.addModificateur(scenId, {
+      type, disciplineId: discId || null, classeIds: ids,
+      heuresParGroupe: h, typeHeure, commentaire: comment, titre
+    });
+    _renderOngletScenarios();
+    renderBannerAndDashboard();
+    if (typeof app !== 'undefined' && app.toast) app.toast('Aménagement « ' + titre + ' » ajouté.', 'success');
+  }
+
   /** Rafraîchit le bandeau actif + le dashboard si le scénario édité est actif. */
   function renderBannerAndDashboard() {
     _renderBannerActif();
@@ -1170,7 +1282,9 @@ const DGHPilotage = (() => {
     setImpactScen,
     gridCellH,
     gridCellType,
-    gridCellTH
+    gridCellTH,
+    mcSelectNiveau,
+    saveMultiClasse
   };
 
 })();
