@@ -26,6 +26,7 @@ const DGHEtab = (() => {
       if (emptyWrap) emptyWrap.classList.toggle('is-hidden', !!etab.logo);
       updateModalDotTotal();
       renderModalYearSelect(); renderYearListAdmin();
+      renderSalles(); renderHeuresBleues();
       switchModalTab('etab');
       m.classList.add('modal-open');
       setTimeout(()=>document.getElementById('inputNomEtab')?.focus(),60);
@@ -123,6 +124,165 @@ const DGHEtab = (() => {
     updateModalDotTotal(); app.renderYearSelect(); renderYearListAdmin();
   }
 
+  // ── SALLES SPÉCIALISÉES (v4.8.0) ──────────────────────────────────
+  let _editSalleId = null;
+
+  function renderSalles() {
+    const el = document.getElementById('salleListWrap');
+    if (!el) return;
+    const salles = DGHData.getSalles();
+    const types  = DGHData.getTypesSalle();
+    const typeLabel = t => (types.find(x => x.value === t) || {}).label || t;
+
+    const formHtml = _editSalleId
+      ? _htmlFormSalle(types, salles.find(s => s.id === _editSalleId) || null)
+      : '';
+
+    let listHtml = '';
+    const visibles = salles.filter(s => s.id !== _editSalleId);
+    if (visibles.length === 0 && !_editSalleId) {
+      listHtml = '<p class="form-hint">Aucune salle spécialisée renseignée — labo SVT, Physique, Musique, Arts, Techno…</p>';
+    } else if (visibles.length > 0) {
+      listHtml = '<div class="salle-list">' + visibles.map(s =>
+        '<div class="salle-row">'
+          + '<span class="salle-row-nom">' + _esc(s.nom || typeLabel(s.type)) + '</span>'
+          + '<span class="salle-row-type">' + _esc(typeLabel(s.type)) + '</span>'
+          + '<span class="salle-row-nb">×' + (s.nb || 1) + '</span>'
+          + '<div class="edt-card-actions">'
+            + '<button class="btn-icon" data-action="salle-edit" data-id="' + s.id + '" title="Modifier">✎</button>'
+            + '<button class="btn-icon btn-icon-danger" data-action="salle-delete" data-id="' + s.id + '" title="Supprimer">✕</button>'
+          + '</div>'
+        + '</div>'
+      ).join('') + '</div>';
+    }
+    el.innerHTML = '<div class="salle-header-row"><span class="modal-section-title">Salles spécialisées</span>'
+      + (_editSalleId ? '' : '<button class="btn-secondary btn-sm" data-action="salle-add">+ Ajouter</button>')
+      + '</div>' + formHtml + listHtml;
+  }
+
+  function _htmlFormSalle(types, editData) {
+    const nom = editData?.nom || '';
+    const typ = editData?.type || 'svt';
+    const nb  = editData?.nb != null ? editData.nb : 1;
+    const opts = types.map(t => '<option value="' + t.value + '"' + (typ===t.value?' selected':'') + '>' + _esc(t.label) + '</option>').join('');
+    const saveAttr = editData ? ' data-id="' + editData.id + '"' : '';
+    return '<div class="edt-form salle-form">'
+      + '<div class="form-row-3">'
+        + '<div class="form-group"><label>Nom</label><input type="text" id="inputSalleNom" value="' + _esc(nom) + '" placeholder="Ex : Labo SVT 1" /></div>'
+        + '<div class="form-group"><label>Type</label><select id="inputSalleType">' + opts + '</select></div>'
+        + '<div class="form-group"><label>Exemplaires disponibles</label><input type="number" id="inputSalleNb" value="' + nb + '" min="1" step="1" /></div>'
+      + '</div>'
+      + '<div class="edt-form-actions">'
+        + '<button class="btn-primary btn-sm" data-action="salle-save"' + saveAttr + '>Enregistrer ✓</button>'
+        + '<button class="btn-secondary btn-sm" data-action="salle-cancel">Annuler</button>'
+      + '</div>'
+    + '</div>';
+  }
+
+  function startAddSalle()  { _editSalleId = '__new__'; renderSalles(); document.getElementById('inputSalleNom')?.focus(); }
+  function editSalle(id)    { _editSalleId = id;        renderSalles(); document.getElementById('inputSalleNom')?.focus(); }
+  function cancelSalle()    { _editSalleId = null;      renderSalles(); }
+
+  function saveSalle(id) {
+    const nom  = document.getElementById('inputSalleNom')?.value.trim() || '';
+    const type = document.getElementById('inputSalleType')?.value || 'svt';
+    const nb   = parseInt(document.getElementById('inputSalleNb')?.value, 10) || 1;
+    const fields = { nom, type, nb };
+    if (id && id !== '__new__') { DGHData.updateSalle(id, fields); app.toast('Salle mise à jour.', 'success'); }
+    else                        { DGHData.addSalle(fields);        app.toast('Salle ajoutée.', 'success'); }
+    _editSalleId = null;
+    renderSalles();
+  }
+
+  function deleteSalle(id) {
+    if (!confirm('Supprimer cette salle ?')) return;
+    DGHData.deleteSalle(id);
+    renderSalles();
+    app.toast('Salle supprimée.', 'info');
+  }
+
+  // ── HEURE BLEUE — recommandation de créneau optimal (v4.8.0) ──────
+  function renderHeuresBleues() {
+    const el = document.getElementById('heureBleueWrap');
+    if (!el) return;
+    const hb   = DGHData.getHeuresBleues();
+    const jours = DGHData.getJoursSemaine();
+    const creneaux = hb.creneaux || [];
+
+    const joursOpts = jours.map(j => '<option value="' + j.value + '">' + _esc(j.label) + '</option>').join('');
+    const creneauxHtml = creneaux.map((c, i) =>
+      '<div class="hb-creneau-row">'
+        + '<span class="hb-creneau-label">' + _esc((jours.find(j=>j.value===c.jour)||{}).label || c.jour) + ' ' + _esc(c.debut) + '–' + _esc(c.fin) + '</span>'
+        + '<button class="btn-icon btn-icon-danger" data-action="hb-remove-creneau" data-idx="' + i + '" title="Retirer">✕</button>'
+      + '</div>'
+    ).join('') || '<p class="form-hint">Ajoutez 1 à 4 créneaux candidats — l\'application recommandera le meilleur.</p>';
+
+    el.innerHTML = '<div class="modal-section-title modal-section-sep">Heure bleue <span class="form-hint">— créneau de réunion commun</span></div>'
+      + '<label class="hb-actif-label"><input type="checkbox" id="inputHBActif"' + (hb.actif ? ' checked' : '') + '> Activer la recherche de créneau bleu</label>'
+      + '<div class="hb-creneaux-add">'
+        + '<select id="inputHBJour">' + joursOpts + '</select>'
+        + '<input type="time" id="inputHBDebut" value="12:00" />'
+        + '<input type="time" id="inputHBFin" value="13:00" />'
+        + '<button class="btn-secondary btn-sm" data-action="hb-add-creneau">+ Ajouter ce créneau</button>'
+      + '</div>'
+      + '<div class="hb-creneaux-list">' + creneauxHtml + '</div>'
+      + '<button class="btn-primary btn-sm" data-action="hb-calculer" ' + (creneaux.length===0?'disabled':'') + '>Calculer le créneau optimal</button>'
+      + '<div id="hbResultatWrap"></div>';
+  }
+
+  function hbAddCreneau() {
+    const jour  = document.getElementById('inputHBJour')?.value || 'lun';
+    const debut = document.getElementById('inputHBDebut')?.value || '';
+    const fin   = document.getElementById('inputHBFin')?.value   || '';
+    if (!debut || !fin || debut >= fin) { app.toast('Créneau invalide.', 'warning'); return; }
+    const hb = DGHData.getHeuresBleues();
+    const creneaux = (hb.creneaux || []).slice();
+    if (creneaux.length >= 4) { app.toast('Maximum 4 créneaux candidats.', 'warning'); return; }
+    creneaux.push({ jour, debut, fin });
+    DGHData.setHeuresBleues({ creneaux });
+    renderHeuresBleues();
+  }
+
+  function hbRemoveCreneau(idx) {
+    const hb = DGHData.getHeuresBleues();
+    const creneaux = (hb.creneaux || []).slice();
+    creneaux.splice(parseInt(idx, 10), 1);
+    DGHData.setHeuresBleues({ creneaux });
+    renderHeuresBleues();
+  }
+
+  function hbToggleActif(checked) {
+    DGHData.setHeuresBleues({ actif: !!checked });
+  }
+
+  function hbCalculer() {
+    try {
+      const hb = DGHData.getHeuresBleues();
+      const ann = DGHData.getAnnee();
+      const enseignants = DGHData.getEnseignants();
+      const contraintesEDT = DGHData.getContraintesEDT();
+      const resultats = Calculs.creneauBleuOptimal(
+        enseignants, contraintesEDT.indisponibilites || [], contraintesEDT.contraintesLibres || [], hb.creneaux || []
+      );
+      const wrap = document.getElementById('hbResultatWrap');
+      if (!wrap) return;
+      if (resultats.length === 0) { wrap.innerHTML = '<p class="form-hint">Ajoutez au moins un créneau candidat.</p>'; return; }
+      const ICONES = { optimal: '★ Optimal', correct: 'Correct', deconseille: 'Déconseillé' };
+      wrap.innerHTML = '<table class="hb-result-table"><thead><tr>'
+        + '<th>Créneau</th><th>Disponibles</th><th>Indispo. dures</th><th>Vœux à éviter</th><th>Recommandation</th>'
+        + '</tr></thead><tbody>' + resultats.map(r =>
+          '<tr class="hb-row-' + r.recommandation + '">'
+            + '<td>' + _esc(r.jourLabel) + ' ' + _esc(r.debut) + '–' + _esc(r.fin) + '</td>'
+            + '<td>' + r.nbDisponibles + '/' + r.nbTotal + '</td>'
+            + '<td>' + r.indisponiblesDurs.length + (r.indisponiblesDurs.length ? ' <span class="hb-detail" title="' + _esc(r.indisponiblesDurs.map(x=>x.nom).join(', ')) + '">ⓘ</span>' : '') + '</td>'
+            + '<td>' + r.voeuxSouples.length + '</td>'
+            + '<td class="hb-reco-cell">' + ICONES[r.recommandation] + '</td>'
+          + '</tr>'
+        ).join('') + '</tbody></table>'
+        + '<p class="form-hint hb-limite-hint">Recommandation basée uniquement sur les contraintes saisies dans l\'application — elle ne connaît pas les cours déjà posés dans Index Éducation.</p>';
+    } catch(e) { console.error('[DGH] hbCalculer:', e); app.toast('Erreur lors du calcul.', 'error'); }
+  }
+
   // ── CONFIRMER RESET ANNÉE ─────────────────────────────────────────
   function openConfirmReset() {
     const m=document.getElementById('confirmReset'); if(!m) return;
@@ -195,7 +355,9 @@ const DGHEtab = (() => {
     renderModalYearSelect, renderYearListAdmin, addModalYear, onModalYearChange,
     openConfirmReset, closeConfirmReset, execResetAnnee,
     openConfirmDeleteAnnee, closeConfirmDeleteAnnee, execDeleteAnnee,
-    renderAlertes, initDisciplinesMEN
+    renderAlertes, initDisciplinesMEN,
+    renderSalles, startAddSalle, editSalle, cancelSalle, saveSalle, deleteSalle,
+    renderHeuresBleues, hbAddCreneau, hbRemoveCreneau, hbToggleActif, hbCalculer
   };
 
 })();

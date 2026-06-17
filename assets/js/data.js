@@ -1,5 +1,5 @@
 /**
- * DGH App — Couche données v4.2.0
+ * DGH App — Couche données v4.8.0
  * SEUL fichier qui touche localStorage
  *
  * v3.0.0 — Sprint 5 : enveloppe HP/HSA, groupesCours, heuresPedaComp, sélection classes
@@ -7,13 +7,34 @@
  * v3.2.0 — Sprint 6 : CRUD enseignants, migration services→heures, import CSV
  * v4.2.0 — Sprint 12 : affectations[] (répartition de service), ppEnsId sur divisions,
  *                      recalcul auto des heures de service depuis les affectations
+ * v4.8.0 — Sprint 14 : Préparation EDT — salles[] + heuresBleues sur établissement,
+ *                      indisponibilites[] + contraintesLibres[] sur contraintesEDT,
+ *                      frequence (hebdo/semaine-A/semaine-B) sur chaque slot de barrette
  */
 
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '4.7.1';
+  const VERSION = '4.8.0';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
+
+  const TYPES_SALLE = [
+    { value: 'svt',       label: 'Labo SVT' },
+    { value: 'physique',  label: 'Labo Physique-Chimie' },
+    { value: 'musique',   label: 'Salle Musique' },
+    { value: 'arts',      label: 'Salle Arts plastiques' },
+    { value: 'techno',    label: 'Salle Technologie' },
+    { value: 'gym',       label: 'Gymnase / EPS' },
+    { value: 'autre',     label: 'Autre salle spécialisée' }
+  ];
+
+  const JOURS_SEMAINE = [
+    { value: 'lun', label: 'Lundi' },
+    { value: 'mar', label: 'Mardi' },
+    { value: 'mer', label: 'Mercredi' },
+    { value: 'jeu', label: 'Jeudi' },
+    { value: 'ven', label: 'Vendredi' }
+  ];
 
   const DISCIPLINES_MEN = [
     { nom: 'Français',                couleur: '#3b82f6' },
@@ -49,14 +70,19 @@ const DGHData = (() => {
   function _schema() {
     return {
       _meta: { version: VERSION, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-      etablissement: { nom: '', uai: '', academie: '', commune: '', typeEtab: 'college', enveloppePacte: 0, enveloppeImp: 0, logo: null },
+      etablissement: {
+        nom: '', uai: '', academie: '', commune: '', typeEtab: 'college',
+        enveloppePacte: 0, enveloppeImp: 0, logo: null,
+        salles: [],
+        heuresBleues: { actif: false, creneaux: [], commentaire: '' }
+      },
       annees: { '2025-2026': _annee('2025-2026') },
       anneeActive: '2025-2026'
     };
   }
 
   function _contraintesVides() {
-    return { barrettes: [], coInterventions: [] };
+    return { barrettes: [], coInterventions: [], indisponibilites: [], contraintesLibres: [] };
   }
 
   function _annee(annee) {
@@ -199,8 +225,6 @@ const DGHData = (() => {
       if (!ann.contraintesEDT || typeof ann.contraintesEDT !== 'object') ann.contraintesEDT = _contraintesVides();
       if (!Array.isArray(ann.contraintesEDT.barrettes))       ann.contraintesEDT.barrettes       = [];
       if (!Array.isArray(ann.contraintesEDT.coInterventions)) ann.contraintesEDT.coInterventions = [];
-      // Nettoyer l'ancien champ indisponibilités (supprimé en v3.8)
-      delete ann.contraintesEDT.indisponibilites;
     });
     // Migration v3.7 : barrette.slots[] remplace classeIds[]/ensIds[]
     Object.values(_data.annees).forEach(ann => {
@@ -237,6 +261,37 @@ const DGHData = (() => {
         if (div.ppEnsId && !ensIds.has(div.ppEnsId)) div.ppEnsId = null;
       });
     });
+    // Migration v4.8.0 : salles[] + heuresBleues sur établissement
+    if (!Array.isArray(_data.etablissement.salles)) _data.etablissement.salles = [];
+    if (!_data.etablissement.heuresBleues || typeof _data.etablissement.heuresBleues !== 'object') {
+      _data.etablissement.heuresBleues = { actif: false, creneaux: [], commentaire: '' };
+    }
+    if (!Array.isArray(_data.etablissement.heuresBleues.creneaux)) _data.etablissement.heuresBleues.creneaux = [];
+    if (typeof _data.etablissement.heuresBleues.actif !== 'boolean') _data.etablissement.heuresBleues.actif = false;
+    if (_data.etablissement.heuresBleues.commentaire === undefined) _data.etablissement.heuresBleues.commentaire = '';
+    // Migration v4.8.0 : indisponibilites[] + contraintesLibres[] (réintroduites avec nouveau schéma,
+    // distinctes du champ retiré en v3.8) + frequence sur les slots de barrettes
+    Object.values(_data.annees).forEach(ann => {
+      if (!ann.contraintesEDT || typeof ann.contraintesEDT !== 'object') ann.contraintesEDT = _contraintesVides();
+      if (!Array.isArray(ann.contraintesEDT.indisponibilites))   ann.contraintesEDT.indisponibilites   = [];
+      if (!Array.isArray(ann.contraintesEDT.contraintesLibres)) ann.contraintesEDT.contraintesLibres = [];
+      ann.contraintesEDT.indisponibilites.forEach(ind => {
+        if (!ind.type)  ind.type  = 'dure';
+        if (!ind.plage) ind.plage = 'journee';
+        if (ind.heureDebut === undefined) ind.heureDebut = '';
+        if (ind.heureFin   === undefined) ind.heureFin   = '';
+        if (!ind.motif) ind.motif = '';
+      });
+      ann.contraintesEDT.contraintesLibres.forEach(cl => {
+        if (!Array.isArray(cl.ensIds))    cl.ensIds    = [];
+        if (!Array.isArray(cl.classeIds)) cl.classeIds = [];
+        if (!cl.scope) cl.scope = 'classe';
+        if (!cl.commentaire) cl.commentaire = '';
+      });
+      (ann.contraintesEDT.barrettes || []).forEach(b => {
+        (b.slots || []).forEach(s => { if (!s.frequence) s.frequence = 'hebdo'; });
+      });
+    });
     _data._meta.version = VERSION;
     _recomputeHeuresFromAffectations();
     save();
@@ -254,6 +309,8 @@ const DGHData = (() => {
   function getNiveaux()        { return NIVEAUX; }
   function getCategoriesHPC()  { return CATEGORIES_HPC.slice(); }
   function getDisciplinesMEN() { return DISCIPLINES_MEN.slice(); }
+  function getTypesSalle()     { return TYPES_SALLE.slice(); }
+  function getJoursSemaine()   { return JOURS_SEMAINE.slice(); }
 
   function getAnnee(a) {
     const key = a || _data.anneeActive;
@@ -318,6 +375,66 @@ const DGHData = (() => {
   // ── SETTERS ──────────────────────────────────────────────────────
   function setEtab(fields) { Object.assign(_data.etablissement, fields); save(); }
 
+  // ── CRUD SALLES SPÉCIALISÉES (v4.8.0) ─────────────────────────────
+  function getSalles() {
+    if (!Array.isArray(_data.etablissement.salles)) _data.etablissement.salles = [];
+    return _data.etablissement.salles.slice();
+  }
+
+  function getSalle(id) {
+    return getSalles().find(s => s.id === id) || null;
+  }
+
+  function addSalle(fields) {
+    if (!Array.isArray(_data.etablissement.salles)) _data.etablissement.salles = [];
+    const s = {
+      id:        genId('salle'),
+      nom:       (fields.nom || '').trim(),
+      type:      fields.type || 'autre',
+      capacite:  parseInt(fields.capacite, 10) || 0,
+      nb:        Math.max(1, parseInt(fields.nb, 10) || 1)
+    };
+    _data.etablissement.salles.push(s);
+    save();
+    return s;
+  }
+
+  function updateSalle(id, fields) {
+    const idx = (_data.etablissement.salles || []).findIndex(s => s.id === id);
+    if (idx === -1) return false;
+    const s = _data.etablissement.salles[idx];
+    if (fields.nom      !== undefined) s.nom      = (fields.nom || '').trim();
+    if (fields.type     !== undefined) s.type     = fields.type || 'autre';
+    if (fields.capacite !== undefined) s.capacite = parseInt(fields.capacite, 10) || 0;
+    if (fields.nb       !== undefined) s.nb       = Math.max(1, parseInt(fields.nb, 10) || 1);
+    save();
+    return true;
+  }
+
+  function deleteSalle(id) {
+    const before = (_data.etablissement.salles || []).length;
+    _data.etablissement.salles = (_data.etablissement.salles || []).filter(s => s.id !== id);
+    if (_data.etablissement.salles.length < before) { save(); return true; }
+    return false;
+  }
+
+  // ── HEURES BLEUES (v4.8.0) ────────────────────────────────────────
+  function getHeuresBleues() {
+    if (!_data.etablissement.heuresBleues || typeof _data.etablissement.heuresBleues !== 'object') {
+      _data.etablissement.heuresBleues = { actif: false, creneaux: [], commentaire: '' };
+    }
+    return _data.etablissement.heuresBleues;
+  }
+
+  function setHeuresBleues(fields) {
+    const hb = getHeuresBleues();
+    if (fields.actif       !== undefined) hb.actif       = !!fields.actif;
+    if (fields.creneaux    !== undefined) hb.creneaux    = Array.isArray(fields.creneaux) ? fields.creneaux.slice() : [];
+    if (fields.commentaire !== undefined) hb.commentaire = fields.commentaire || '';
+    save();
+    return true;
+  }
+
   function setAnneeActive(a) {
     if (!_data.annees[a]) _data.annees[a] = _annee(a);
     _data.anneeActive = a; save();
@@ -363,6 +480,10 @@ const DGHData = (() => {
     });
     (ann.heuresPedaComp||[]).forEach(h => { h.classesIds = (h.classesIds||[]).filter(c=>c!==id); });
     ann.affectations = (ann.affectations||[]).filter(a => a.divisionId !== id);
+    if (ann.contraintesEDT) {
+      (ann.contraintesEDT.contraintesLibres||[]).forEach(cl => { cl.classeIds = (cl.classeIds||[]).filter(c=>c!==id); });
+      (ann.contraintesEDT.coInterventions||[]).forEach(ci => { ci.classeIds = (ci.classeIds||[]).filter(c=>c!==id); });
+    }
     if (ann.structures.length<before){save();return true;} return false;
   }
 
@@ -610,6 +731,13 @@ const DGHData = (() => {
     (ann.scenarios||[]).forEach(s => (s.modificateurs||[]).forEach(m => {
       if (Array.isArray(m.affectations)) m.affectations = m.affectations.filter(a => a.ensId !== id);
     }));
+    // Nettoyer indisponibilités, contraintes libres et slots de barrettes (v4.8.0)
+    if (ann.contraintesEDT) {
+      ann.contraintesEDT.indisponibilites = (ann.contraintesEDT.indisponibilites||[]).filter(i => i.ensId !== id);
+      (ann.contraintesEDT.contraintesLibres||[]).forEach(cl => { cl.ensIds = (cl.ensIds||[]).filter(eid => eid !== id); });
+      (ann.contraintesEDT.barrettes||[]).forEach(b => (b.slots||[]).forEach(s => { s.ensIds = (s.ensIds||[]).filter(eid => eid !== id); }));
+      (ann.contraintesEDT.coInterventions||[]).forEach(ci => { ci.ensIds = (ci.ensIds||[]).filter(eid => eid !== id); });
+    }
     _recomputeHeuresFromAffectations();
     if (ann.enseignants.length<before){save();return true;} return false;
   }
@@ -856,8 +984,18 @@ const DGHData = (() => {
     return ann.contraintesEDT;
   }
 
-  // ── Barrettes (v3.7 — schéma slots[]) ────────────────────────────
+  // ── Barrettes (v3.7 — schéma slots[] ; v4.8.0 — frequence par slot) ──
   function getBarrettes(annee)  { return getContraintesEDT(annee).barrettes.slice(); }
+
+  function _normaliserSlots(slots) {
+    return Array.isArray(slots) ? slots.map(s => ({
+      type:      s.type || 'classe',
+      ref:       s.ref || '',
+      nomLibre:  s.nomLibre || '',
+      ensIds:    Array.isArray(s.ensIds) ? s.ensIds.slice() : [],
+      frequence: s.frequence || 'hebdo'   // 'hebdo' | 'semaine-A' | 'semaine-B'
+    })) : [];
+  }
 
   function addBarrette(fields) {
     const ann  = getAnnee();
@@ -865,7 +1003,7 @@ const DGHData = (() => {
       id:            genId('barr'),
       nom:           (fields.nom || '').trim(),
       disciplineIds: Array.isArray(fields.disciplineIds) ? fields.disciplineIds.slice() : [],
-      slots:         Array.isArray(fields.slots)         ? JSON.parse(JSON.stringify(fields.slots)) : [],
+      slots:         _normaliserSlots(fields.slots),
       commentaire:   fields.commentaire || ''
     };
     ann.contraintesEDT.barrettes.push(barr);
@@ -880,7 +1018,7 @@ const DGHData = (() => {
     const b = c.barrettes[idx];
     if (fields.nom           !== undefined) b.nom           = (fields.nom || '').trim();
     if (fields.disciplineIds !== undefined) b.disciplineIds = Array.isArray(fields.disciplineIds) ? fields.disciplineIds.slice() : [];
-    if (fields.slots         !== undefined) b.slots         = Array.isArray(fields.slots)         ? JSON.parse(JSON.stringify(fields.slots)) : [];
+    if (fields.slots         !== undefined) b.slots         = _normaliserSlots(fields.slots);
     if (fields.commentaire   !== undefined) b.commentaire   = fields.commentaire || '';
     save();
     return true;
@@ -929,6 +1067,113 @@ const DGHData = (() => {
     const before = c.coInterventions.length;
     c.coInterventions = c.coInterventions.filter(ci => ci.id !== id);
     if (c.coInterventions.length < before) { save(); return true; }
+    return false;
+  }
+
+  // ── Indisponibilités enseignants (v4.8.0) ─────────────────────────
+  /**
+   * IndisponibiliteObject :
+   * { id, ensId, type:'dure'|'souple', jour, plage:'matin'|'aprem'|'journee'|'creneau',
+   *   heureDebut, heureFin, motif }
+   * type='dure'   → indisponibilité réelle (BMP autre établissement, temps partiel non travaillé…)
+   * type='souple' → vœu à éviter si possible, non bloquant
+   */
+  function getIndisponibilites(annee)        { return getContraintesEDT(annee).indisponibilites.slice(); }
+  function getIndisponibilitesEnseignant(ensId, annee) {
+    return getIndisponibilites(annee).filter(i => i.ensId === ensId);
+  }
+
+  function addIndisponibilite(fields) {
+    const ann = getAnnee();
+    const ind = {
+      id:         genId('indispo'),
+      ensId:      fields.ensId || null,
+      type:       fields.type  === 'souple' ? 'souple' : 'dure',
+      jour:       fields.jour  || 'lun',
+      plage:      fields.plage || 'journee',
+      heureDebut: fields.plage === 'creneau' ? (fields.heureDebut || '') : '',
+      heureFin:   fields.plage === 'creneau' ? (fields.heureFin   || '') : '',
+      motif:      (fields.motif || '').trim()
+    };
+    ann.contraintesEDT.indisponibilites.push(ind);
+    save();
+    return ind;
+  }
+
+  function updateIndisponibilite(id, fields) {
+    const c   = getContraintesEDT();
+    const idx = c.indisponibilites.findIndex(i => i.id === id);
+    if (idx === -1) return false;
+    const ind = c.indisponibilites[idx];
+    if (fields.ensId      !== undefined) ind.ensId      = fields.ensId || null;
+    if (fields.type       !== undefined) ind.type       = fields.type === 'souple' ? 'souple' : 'dure';
+    if (fields.jour       !== undefined) ind.jour       = fields.jour || 'lun';
+    if (fields.plage      !== undefined) ind.plage      = fields.plage || 'journee';
+    if (fields.heureDebut !== undefined) ind.heureDebut = fields.heureDebut || '';
+    if (fields.heureFin   !== undefined) ind.heureFin   = fields.heureFin   || '';
+    if (fields.motif      !== undefined) ind.motif      = (fields.motif || '').trim();
+    if (ind.plage !== 'creneau') { ind.heureDebut = ''; ind.heureFin = ''; }
+    save();
+    return true;
+  }
+
+  function deleteIndisponibilite(id) {
+    const c      = getContraintesEDT();
+    const before = c.indisponibilites.length;
+    c.indisponibilites = c.indisponibilites.filter(i => i.id !== id);
+    if (c.indisponibilites.length < before) { save(); return true; }
+    return false;
+  }
+
+  // ── Contraintes libres (v4.8.0) ───────────────────────────────────
+  /**
+   * ContrainteLibreObject :
+   * { id, titre, jour, heureDebut, heureFin, scope:'etablissement'|'classe'|'groupe',
+   *   classeIds[], ensIds[], commentaire }
+   * Ex : "Orchestre — Conservatoire", jeudi 8h-11h, classeIds=[6eA], ensIds=[prof musique]
+   */
+  function getContraintesLibres(annee) { return getContraintesEDT(annee).contraintesLibres.slice(); }
+
+  function addContrainteLibre(fields) {
+    const ann = getAnnee();
+    const cl = {
+      id:          genId('clibre'),
+      titre:       (fields.titre || '').trim(),
+      jour:        fields.jour || 'lun',
+      heureDebut:  fields.heureDebut || '',
+      heureFin:    fields.heureFin   || '',
+      scope:       fields.scope || 'classe',
+      classeIds:   Array.isArray(fields.classeIds) ? fields.classeIds.slice() : [],
+      ensIds:      Array.isArray(fields.ensIds)    ? fields.ensIds.slice()    : [],
+      commentaire: fields.commentaire || ''
+    };
+    ann.contraintesEDT.contraintesLibres.push(cl);
+    save();
+    return cl;
+  }
+
+  function updateContrainteLibre(id, fields) {
+    const c   = getContraintesEDT();
+    const idx = c.contraintesLibres.findIndex(cl => cl.id === id);
+    if (idx === -1) return false;
+    const cl = c.contraintesLibres[idx];
+    if (fields.titre       !== undefined) cl.titre       = (fields.titre || '').trim();
+    if (fields.jour        !== undefined) cl.jour        = fields.jour || 'lun';
+    if (fields.heureDebut  !== undefined) cl.heureDebut  = fields.heureDebut || '';
+    if (fields.heureFin    !== undefined) cl.heureFin    = fields.heureFin   || '';
+    if (fields.scope       !== undefined) cl.scope       = fields.scope || 'classe';
+    if (fields.classeIds   !== undefined) cl.classeIds   = Array.isArray(fields.classeIds) ? fields.classeIds.slice() : [];
+    if (fields.ensIds      !== undefined) cl.ensIds      = Array.isArray(fields.ensIds)    ? fields.ensIds.slice()    : [];
+    if (fields.commentaire !== undefined) cl.commentaire = fields.commentaire || '';
+    save();
+    return true;
+  }
+
+  function deleteContrainteLibre(id) {
+    const c      = getContraintesEDT();
+    const before = c.contraintesLibres.length;
+    c.contraintesLibres = c.contraintesLibres.filter(cl => cl.id !== id);
+    if (c.contraintesLibres.length < before) { save(); return true; }
     return false;
   }
 
@@ -1183,11 +1428,13 @@ const DGHData = (() => {
 
   return {
     init,get,getEtab,getAnnee,getAnnees,getAnneeActive,getNiveaux,
-    getCategoriesHPC,getDisciplinesMEN,
+    getCategoriesHPC,getDisciplinesMEN,getTypesSalle,getJoursSemaine,
     getStructures,getDivision,
     getDisciplines,getDiscipline,getRepartition,getGroupeCours,
     getHeuresPedaComp,getHPC,
     setEtab,setAnneeActive,setDotation,
+    getSalles,getSalle,addSalle,updateSalle,deleteSalle,
+    getHeuresBleues,setHeuresBleues,
     addDivision,updateDivision,deleteDivision,duplicateDivisions,appliquerMatrice,
     addDiscipline,updateDiscipline,deleteDiscipline,setRepartition,initDisciplinesMEN,
     getGrilles,setGrille,
@@ -1204,6 +1451,9 @@ const DGHData = (() => {
     getContraintesEDT,
     getBarrettes,addBarrette,updateBarrette,deleteBarrette,
     getCoInterventions,addCoIntervention,updateCoIntervention,deleteCoIntervention,
+    getIndisponibilites,getIndisponibilitesEnseignant,
+    addIndisponibilite,updateIndisponibilite,deleteIndisponibilite,
+    getContraintesLibres,addContrainteLibre,updateContrainteLibre,deleteContrainteLibre,
     resetAnnee,deleteAnnee,
     figerSnapshot,getSnapshot,supprimerSnapshot,
     getMissions,getMission,getMissionsEnseignant,addMission,updateMission,deleteMission,

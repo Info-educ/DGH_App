@@ -3898,11 +3898,91 @@ td.col-grille {
 .struct-groupe-meta-item { display: flex; gap: .25rem; }
 .struct-groupe-meta-lbl { color: var(--c-text-muted); font-size: .75rem; }
 
+/* ══ SALLES & HEURE BLEUE — Modale établissement (v4.8.0) ════════════ */
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .75rem; }
+@media (max-width: 600px) { .form-row-3 { grid-template-columns: 1fr; } }
+
+.salle-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: .5rem; }
+.salle-form { margin-bottom: .75rem; }
+.salle-list { display: flex; flex-direction: column; gap: .4rem; margin-bottom: .5rem; }
+.salle-row {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .4rem .6rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 6px;
+}
+.salle-row-nom  { font-weight: 600; font-size: .85rem; color: var(--c-text); flex: 1; }
+.salle-row-type { font-size: .76rem; color: var(--c-text-muted); }
+.salle-row-nb   { font-size: .78rem; font-weight: 700; color: var(--c-accent); font-family: 'JetBrains Mono', monospace; }
+
+.hb-actif-label { display: flex; align-items: center; gap: .4rem; font-size: .85rem; color: var(--c-text); margin: .5rem 0; cursor: pointer; }
+.hb-creneaux-add { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; margin-bottom: .6rem; }
+.hb-creneaux-add select, .hb-creneaux-add input[type="time"] {
+  padding: .4rem .5rem; border: 1px solid var(--c-border); border-radius: 6px; background: var(--c-surface); color: var(--c-text); font-size: .82rem;
+}
+.hb-creneaux-list { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .6rem; }
+.hb-creneau-row {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  padding: .3rem .6rem; background: var(--c-surface2); border-radius: 6px; font-size: .82rem;
+}
+.hb-creneau-label { color: var(--c-text); }
+
+.hb-result-table { width: 100%; border-collapse: collapse; margin-top: .75rem; font-size: .82rem; }
+.hb-result-table th {
+  font-size: .7rem; font-weight: 700; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: .04em;
+  padding: .4rem .5rem; border-bottom: 1.5px solid var(--c-border); text-align: left;
+}
+.hb-result-table td { padding: .4rem .5rem; border-bottom: 1px solid var(--c-border); }
+.hb-row-optimal     td.hb-reco-cell { color: var(--c-accent); font-weight: 700; }
+.hb-row-correct      td.hb-reco-cell { color: var(--c-amber); font-weight: 600; }
+.hb-row-deconseille  td.hb-reco-cell { color: var(--c-text-muted); }
+.hb-detail { cursor: help; opacity: .7; }
+.hb-limite-hint { margin-top: .6rem; font-style: italic; }
+
+/* ══ INDISPONIBILITÉS & CONTRAINTES LIBRES — Module EDT (v4.8.0) ═════ */
+.edt-indispo-list { display: flex; flex-direction: column; gap: .5rem; }
+.edt-indispo-card {
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  padding: .5rem .75rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 8px;
+}
+.edt-indispo-dure   { border-left: 3px solid var(--c-red); }
+.edt-indispo-souple { border-left: 3px solid var(--c-amber); }
+.edt-indispo-ens   { font-weight: 600; font-size: .85rem; color: var(--c-text); }
+.edt-indispo-badge {
+  font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  padding: 1px 7px; border-radius: 4px;
+}
+.edt-indispo-badge.dure   { background: var(--c-red-bg);   color: var(--c-red); }
+.edt-indispo-badge.souple { background: var(--c-amber-bg); color: var(--c-amber); }
+.edt-indispo-creneau { font-size: .8rem; color: var(--c-text-muted); }
+.edt-indispo-motif   { font-size: .78rem; color: var(--c-text-dim); font-style: italic; flex-basis: 100%; }
+
+.edt-clibre-card {
+  display: flex; flex-direction: column; gap: .25rem;
+  padding: .5rem .75rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 8px; margin-bottom: .5rem;
+}
+.edt-clibre-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.edt-clibre-titre { font-weight: 600; font-size: .87rem; color: var(--c-text); }
+.edt-clibre-meta  { font-size: .78rem; color: var(--c-text-muted); }
+
+.edt-freq-select { font-size: .76rem; padding: .2rem .4rem; border-radius: 5px; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text); }
+.edt-freq-tag { font-size: .68rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: .03em; }
+.edt-freq-tag.hebdo     { background: var(--c-surface3); color: var(--c-text-muted); }
+.edt-freq-tag.semaine-A { background: var(--c-blue-bg);  color: var(--c-blue); }
+.edt-freq-tag.semaine-B { background: var(--c-indigo-bg);color: var(--c-indigo); }
+
+.edt-notice-section { margin-bottom: 1.5rem; }
+.edt-notice-alerte-list { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+.edt-notice-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-bottom: .75rem; }
+.edt-notice-table th {
+  font-size: .7rem; font-weight: 700; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: .04em;
+  padding: .4rem .6rem; border-bottom: 1.5px solid var(--c-border); text-align: left; background: var(--c-surface2);
+}
+.edt-notice-table td { padding: .4rem .6rem; border-bottom: 1px solid var(--c-border); vertical-align: top; }
+
 /* ── Impression (Contraintes EDT) ───────────────────────────────────── */
 @media print {
   .sidebar, .topbar, .view-header, #edtTabs, .edt-card-actions, .btn-secondary, .btn-primary { display: none !important; }
-  #edt-panel-barrettes, #edt-panel-cointerv { display: none !important; }
-  #edt-panel-synthese { display: block !important; }
+  #edt-panel-barrettes, #edt-panel-cointerv, #edt-panel-indispos, #edt-panel-salles { display: none !important; }
+  #edt-panel-notice { display: block !important; }
   .edt-synth-fiche { page-break-inside: avoid; margin-bottom: 1.5rem; }
   body { background: white !important; }
 }

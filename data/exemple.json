@@ -1,344 +1,470 @@
 {
-  "_meta": {
-    "version": "4.7.1",
-    "createdAt": "2025-09-01T00:00:00.000Z",
-    "updatedAt": "2025-09-01T00:00:00.000Z",
-    "note": "Fichier d'exemple anonymisé — données fictives pour démonstration"
-  },
-  "etablissement": {
-    "nom": "Collège Exemple",
-    "uai": "0000000A",
-    "academie": "Exemple",
-    "commune": "Ville",
-    "typeEtab": "college"
-  },
-  "anneeActive": "2025-2026",
-  "annees": {
-    "2025-2026": {
-      "annee": "2025-2026",
-      "createdAt": "2025-09-01T00:00:00.000Z",
-      "dotation": {
-        "hPosteEnveloppe": 320,
-        "hsaEnveloppe": 30,
-        "commentaire": "Dotation DSDEN + HSA votées au CA"
-      },
-      "structures": [
-        {
-          "id": "div_6ea",
-          "niveau": "6e",
-          "nom": "6eA",
-          "effectif": 28,
-          "options": [],
-          "dispositif": null,
-          "ppEnsId": null
-        },
-        {
-          "id": "div_6eb",
-          "niveau": "6e",
-          "nom": "6eB",
-          "effectif": 27,
-          "options": [],
-          "dispositif": null,
-          "ppEnsId": null
-        },
-        {
-          "id": "div_5ea",
-          "niveau": "5e",
-          "nom": "5eA",
-          "effectif": 29,
-          "options": [],
-          "dispositif": null,
-          "ppEnsId": null
-        },
-        {
-          "id": "div_5eb",
-          "niveau": "5e",
-          "nom": "5eB",
-          "effectif": 28,
-          "options": [],
-          "dispositif": null,
-          "ppEnsId": null
-        },
-        {
-          "id": "div_4ea",
-          "niveau": "4e",
-          "nom": "4eA",
-          "effectif": 28,
-          "options": [],
-          "dispositif": null,
-          "ppEnsId": null
-        },
-        {
-          "id": "div_4eb",
-          "niveau": "4e",
-          "nom": "4eB",
-          "effectif": 27,
-          "options": [],
-          "dispositif": null,
-          "ppEnsId": null
-        },
-        {
-          "id": "div_3ea",
-          "niveau": "3e",
-          "nom": "3eA",
-          "effectif": 27,
-          "options": [],
-          "dispositif": null,
-          "ppEnsId": null
-        },
-        {
-          "id": "div_3eb",
-          "niveau": "3e",
-          "nom": "3eB",
-          "effectif": 26,
-          "options": [],
-          "dispositif": null,
-          "ppEnsId": null
-        }
-      ],
-      "grilles": {},
-      "disciplines": [
-        {
-          "id": "disc_fr",
-          "nom": "Français",
-          "couleur": "#3b82f6"
-        },
-        {
-          "id": "disc_math",
-          "nom": "Mathématiques",
-          "couleur": "#22c55e"
-        },
-        {
-          "id": "disc_hg",
-          "nom": "Histoire-Géographie",
-          "couleur": "#f59e0b"
-        },
-        {
-          "id": "disc_eps",
-          "nom": "EPS",
-          "couleur": "#ef4444"
-        },
-        {
-          "id": "disc_lv1",
-          "nom": "LV1",
-          "couleur": "#8b5cf6"
-        },
-        {
-          "id": "disc_lv2",
-          "nom": "LV2",
-          "couleur": "#a78bfa"
-        }
-      ],
-      "repartition": [
-        {
-          "disciplineId": "disc_fr",
-          "hPoste": 72,
-          "hsa": 4,
-          "commentaire": "",
-          "groupesCours": []
-        },
-        {
-          "disciplineId": "disc_math",
-          "hPoste": 64,
-          "hsa": 4,
-          "commentaire": "",
-          "groupesCours": []
-        },
-        {
-          "disciplineId": "disc_hg",
-          "hPoste": 52,
-          "hsa": 0,
-          "commentaire": "",
-          "groupesCours": []
-        },
-        {
-          "disciplineId": "disc_eps",
-          "hPoste": 48,
-          "hsa": 0,
-          "commentaire": "",
-          "groupesCours": []
-        },
-        {
-          "disciplineId": "disc_lv1",
-          "hPoste": 56,
-          "hsa": 0,
-          "commentaire": "",
-          "groupesCours": []
-        },
-        {
-          "disciplineId": "disc_lv2",
-          "hPoste": 40,
-          "hsa": 0,
-          "commentaire": "",
-          "groupesCours": [
+    "_meta": {
+        "version": "4.8.0",
+        "createdAt": "2025-09-01T00:00:00.000Z",
+        "updatedAt": "2025-09-01T00:00:00.000Z",
+        "note": "Fichier d'exemple anonymisé — données fictives pour démonstration"
+    },
+    "etablissement": {
+        "nom": "Collège Exemple",
+        "uai": "0000000A",
+        "academie": "Exemple",
+        "commune": "Ville",
+        "typeEtab": "college",
+        "enveloppePacte": 0,
+        "enveloppeImp": 0,
+        "logo": null,
+        "salles": [
             {
-              "id": "gc_lv2_esp",
-              "nom": "LV2 Espagnol",
-              "classesIds": [
-                "div_5ea",
-                "div_5eb",
-                "div_4ea"
-              ],
-              "heures": 2.5,
-              "commentaire": ""
+                "id": "salle_svt1",
+                "nom": "Labo SVT 1",
+                "type": "svt",
+                "capacite": 30,
+                "nb": 2
             },
             {
-              "id": "gc_lv2_all",
-              "nom": "LV2 Allemand",
-              "classesIds": [
-                "div_4eb",
-                "div_3ea"
-              ],
-              "heures": 2.5,
-              "commentaire": ""
-            }
-          ]
-        }
-      ],
-      "heuresPedaComp": [
-        {
-          "id": "hpc_latin",
-          "nom": "Latin 4e-3e",
-          "categorie": "option",
-          "disciplineId": null,
-          "classesIds": [
-            "div_4ea",
-            "div_3ea"
-          ],
-          "typeHeure": "hp",
-          "heures": 3,
-          "effectif": 18,
-          "commentaire": "",
-          "enseignants": []
-        },
-        {
-          "id": "hpc_choral",
-          "nom": "Chorale",
-          "categorie": "arts",
-          "disciplineId": null,
-          "classesIds": [],
-          "typeHeure": "hsa",
-          "heures": 1,
-          "effectif": 40,
-          "commentaire": "",
-          "enseignants": []
-        },
-        {
-          "id": "hpc_devfait",
-          "nom": "Devoirs faits",
-          "categorie": "dispositif",
-          "disciplineId": null,
-          "classesIds": [
-            "div_6ea",
-            "div_6eb"
-          ],
-          "typeHeure": "hp",
-          "heures": 2,
-          "effectif": 55,
-          "commentaire": "Financé sur HP",
-          "enseignants": []
-        }
-      ],
-      "enseignants": [
-        {
-          "id": "ens_001",
-          "nom": "DUPONT",
-          "prenom": "Marie",
-          "grade": "certifie",
-          "statut": "titulaire",
-          "disciplines": [
-            {
-              "discNom": "Français",
-              "heures": 18
-            }
-          ],
-          "disciplinePrincipale": "Français",
-          "heures": 18,
-          "orsManuel": null,
-          "commentaire": ""
-        },
-        {
-          "id": "ens_002",
-          "nom": "MARTIN",
-          "prenom": "Paul",
-          "grade": "certifie",
-          "statut": "tzr",
-          "disciplines": [
-            {
-              "discNom": "Mathématiques",
-              "heures": 12
-            }
-          ],
-          "disciplinePrincipale": "Mathématiques",
-          "heures": 12,
-          "orsManuel": null,
-          "commentaire": "Rattachement : Collège B — complément ici"
-        },
-        {
-          "id": "ens_003",
-          "nom": "BERNARD",
-          "prenom": "Sophie",
-          "grade": "agrege",
-          "statut": "titulaire",
-          "disciplines": [
-            {
-              "discNom": "Histoire-Géographie",
-              "heures": 15
-            }
-          ],
-          "disciplinePrincipale": "Histoire-Géographie",
-          "heures": 15,
-          "orsManuel": null,
-          "commentaire": ""
-        },
-        {
-          "id": "ens_004",
-          "nom": "LECLERC",
-          "prenom": "Thomas",
-          "grade": "eps",
-          "statut": "bmp",
-          "disciplines": [
-            {
-              "discNom": "EPS",
-              "heures": 10
-            }
-          ],
-          "disciplinePrincipale": "EPS",
-          "heures": 10,
-          "orsManuel": null,
-          "commentaire": "BMP — complète un temps partiel"
-        },
-        {
-          "id": "ens_005",
-          "nom": "PETIT",
-          "prenom": "Anne",
-          "grade": "certifie",
-          "statut": "titulaire",
-          "disciplines": [
-            {
-              "discNom": "Mathématiques",
-              "heures": 10
+                "id": "salle_pc1",
+                "nom": "Labo Physique-Chimie",
+                "type": "physique",
+                "capacite": 30,
+                "nb": 1
             },
             {
-              "discNom": "Physique-Chimie",
-              "heures": 8
+                "id": "salle_mus",
+                "nom": "Salle Musique",
+                "type": "musique",
+                "capacite": 30,
+                "nb": 1
+            },
+            {
+                "id": "salle_arts",
+                "nom": "Salle Arts plastiques",
+                "type": "arts",
+                "capacite": 30,
+                "nb": 1
+            },
+            {
+                "id": "salle_tech",
+                "nom": "Salle Technologie",
+                "type": "techno",
+                "capacite": 24,
+                "nb": 1
             }
-          ],
-          "disciplinePrincipale": "Mathématiques",
-          "heures": 18,
-          "orsManuel": null,
-          "commentaire": "Bivalent maths / physique-chimie"
+        ],
+        "heuresBleues": {
+            "actif": true,
+            "creneaux": [
+                {
+                    "jour": "jeu",
+                    "debut": "13:00",
+                    "fin": "14:00"
+                },
+                {
+                    "jour": "mar",
+                    "debut": "08:00",
+                    "fin": "09:00"
+                }
+            ],
+            "commentaire": "Créneau visé pour les réunions de coordination."
         }
-      ],
-      "simulation": {
-        "active": false,
-        "nom": "",
-        "dotation": null,
-        "repartition": [],
-        "enseignants": []
-      },
-      "alertes": [],
-      "affectations": []
+    },
+    "anneeActive": "2025-2026",
+    "annees": {
+        "2025-2026": {
+            "annee": "2025-2026",
+            "createdAt": "2025-09-01T00:00:00.000Z",
+            "dotation": {
+                "hPosteEnveloppe": 320,
+                "hsaEnveloppe": 30,
+                "commentaire": "Dotation DSDEN + HSA votées au CA"
+            },
+            "structures": [
+                {
+                    "id": "div_6ea",
+                    "niveau": "6e",
+                    "nom": "6eA",
+                    "effectif": 28,
+                    "options": [],
+                    "dispositif": null,
+                    "ppEnsId": null
+                },
+                {
+                    "id": "div_6eb",
+                    "niveau": "6e",
+                    "nom": "6eB",
+                    "effectif": 27,
+                    "options": [],
+                    "dispositif": null,
+                    "ppEnsId": null
+                },
+                {
+                    "id": "div_5ea",
+                    "niveau": "5e",
+                    "nom": "5eA",
+                    "effectif": 29,
+                    "options": [],
+                    "dispositif": null,
+                    "ppEnsId": null
+                },
+                {
+                    "id": "div_5eb",
+                    "niveau": "5e",
+                    "nom": "5eB",
+                    "effectif": 28,
+                    "options": [],
+                    "dispositif": null,
+                    "ppEnsId": null
+                },
+                {
+                    "id": "div_4ea",
+                    "niveau": "4e",
+                    "nom": "4eA",
+                    "effectif": 28,
+                    "options": [],
+                    "dispositif": null,
+                    "ppEnsId": null
+                },
+                {
+                    "id": "div_4eb",
+                    "niveau": "4e",
+                    "nom": "4eB",
+                    "effectif": 27,
+                    "options": [],
+                    "dispositif": null,
+                    "ppEnsId": null
+                },
+                {
+                    "id": "div_3ea",
+                    "niveau": "3e",
+                    "nom": "3eA",
+                    "effectif": 27,
+                    "options": [],
+                    "dispositif": null,
+                    "ppEnsId": null
+                },
+                {
+                    "id": "div_3eb",
+                    "niveau": "3e",
+                    "nom": "3eB",
+                    "effectif": 26,
+                    "options": [],
+                    "dispositif": null,
+                    "ppEnsId": null
+                }
+            ],
+            "grilles": {},
+            "disciplines": [
+                {
+                    "id": "disc_fr",
+                    "nom": "Français",
+                    "couleur": "#3b82f6"
+                },
+                {
+                    "id": "disc_math",
+                    "nom": "Mathématiques",
+                    "couleur": "#22c55e"
+                },
+                {
+                    "id": "disc_hg",
+                    "nom": "Histoire-Géographie",
+                    "couleur": "#f59e0b"
+                },
+                {
+                    "id": "disc_eps",
+                    "nom": "EPS",
+                    "couleur": "#ef4444"
+                },
+                {
+                    "id": "disc_lv1",
+                    "nom": "LV1",
+                    "couleur": "#8b5cf6"
+                },
+                {
+                    "id": "disc_lv2",
+                    "nom": "LV2",
+                    "couleur": "#a78bfa"
+                }
+            ],
+            "repartition": [
+                {
+                    "disciplineId": "disc_fr",
+                    "hPoste": 72,
+                    "hsa": 4,
+                    "commentaire": "",
+                    "groupesCours": []
+                },
+                {
+                    "disciplineId": "disc_math",
+                    "hPoste": 64,
+                    "hsa": 4,
+                    "commentaire": "",
+                    "groupesCours": []
+                },
+                {
+                    "disciplineId": "disc_hg",
+                    "hPoste": 52,
+                    "hsa": 0,
+                    "commentaire": "",
+                    "groupesCours": []
+                },
+                {
+                    "disciplineId": "disc_eps",
+                    "hPoste": 48,
+                    "hsa": 0,
+                    "commentaire": "",
+                    "groupesCours": []
+                },
+                {
+                    "disciplineId": "disc_lv1",
+                    "hPoste": 56,
+                    "hsa": 0,
+                    "commentaire": "",
+                    "groupesCours": []
+                },
+                {
+                    "disciplineId": "disc_lv2",
+                    "hPoste": 40,
+                    "hsa": 0,
+                    "commentaire": "",
+                    "groupesCours": [
+                        {
+                            "id": "gc_lv2_esp",
+                            "nom": "LV2 Espagnol",
+                            "classesIds": [
+                                "div_5ea",
+                                "div_5eb",
+                                "div_4ea"
+                            ],
+                            "heures": 2.5,
+                            "commentaire": ""
+                        },
+                        {
+                            "id": "gc_lv2_all",
+                            "nom": "LV2 Allemand",
+                            "classesIds": [
+                                "div_4eb",
+                                "div_3ea"
+                            ],
+                            "heures": 2.5,
+                            "commentaire": ""
+                        }
+                    ]
+                }
+            ],
+            "heuresPedaComp": [
+                {
+                    "id": "hpc_latin",
+                    "nom": "Latin 4e-3e",
+                    "categorie": "option",
+                    "disciplineId": null,
+                    "classesIds": [
+                        "div_4ea",
+                        "div_3ea"
+                    ],
+                    "typeHeure": "hp",
+                    "heures": 3,
+                    "effectif": 18,
+                    "commentaire": "",
+                    "enseignants": []
+                },
+                {
+                    "id": "hpc_choral",
+                    "nom": "Chorale",
+                    "categorie": "arts",
+                    "disciplineId": null,
+                    "classesIds": [],
+                    "typeHeure": "hsa",
+                    "heures": 1,
+                    "effectif": 40,
+                    "commentaire": "",
+                    "enseignants": []
+                },
+                {
+                    "id": "hpc_devfait",
+                    "nom": "Devoirs faits",
+                    "categorie": "dispositif",
+                    "disciplineId": null,
+                    "classesIds": [
+                        "div_6ea",
+                        "div_6eb"
+                    ],
+                    "typeHeure": "hp",
+                    "heures": 2,
+                    "effectif": 55,
+                    "commentaire": "Financé sur HP",
+                    "enseignants": []
+                }
+            ],
+            "enseignants": [
+                {
+                    "id": "ens_001",
+                    "nom": "DUPONT",
+                    "prenom": "Marie",
+                    "grade": "certifie",
+                    "statut": "titulaire",
+                    "disciplines": [
+                        {
+                            "discNom": "Français",
+                            "heures": 18
+                        }
+                    ],
+                    "disciplinePrincipale": "Français",
+                    "heures": 18,
+                    "orsManuel": null,
+                    "commentaire": ""
+                },
+                {
+                    "id": "ens_002",
+                    "nom": "MARTIN",
+                    "prenom": "Paul",
+                    "grade": "certifie",
+                    "statut": "tzr",
+                    "disciplines": [
+                        {
+                            "discNom": "Mathématiques",
+                            "heures": 12
+                        }
+                    ],
+                    "disciplinePrincipale": "Mathématiques",
+                    "heures": 12,
+                    "orsManuel": null,
+                    "commentaire": "Rattachement : Collège B — complément ici"
+                },
+                {
+                    "id": "ens_003",
+                    "nom": "BERNARD",
+                    "prenom": "Sophie",
+                    "grade": "agrege",
+                    "statut": "titulaire",
+                    "disciplines": [
+                        {
+                            "discNom": "Histoire-Géographie",
+                            "heures": 15
+                        }
+                    ],
+                    "disciplinePrincipale": "Histoire-Géographie",
+                    "heures": 15,
+                    "orsManuel": null,
+                    "commentaire": ""
+                },
+                {
+                    "id": "ens_004",
+                    "nom": "LECLERC",
+                    "prenom": "Thomas",
+                    "grade": "eps",
+                    "statut": "bmp",
+                    "disciplines": [
+                        {
+                            "discNom": "EPS",
+                            "heures": 10
+                        }
+                    ],
+                    "disciplinePrincipale": "EPS",
+                    "heures": 10,
+                    "orsManuel": null,
+                    "commentaire": "BMP — complète un temps partiel"
+                },
+                {
+                    "id": "ens_005",
+                    "nom": "PETIT",
+                    "prenom": "Anne",
+                    "grade": "certifie",
+                    "statut": "titulaire",
+                    "disciplines": [
+                        {
+                            "discNom": "Mathématiques",
+                            "heures": 10
+                        },
+                        {
+                            "discNom": "Physique-Chimie",
+                            "heures": 8
+                        }
+                    ],
+                    "disciplinePrincipale": "Mathématiques",
+                    "heures": 18,
+                    "orsManuel": null,
+                    "commentaire": "Bivalent maths / physique-chimie"
+                }
+            ],
+            "simulation": {
+                "active": false,
+                "nom": "",
+                "dotation": null,
+                "repartition": [],
+                "enseignants": []
+            },
+            "alertes": [],
+            "affectations": [],
+            "contraintesEDT": {
+                "barrettes": [
+                    {
+                        "id": "barr_eps_6e",
+                        "nom": "EPS — 6e",
+                        "disciplineIds": [
+                            "disc_eps"
+                        ],
+                        "slots": [
+                            {
+                                "type": "classe",
+                                "ref": "div_6ea",
+                                "nomLibre": "",
+                                "ensIds": [
+                                    "ens_004"
+                                ],
+                                "frequence": "semaine-A"
+                            },
+                            {
+                                "type": "classe",
+                                "ref": "div_6eb",
+                                "nomLibre": "",
+                                "ensIds": [
+                                    "ens_004"
+                                ],
+                                "frequence": "semaine-B"
+                            }
+                        ],
+                        "commentaire": "Alternance proposée par l'équipe EPS — à poser en premier dans EDT."
+                    }
+                ],
+                "coInterventions": [],
+                "indisponibilites": [
+                    {
+                        "id": "indispo_001",
+                        "ensId": "ens_004",
+                        "type": "dure",
+                        "jour": "mer",
+                        "plage": "journee",
+                        "heureDebut": "",
+                        "heureFin": "",
+                        "motif": "Mercredi non travaillé (temps partiel)."
+                    },
+                    {
+                        "id": "indispo_002",
+                        "ensId": "ens_005",
+                        "type": "souple",
+                        "jour": "ven",
+                        "plage": "aprem",
+                        "heureDebut": "",
+                        "heureFin": "",
+                        "motif": "Souhait — fin de semaine allégée."
+                    }
+                ],
+                "contraintesLibres": [
+                    {
+                        "id": "clibre_001",
+                        "titre": "Orchestre — Conservatoire",
+                        "jour": "jeu",
+                        "heureDebut": "08:00",
+                        "heureFin": "11:00",
+                        "scope": "classe",
+                        "classeIds": [
+                            "div_6ea"
+                        ],
+                        "ensIds": [],
+                        "commentaire": "Élèves transportés au conservatoire municipal."
+                    }
+                ]
+            }
+        }
     }
-  }
 }

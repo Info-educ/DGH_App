@@ -760,6 +760,182 @@ function controlesRepartition(anneeData) {
   return out;
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════
+ * PRÉPARATION EDT (v4.8.0) — fonctions pures
+ * ══════════════════════════════════════════════════════════════════
+ */
+
+const JOURS_LABEL = { lun:'Lundi', mar:'Mardi', mer:'Mercredi', jeu:'Jeudi', ven:'Vendredi' };
+
+/**
+ * true si deux fréquences de slot/barrette entrent en conflit horaire.
+ * hebdo entre en conflit avec tout. semaine-A ne conflicte qu'avec hebdo et semaine-A.
+ */
+function _frequencesConflit(f1, f2) {
+  f1 = f1 || 'hebdo'; f2 = f2 || 'hebdo';
+  if (f1 === 'hebdo' || f2 === 'hebdo') return true;
+  return f1 === f2;
+}
+
+/**
+ * Détecte les conflits de préparation EDT : enseignants en double barrette,
+ * salles spécialisées saturées, indisponibilités dures sans aucun créneau libre.
+ * @returns {Array<{severite, categorie, message, ref}>}
+ */
+function controlesEDT(anneeData, etab) {
+  const out = [];
+  const contraintesEDT = anneeData.contraintesEDT || {};
+  const barrettes      = contraintesEDT.barrettes || [];
+  const indispos        = contraintesEDT.indisponibilites || [];
+  const enseignants     = anneeData.enseignants || [];
+  const salles          = (etab && etab.salles) || [];
+
+  // 1. Enseignant présent dans 2+ slots de barrettes à fréquence compatible
+  const occupations = []; // { ensId, barretteNom, slotIdx, frequence }
+  barrettes.forEach(b => {
+    (b.slots || []).forEach((s, idx) => {
+      (s.ensIds || []).forEach(ensId => {
+        occupations.push({ ensId, barretteNom: b.nom || 'Barrette', slotIdx: idx, frequence: s.frequence || 'hebdo' });
+      });
+    });
+  });
+  const parEns = {};
+  occupations.forEach(o => { (parEns[o.ensId] = parEns[o.ensId] || []).push(o); });
+  Object.entries(parEns).forEach(([ensId, occs]) => {
+    if (occs.length < 2) return;
+    const ens  = enseignants.find(e => e.id === ensId);
+    const nom  = ens ? ((ens.prenom||'')+' '+ens.nom).trim() : '?';
+    for (let i = 0; i < occs.length; i++) {
+      for (let j = i+1; j < occs.length; j++) {
+        if (_frequencesConflit(occs[i].frequence, occs[j].frequence)) {
+          out.push({
+            severite: 'error', categorie: 'barrette',
+            message: nom + ' apparaît simultanément dans « ' + occs[i].barretteNom + ' » et « ' + occs[j].barretteNom + ' » (conflit possible).',
+            ref: ensId
+          });
+        }
+      }
+    }
+  });
+
+  // 2. Salles spécialisées saturées : plus de cours hebdo que d'exemplaires disponibles
+  //    Comparaison par discipline associée à la barrette ↔ type de salle.
+  const TYPE_PAR_DISC = { 'SVT':'svt', 'Physique-Chimie':'physique', 'Éducation musicale':'musique', 'Arts plastiques':'arts', 'Technologie':'techno', 'EPS':'gym' };
+  const disciplines = anneeData.disciplines || [];
+  if (salles.length > 0) {
+    const compteParType = {};
+    barrettes.forEach(b => {
+      const discNoms = (b.disciplineIds||[]).map(did => (disciplines.find(d=>d.id===did)||{}).nom).filter(Boolean);
+      discNoms.forEach(nom => {
+        const type = TYPE_PAR_DISC[nom];
+        if (!type) return;
+        // Compter le nombre de slots simultanés sur cette barrette pour cette discipline (cours en parallèle = besoin simultané)
+        const nbSlotsSimultanes = (b.slots || []).length || 1;
+        compteParType[type] = Math.max(compteParType[type] || 0, nbSlotsSimultanes);
+      });
+    });
+    Object.entries(compteParType).forEach(([type, nbBesoin]) => {
+      const sallesType = salles.filter(s => s.type === type);
+      const nbDispo = sallesType.reduce((s, sl) => s + (sl.nb || 1), 0);
+      if (sallesType.length > 0 && nbBesoin > nbDispo) {
+        const typeLabel = (TYPES_SALLE_LABELS[type] || type);
+        out.push({
+          severite: 'warning', categorie: 'salle',
+          message: typeLabel + ' : ' + nbBesoin + ' cours simultanés prévus pour ' + nbDispo + ' salle(s) disponible(s).',
+          ref: type
+        });
+      }
+    });
+  }
+
+  // 3. Indisponibilité dure couvrant la totalité de la semaine (aucun créneau restant)
+  const parEnsIndispo = {};
+  indispos.filter(i => i.type === 'dure').forEach(i => { (parEnsIndispo[i.ensId] = parEnsIndispo[i.ensId] || []).push(i); });
+  Object.entries(parEnsIndispo).forEach(([ensId, list]) => {
+    const joursIndispoTotal = new Set(list.filter(i => i.plage === 'journee').map(i => i.jour));
+    if (joursIndispoTotal.size >= 5) {
+      const ens = enseignants.find(e => e.id === ensId);
+      const nom = ens ? ((ens.prenom||'')+' '+ens.nom).trim() : '?';
+      out.push({ severite:'error', categorie:'indisponibilite', message: nom + ' : indisponible la journée entière sur tous les jours — vérifier la saisie.', ref: ensId });
+    }
+  });
+
+  return out;
+}
+
+const TYPES_SALLE_LABELS = {
+  svt: 'Labo SVT', physique: 'Labo Physique-Chimie', musique: 'Salle Musique',
+  arts: 'Salle Arts plastiques', techno: 'Salle Technologie', gym: 'Gymnase / EPS', autre: 'Autre salle'
+};
+
+/**
+ * Calcule, pour chaque créneau candidat, le nombre d'enseignants réellement
+ * disponibles (hors indisponibilités dures et contraintes libres qui les concernent),
+ * avec pénalité partielle pour les vœux souples. Sert à recommander le meilleur
+ * créneau pour l'heure bleue (réunions).
+ *
+ * Limite assumée : ne connaît pas les cours déjà posés dans Index Éducation —
+ * uniquement les contraintes saisies dans l'application.
+ *
+ * @param {Array} enseignants
+ * @param {Array} indisponibilites  contraintesEDT.indisponibilites
+ * @param {Array} contraintesLibres contraintesEDT.contraintesLibres
+ * @param {Array} creneaux  [{ jour, debut, fin }]  créneaux candidats définis par l'utilisateur
+ * @returns {Array<{ jour, debut, fin, nbTotal, nbDisponibles, indisponiblesDurs:[{ensId,nom,motif}], voeuxSouples:[{ensId,nom,motif}], score, recommandation }>}
+ */
+function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, creneaux) {
+  if (!Array.isArray(creneaux) || creneaux.length === 0) return [];
+  const ens = Array.isArray(enseignants) ? enseignants : [];
+  const indispos = Array.isArray(indisponibilites)  ? indisponibilites  : [];
+  const libres    = Array.isArray(contraintesLibres) ? contraintesLibres : [];
+
+  function _chevauche(jour, debut, fin, iJour, iDebut, iFin, iPlage) {
+    if (iJour !== jour) return false;
+    if (iPlage === 'journee') return true;
+    if (iPlage === 'matin')  return debut < '13:00';
+    if (iPlage === 'aprem')  return fin   >= '13:00';
+    if (iPlage === 'creneau') return iDebut && iFin && debut < iFin && fin > iDebut;
+    return false;
+  }
+
+  const resultats = creneaux.map(c => {
+    const indisponiblesDurs = [];
+    const voeuxSouples = [];
+    ens.forEach(e => {
+      const nom = ((e.prenom||'')+' '+e.nom).trim();
+      const indEns = indispos.filter(i => i.ensId === e.id && _chevauche(c.jour, c.debut, c.fin, i.jour, i.heureDebut, i.heureFin, i.plage));
+      const dur    = indEns.find(i => i.type === 'dure');
+      const souple = indEns.find(i => i.type === 'souple');
+      if (dur)    { indisponiblesDurs.push({ ensId: e.id, nom, motif: dur.motif || '' }); return; }
+      // Contrainte libre qui implique l'enseignant (ex : accompagnement conservatoire)
+      const libreConcerne = libres.find(cl =>
+        (cl.ensIds||[]).includes(e.id) && cl.jour === c.jour &&
+        cl.heureDebut && cl.heureFin && c.debut < cl.heureFin && c.fin > cl.heureDebut
+      );
+      if (libreConcerne) { indisponiblesDurs.push({ ensId: e.id, nom, motif: libreConcerne.titre || 'Contrainte libre' }); return; }
+      if (souple) voeuxSouples.push({ ensId: e.id, nom, motif: souple.motif || '' });
+    });
+    const nbTotal       = ens.length;
+    const nbIndispo      = indisponiblesDurs.length;
+    const nbDisponibles  = nbTotal - nbIndispo;
+    const score = nbTotal - nbIndispo - (voeuxSouples.length * 0.5);
+    return {
+      jour: c.jour, debut: c.debut, fin: c.fin,
+      jourLabel: JOURS_LABEL[c.jour] || c.jour,
+      nbTotal, nbDisponibles,
+      indisponiblesDurs, voeuxSouples,
+      score: Math.round(score * 10) / 10
+    };
+  });
+
+  resultats.sort((a, b) => b.score - a.score);
+  resultats.forEach((r, i) => {
+    r.recommandation = i === 0 ? 'optimal' : (r.score >= resultats[0].score * 0.75 ? 'correct' : 'deconseille');
+  });
+  return resultats;
+}
+
   return {
     getORS, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
     resumeStructures, bilanDotation, besoinsParDiscipline,
@@ -767,7 +943,8 @@ function controlesRepartition(anneeData) {
     bilanScenario, comparerScenarios, comparatifDisciplines,
     syntheseCA, dialogueGestion, recapServices,
     heuresGrille, affectationsExistent, profsDeClasseDiscipline,
-    grilleRepartition, controlesRepartition
+    grilleRepartition, controlesRepartition,
+    controlesEDT, creneauBleuOptimal
   };
 
 })();

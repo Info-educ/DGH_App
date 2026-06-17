@@ -201,6 +201,14 @@ const app = (() => {
       if (action === 'edt-save-cointerv')         { DGHEdt.saveCoInterv(id);                        return; }
       if (action === 'edt-cancel-cointerv')       { DGHEdt.cancelCoInterv();                         return; }
       if (action === 'edt-delete-cointerv')       { DGHEdt.deleteCoInterv(id);                      return; }
+      if (action === 'edt-edit-indispo')          { DGHEdt.editIndispo(id);                         return; }
+      if (action === 'edt-save-indispo')          { DGHEdt.saveIndispo(id);                         return; }
+      if (action === 'edt-cancel-indispo')        { DGHEdt.cancelIndispo();                          return; }
+      if (action === 'edt-delete-indispo')        { DGHEdt.deleteIndispo(id);                       return; }
+      if (action === 'edt-edit-clibre')           { DGHEdt.editClibre(id);                          return; }
+      if (action === 'edt-save-clibre')           { DGHEdt.saveClibre(id);                          return; }
+      if (action === 'edt-cancel-clibre')         { DGHEdt.cancelClibre();                           return; }
+      if (action === 'edt-delete-clibre')         { DGHEdt.deleteClibre(id);                        return; }
       // ── Instances ──
       if (action === 'inst-tab')        { DGHInstances.switchTab(actionBtn.dataset.tab); return; }
       if (action === 'inst-projeter')   { DGHInstances.toggleProjection();               return; }
@@ -223,6 +231,15 @@ const app = (() => {
       // ── Répartition de service ──
       if (action === 'rep-mode')              { DGHRepartition.setMode(actionBtn.dataset.mode);  return; }
       if (action === 'rep-del-aff')           { DGHRepartition.deleteAff(actionBtn.dataset.id);  return; }
+      // ── Salles & Heure bleue (modale établissement, v4.8.0) ──
+      if (action === 'salle-add')             { DGHEtab.startAddSalle();                          return; }
+      if (action === 'salle-edit')            { DGHEtab.editSalle(id);                            return; }
+      if (action === 'salle-save')            { DGHEtab.saveSalle(id);                            return; }
+      if (action === 'salle-cancel')          { DGHEtab.cancelSalle();                             return; }
+      if (action === 'salle-delete')          { DGHEtab.deleteSalle(id);                          return; }
+      if (action === 'hb-add-creneau')        { DGHEtab.hbAddCreneau();                            return; }
+      if (action === 'hb-remove-creneau')     { DGHEtab.hbRemoveCreneau(actionBtn.dataset.idx);    return; }
+      if (action === 'hb-calculer')           { DGHEtab.hbCalculer();                              return; }
     }
 
     // btn-toggle-gc (généré dynamiquement) — délégué ici
@@ -245,6 +262,8 @@ const app = (() => {
     if (e.target.closest('#btnAddGroupe'))      { DGHStructures.startAddGroupe();    return; }
     if (e.target.closest('#btnAddBarrette'))    { DGHEdt.startAddBarrette();         return; }
     if (e.target.closest('#btnAddCoInterv'))    { DGHEdt.startAddCoInterv();         return; }
+    if (e.target.closest('#btnAddIndispo'))     { DGHEdt.startAddIndispo();          return; }
+    if (e.target.closest('#btnAddClibre'))      { DGHEdt.startAddClibre();           return; }
     if (e.target.closest('#btnPrintEdt'))       { DGHEdt.printSynthese();            return; }
     if (e.target.closest('#btnAddMission'))     { DGHMissions.openModal(null);         return; }
     if (e.target.closest('#btnAddDiv'))       { DGHStructures.openModalDiv(null);    return; }
@@ -360,6 +379,7 @@ const app = (() => {
     if (e.target.classList.contains('grille-input'))      { DGHDotation.handleGrilleInput(e.target); return; }
     if (e.target.id==='inputEnvHP'||e.target.id==='inputEnvHSA') { DGHDotation.saveEnveloppe();     return; }
     if (e.target.id==='modalYearSelect')                  { DGHEtab.onModalYearChange(e.target.value); return; }
+    if (e.target.id==='inputHBActif')                     { DGHEtab.hbToggleActif(e.target.checked);   return; }
     if (e.target.classList.contains('classe-check'))      { DGHDotation.updateGCEffectif();           return; }
     if (e.target.classList.contains('hpc-classe-check'))  { DGHHPC.updateHPCEffectif();               return; }
     if (e.target.id==='inputEnsGrade'||e.target.id==='inputEnsOrsManuel'||e.target.id==='inputEnsHeures') { DGHEnseignants.updateOrsPreview(); return; }
@@ -374,6 +394,7 @@ const app = (() => {
     if (e.target.id === 'recapScenSelect')                { DGHPilotage.setRecapScen(e.target.value);  return; }
     if (e.target.id === 'impactScenSelect')               { DGHPilotage.setImpactScen(e.target.value); return; }
     if (e.target.id === 'edtBarretteDiscs')               { DGHEdt.onBarrDiscChange(); return; }
+    if (e.target.dataset.action === 'edt-indispo-plage-change') { DGHEdt.onIndispoPlageChange(); return; }
     if (e.target.id === 'inputMissionHeures')              { DGHMissions.updateHHebdo(); return; }
     if (e.target.id === 'inputMissionEns')                 { DGHMissions.updateEnsInfo(); return; }
     if (e.target.classList.contains('hist-year-sel')) {

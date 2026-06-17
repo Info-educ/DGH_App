@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **4.7.1** — Dernière mise à jour : consommation du scénario actif visible sur le tableau de bord
+> Version courante : **4.8.0** — Dernière mise à jour : Préparation EDT (Sprint 14) — salles spécialisées, heure bleue avec recommandation de créneau optimal, indisponibilités enseignants (dures/souples), contraintes libres, fréquence semaine A/B sur les barrettes, notice EDT consolidée avec détection d'alertes
 
 ---
 
@@ -99,7 +99,8 @@ assets/js/modules/
   enseignants.js        → DGHEnseignants (3 vues : liste / par discipline / HPC)
   repartition.js        → DGHRepartition (v4.2 : affectations classe×discipline, PP) ← NOUVEAU
   pilotage.js           → DGHPilotage (scénarios, récap, impact, synthèse)
-  edt.js                → DGHEdt (barrettes, co-interventions)
+  edt.js                → DGHEdt (barrettes avec fréquence A/B, co-interventions,
+                          indisponibilités enseignants, contraintes libres, notice EDT)
   historique.js         → DGHHistorique (comparaison N/N-1, snapshots)
   missions.js           → DGHMissions (PACTE / IMP)
   instances.js          → DGHInstances (Synthèse CA, Dialogue, Services — impression/projection)
@@ -359,16 +360,164 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 
 ---
 
-## Prochains sprints — Conception validée
+## Sprints réalisés (historique condensé)
 
-### Sprint 8 — Synthèses & exports
-- Tableau de synthèse DGH pour le CA (format A4)
-- Rapport par discipline : besoin / HP / HSA / enseignants
-- Rapport par enseignant : service complet avec décomposition HP disc. / HPC-HP / HSA
+- Sprint 8 — Synthèses & exports (Synthèse CA, Dialogue de gestion, Services enseignants)
+- Sprint 9 — Historique pluriannuel (comparaison N/N-1, snapshots)
+- Sprint 10 — Comparaison N/N-1 figée, KPI delta
+- Sprint 11 — PACTE/IMP, référentiel Groupes
+- Sprint 12 — Répartition de service (affectations classe×discipline→enseignant, PP)
+- Sprint 13 — Dashboard scénario-aware, gauges HP/HSA, saisie en grille
+- **Sprint 14 (v4.8.0) — Préparation EDT** : voir section dédiée ci-dessous
 
-### Sprint 9 — Historique pluriannuel
-- Comparaison N vs N-1
-- Graphiques SVG inline (sans bibliothèque)
+## Sprints futurs — Conception à valider lors d'une prochaine session
+
+### Dispositifs spécialisés SEGPA / ULIS / UPE2A
+Grilles MEN spécifiques non implémentées. Contraintes EDT propres à ces dispositifs
+(enseignants partagés avec d'autres établissements, horaires AESH, emplois du temps
+individualisés) — actuellement hors périmètre, à concevoir avec JB le jour où
+l'établissement ouvre l'un de ces dispositifs.
+
+### Scénario → contraintes EDT (conversion automatique)
+Convertir un modificateur de scénario (dédoublement, co-enseignement) en barrette EDT
+pré-remplie depuis l'onglet Impact du Pilotage, pour éviter la double saisie entre
+simulation budgétaire et préparation EDT. Nécessite de définir précisément le mapping
+type de modificateur → structure de slots.
+
+### Tests automatisés sur calculs.js
+Aucun test unitaire formalisé à ce jour (risque identifié). Les fonctions pures de
+calculs.js sont testables sans DOM ; un harnais Node simple (comme ceux utilisés en
+cours de développement du Sprint 14) pourrait être committé sous `tests/`.
+
+---
+
+## Préparation EDT (Sprint 14 / v4.8.0)
+
+### Contexte métier
+L'objectif n'est pas de remplacer Index Éducation mais de **centraliser avant la saisie**
+tout ce que le PERDIR doit avoir sous les yeux pour poser un EDT sans rien oublier :
+contraintes élèves (salles spécialisées), contraintes enseignants (indisponibilités),
+puis barrettes. Aucun export technique vers EDT n'existe : Index Éducation ne propose
+pas d'import de fichier externe pour les indisponibilités — seule la notice imprimable
+a de la valeur.
+
+### Modèle de données ajouté
+
+```js
+// EtablissementObject — champs ajoutés v4.8.0
+{
+  ...,
+  salles: [{ id, nom, type, capacite, nb }],
+  // type: 'svt'|'physique'|'musique'|'arts'|'techno'|'gym'|'autre'
+  // nb = nombre d'exemplaires disponibles (sert à la détection de saturation)
+  heuresBleues: { actif: boolean, creneaux: [{jour, debut, fin}], commentaire }
+  // 1 à 4 créneaux candidats ; recommandation calculée par Calculs.creneauBleuOptimal
+}
+
+// contraintesEDT — champs ajoutés v4.8.0 (annees[].contraintesEDT)
+{
+  barrettes: [...],       // existant — chaque slot a désormais .frequence
+  coInterventions: [...], // existant, inchangé
+  indisponibilites: [
+    { id, ensId, type:'dure'|'souple', jour, plage:'matin'|'aprem'|'journee'|'creneau',
+      heureDebut, heureFin, motif }
+  ],
+  contraintesLibres: [
+    { id, titre, jour, heureDebut, heureFin, scope:'etablissement'|'classe'|'groupe',
+      classeIds[], ensIds[], commentaire }
+  ]
+}
+
+// BarretteSlot — champ ajouté v4.8.0
+{ type, ref, nomLibre, ensIds[], frequence: 'hebdo'|'semaine-A'|'semaine-B' }
+// hebdo = toutes les semaines. La fréquence se règle PAR SLOT (pas sur la barrette),
+// pour permettre par ex. Gr.1 SVT semaine-A / Gr.1 PC semaine-B sur le même groupe.
+```
+
+⚠️ Historique : un champ `contraintesEDT.indisponibilites` avait été retiré en v3.8
+("gérées directement dans Index Éducation"). Le schéma v4.8.0 le réintroduit avec une
+structure différente (dure/souple + créneaux) — ce n'est pas une régression, c'est une
+fonctionnalité repensée avec un objet de données distinct.
+
+### Onglets du module EDT (4, contre 3 avant v4.8.0)
+1. **Barrettes** — inchangé dans sa logique, slot enrichi du sélecteur de fréquence
+2. **Co-interventions** — inchangé
+3. **Indisponibilités** — *nouveau* : indispos enseignants (dure/souple) + contraintes
+   libres (ex. orchestre/conservatoire, concerne classes ET/OU enseignants)
+4. **Notice EDT** — *remplace* l'ancienne « Fiche synthèse ». 7 sections dans l'ordre du
+   flux réel de préparation : alertes → cadre général (dont heure bleue retenue) →
+   salles → contraintes enseignants → contraintes libres → barrettes → co-interventions
+
+### Salles & heure bleue — gérées dans la modale Établissement, pas dans le module EDT
+Nouvel onglet modale **« Salles & Heure bleue »** (`DGHEtab.renderSalles` /
+`renderHeuresBleues`). Choix architectural : les salles et l'heure bleue sont des
+propriétés de l'établissement (stables d'une année sur l'autre), pas de l'année
+scolaire — cohérent avec leur emplacement dans `_data.etablissement`, pas dans
+`_annee()`.
+
+### Heure bleue — recommandation de créneau optimal
+`Calculs.creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, creneaux)`
+calcule pour chaque créneau candidat un score = nb_enseignants_total −
+nb_indisponibles_durs − (nb_vœux_souples × 0.5), classe les créneaux, et marque le
+meilleur `optimal`. **Limite assumée et affichée à l'utilisateur** : ce score ignore les
+cours déjà posés dans Index Éducation (donnée non disponible côté DGH App) — c'est une
+recommandation sur les seules contraintes saisies, jamais une certitude.
+
+### Détection de conflits — `Calculs.controlesEDT(anneeData, etab)`
+Fonction pure, retourne `[{severite, categorie, message, ref}]` :
+- **Conflit de barrette** : même enseignant dans 2 slots dont les fréquences se
+  chevauchent (hebdo entre en conflit avec tout ; semaine-A ne conflicte qu'avec
+  hebdo/semaine-A — jamais avec semaine-B)
+- **Salle saturée** : nombre de slots simultanés sur une discipline associée à un type
+  de salle (SVT/Physique/Musique/Arts/Techno/Gym) supérieur au nombre d'exemplaires
+  disponibles dans `etab.salles`
+- **Indisponibilité suspecte** : enseignant marqué indisponible la journée entière sur
+  les 5 jours (signal probable d'erreur de saisie)
+
+### API publique ajoutée — `data.js`
+```js
+DGHData.getTypesSalle() / getJoursSemaine()           // → constantes UI
+DGHData.getSalles() / getSalle(id)
+DGHData.addSalle / updateSalle / deleteSalle(fields|id)
+DGHData.getHeuresBleues() / setHeuresBleues(fields)
+DGHData.getIndisponibilites(annee?) / getIndisponibilitesEnseignant(ensId, annee?)
+DGHData.addIndisponibilite / updateIndisponibilite / deleteIndisponibilite
+DGHData.getContraintesLibres(annee?)
+DGHData.addContrainteLibre / updateContrainteLibre / deleteContrainteLibre
+```
+Cascades : `deleteEnseignant` nettoie désormais aussi ses indisponibilités, ses
+références dans `contraintesLibres.ensIds`, les slots de barrettes et les
+co-interventions. `deleteDivision` nettoie `contraintesLibres.classeIds` et
+`coInterventions.classeIds`.
+
+### API publique ajoutée — `calculs.js`
+```js
+Calculs.controlesEDT(anneeData, etab)               // → [{severite, categorie, message, ref}]
+Calculs.creneauBleuOptimal(enseignants, indispos, contraintesLibres, creneaux)
+  // → [{ jour, debut, fin, jourLabel, nbTotal, nbDisponibles,
+  //      indisponiblesDurs[], voeuxSouples[], score, recommandation }]
+  // recommandation: 'optimal' | 'correct' | 'deconseille'
+```
+
+### Délégation globale ajoutée — `app.js`
+```js
+// _onGlobalClick — data-action
+'salle-add' | 'salle-edit' | 'salle-save' | 'salle-cancel' | 'salle-delete'
+  → DGHEtab.*Salle(...)
+'hb-add-creneau' | 'hb-remove-creneau' | 'hb-calculer' → DGHEtab.hb*(...)
+'edt-edit-indispo' | 'edt-save-indispo' | 'edt-cancel-indispo' | 'edt-delete-indispo'
+  → DGHEdt.*Indispo(...)
+'edt-edit-clibre' | 'edt-save-clibre' | 'edt-cancel-clibre' | 'edt-delete-clibre'
+  → DGHEdt.*Clibre(...)
+
+// _onGlobalChange
+'inputHBActif' (id)                          → DGHEtab.hbToggleActif(checked)
+'edt-indispo-plage-change' (data-action)     → DGHEdt.onIndispoPlageChange()
+
+// Boutons statiques (_onGlobalClick)
+'#btnAddIndispo' → DGHEdt.startAddIndispo()
+'#btnAddClibre'  → DGHEdt.startAddClibre()
+```
 
 ---
 
@@ -387,6 +536,10 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 - [ ] `VERSION` dans `data.js` incrémentée si schéma modifié
 - [ ] Aucune donnée réelle committée
 - [ ] **Encodage Python** : tester `.encode('utf-8')` avant écriture
+- [ ] Pour tout nouveau rendu HTML généré en JS (onglets, formulaires) : test fonctionnel
+      avec un DOM minimal simulé en Node (`getElementById`/`innerHTML` factices) avant
+      livraison — `node --check` ne détecte pas les erreurs d'exécution comme un nom de
+      fonction interne incorrect (ex. router d'onglet appelant une fonction renommée)
 
 ---
 
@@ -400,7 +553,7 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 
 *Ce fichier fait partie intégrante du projet DGH App.*
 *Le mettre à jour à chaque évolution structurelle.*
-*Version : 4.6.0 — Dernière mise à jour : aide contextuelle embarquée (tutorial.js)*
+*Version : 4.8.0 — Dernière mise à jour : Préparation EDT (Sprint 14)*
 
 ## Modèle de données — Répartition de service (v4.2)
 
@@ -563,6 +716,7 @@ Checklist de version (à synchroniser à chaque release) :
 4. `data/exemple.json` → `_meta.version`
 5. `README.md` → titre + badge
 6. `CHANGELOG.md` → nouvelle entrée
+7. `assets/js/tutorial.js` → `CONTENT_VER` **uniquement si le contenu d'aide a changé** (sinon laisser tel quel — incrémenter inutilement reproposerait l'aide à tous les utilisateurs sans raison)
 
 ## Aide contextuelle embarquée — `tutorial.js` (v4.6.0)
 

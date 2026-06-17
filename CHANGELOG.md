@@ -5,6 +5,68 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.8.0 — Préparation EDT : salles, heure bleue, indisponibilités, notice consolidée (2026-06-17)
+
+### Contexte
+Sprint conçu pour que l'application devienne un atout concret au moment de la saisie
+dans Index Éducation : centraliser, avant d'ouvrir EDT, toutes les contraintes
+aujourd'hui dispersées entre fiches papier, mémoire et tableurs.
+
+### Ajouté
+- **Salles spécialisées** (modale Établissement → onglet « Salles & Heure bleue ») :
+  référentiel des salles critiques (labo SVT, Physique-Chimie, Musique, Arts
+  plastiques, Technologie…) avec nombre d'exemplaires disponibles. Sert de base à la
+  détection de saturation dans la notice EDT.
+- **Heure bleue avec recommandation de créneau optimal.** L'utilisateur saisit 1 à 4
+  créneaux candidats ; l'application calcule pour chacun le nombre d'enseignants
+  réellement disponibles (hors indisponibilités dures et contraintes libres qui les
+  concernent, pénalité partielle pour les vœux souples) et recommande le meilleur.
+  Limite assumée et affichée : ignore les cours déjà posés dans Index Éducation
+  (donnée non disponible côté DGH App).
+- **Indisponibilités enseignants** (nouvel onglet « Indisponibilités » du module EDT) :
+  distinction explicite entre indisponibilité **dure** (réelle — BMP sur un autre
+  établissement, temps partiel non travaillé) et **vœu souple** (à éviter, non
+  bloquant). Saisie par jour + plage (matin/après-midi/journée/créneau précis).
+- **Contraintes libres** : contraintes ad hoc à titre libre (ex. « Orchestre —
+  Conservatoire », jeudi 8h–11h), pouvant concerner des classes ET/OU des enseignants.
+- **Fréquence semaine A/B sur les barrettes.** Chaque slot d'une barrette porte
+  désormais une fréquence (`hebdo` / `semaine-A` / `semaine-B`), réglable
+  indépendamment par slot — permet par exemple un même groupe en SVT semaine A et en
+  Physique-Chimie semaine B.
+- **Notice EDT** (remplace la Fiche synthèse) : document consolidé et imprimable en
+  7 sections dans l'ordre du flux réel de préparation — alertes détectées, cadre
+  général (dont heure bleue retenue), salles spécialisées, contraintes enseignants,
+  contraintes libres, barrettes (avec tag de fréquence), co-interventions.
+- **Détection de conflits** (`Calculs.controlesEDT`) : enseignant dans deux barrettes à
+  fréquence incompatible, salle spécialisée saturée (plus de cours simultanés que
+  d'exemplaires disponibles), indisponibilité dure suspecte (journée entière sur les
+  5 jours).
+
+### Modifié
+- Module EDT : 3 → 4 onglets (Barrettes, Co-interventions, Indisponibilités, Notice EDT).
+- `data.js` : migration v4.8.0 — `etablissement.salles[]`, `etablissement.heuresBleues`,
+  `contraintesEDT.indisponibilites[]`, `contraintesEDT.contraintesLibres[]`,
+  `barrette.slots[].frequence`. Cascades de suppression étendues (`deleteEnseignant`,
+  `deleteDivision`) pour couvrir les nouvelles références croisées.
+- `data/exemple.json` enrichi avec des données représentatives du nouveau schéma.
+
+### Précision historique
+Un champ `contraintesEDT.indisponibilites` avait été retiré en v3.8 avec la mention
+« gérées directement dans Index Éducation ». Ce sprint le réintroduit avec un schéma
+distinct (dure/souple + créneaux + motif) répondant à un besoin de préparation amont,
+non de gestion fine heure par heure — ce n'est pas un retour en arrière.
+
+### Détails techniques
+- `calculs.js` : `controlesEDT(anneeData, etab)`, `creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, creneaux)` — fonctions pures.
+- `data.js` : `getSalles/addSalle/updateSalle/deleteSalle`, `getHeuresBleues/setHeuresBleues`, `getIndisponibilites/...Enseignant/add/update/delete`, `getContraintesLibres/add/update/delete`.
+- `etab.js` : `renderSalles`, `renderHeuresBleues`, `hbAddCreneau/hbRemoveCreneau/hbToggleActif/hbCalculer`.
+- `edt.js` : onglet `indispos` (formulaires indisponibilité + contrainte libre), notice refondue, sélecteur de fréquence sur chaque slot de barrette.
+- `index.html` : modale Établissement +1 onglet ; vue EDT 3→4 onglets ; cache-busting `?v=4.8.0`.
+- `style.css` : classes `.salle-*`, `.hb-*`, `.edt-indispo-*`, `.edt-clibre-*`, `.edt-freq-tag`, `.edt-notice-*`.
+- `tutorial.js` : contenu d'aide de l'onglet EDT mis à jour, `CONTENT_VER` 1→2.
+
+---
+
 ## v4.7.1 — Consommation du scénario actif visible sur le tableau de bord (2026-06-15)
 
 ### Corrigé
