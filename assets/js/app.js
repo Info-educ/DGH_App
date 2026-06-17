@@ -197,7 +197,6 @@ const app = (() => {
       if (action === 'edt-delete-barrette')       { DGHEdt.deleteBarrette(id);                      return; }
       if (action === 'edt-barr-add-slot')         { DGHEdt.barrAddSlot();                            return; }
       if (action === 'edt-barr-remove-slot')      { DGHEdt.barrRemoveSlot(actionBtn.dataset.slotIdx); return; }
-      if (action === 'edt-barr-slot-type-change') { DGHEdt.barrSlotTypeChange();                    return; }
       if (action === 'edt-edit-cointerv')         { DGHEdt.editCoInterv(id);                        return; }
       if (action === 'edt-save-cointerv')         { DGHEdt.saveCoInterv(id);                        return; }
       if (action === 'edt-cancel-cointerv')       { DGHEdt.cancelCoInterv();                         return; }
@@ -265,7 +264,6 @@ const app = (() => {
     if (e.target.closest('#btnDesactiverScen')) { DGHPilotage.desactiverScenario();  return; }
     if (e.target.closest('#btnAddGroupe'))      { DGHStructures.startAddGroupe();    return; }
     if (e.target.closest('#btnAddBarrette'))    { DGHEdt.startAddBarrette();         return; }
-    if (e.target.closest('#btnAddSalleEdt'))    { DGHEdt.startAddSalleEdt();         return; }
     if (e.target.closest('#btnAddCoInterv'))    { DGHEdt.startAddCoInterv();         return; }
     if (e.target.closest('#btnAddIndispo'))     { DGHEdt.startAddIndispo();          return; }
     if (e.target.closest('#btnAddClibre'))      { DGHEdt.startAddClibre();           return; }
@@ -399,6 +397,7 @@ const app = (() => {
     if (e.target.id === 'recapScenSelect')                { DGHPilotage.setRecapScen(e.target.value);  return; }
     if (e.target.id === 'impactScenSelect')               { DGHPilotage.setImpactScen(e.target.value); return; }
     if (e.target.id === 'edtBarretteDiscs')               { DGHEdt.onBarrDiscChange(); return; }
+    if (e.target.classList.contains('edt-slot-type-sel')) { DGHEdt.barrSlotTypeChange(); return; }
     if (e.target.dataset.action === 'edt-indispo-plage-change') { DGHEdt.onIndispoPlageChange(); return; }
     if (e.target.id === 'inputMissionHeures')              { DGHMissions.updateHHebdo(); return; }
     if (e.target.id === 'inputMissionEns')                 { DGHMissions.updateEnsInfo(); return; }

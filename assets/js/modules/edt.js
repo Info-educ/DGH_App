@@ -66,8 +66,6 @@ const DGHEdt = (() => {
     } else if (_tab === 'indispos') {
       el.innerHTML = '<button class="btn-primary" id="btnAddIndispo">+ Indisponibilité</button>'
         + '<button class="btn-secondary" id="btnAddClibre">+ Contrainte libre</button>';
-    } else if (_tab === 'etab') {
-      el.innerHTML = '<button class="btn-primary" id="btnAddSalleEdt">+ Ajouter une salle</button>';
     } else if (_tab === 'notice') {
       el.innerHTML = '<button class="btn-secondary" id="btnPrintEdt">⎙ Imprimer</button>';
     } else {
@@ -153,7 +151,7 @@ const DGHEdt = (() => {
       + '<div class="edt-scen-ded-header">'
         + '<span class="edt-scen-ded-tag">\u2295 Scénario actif</span>'
         + '<strong class="edt-scen-ded-nom">' + _esc(scen.nom) + '</strong>'
-        + '<span class="edt-scen-ded-hint">' + mods.length + ' dédoublement' + (mods.length > 1 ? 's' : '') + ' — cliquez pour pré-remplir le formulaire</span>'
+        + '<span class="edt-scen-ded-hint">' + mods.length + ' dédoublement' + (mods.length > 1 ? 's' : '') + ' détectés — une barrette n\'est pas obligatoire pour chaque dédoublement</span>'
       + '</div>'
       + '<div class="edt-scen-ded-list">' + rows + '</div>'
     + '</div>';
@@ -309,7 +307,7 @@ const DGHEdt = (() => {
       + '</div>'
       + '<div class="edt-slot-fields">'
         + '<div class="edt-form-field"><label>Type</label>'
-          + '<select class="edt-slot-type-sel" data-action="edt-barr-slot-type-change" data-slot-idx="' + idx + '">'
+          + '<select class="edt-slot-type-sel" data-slot-idx="' + idx + '">'
             + '<option value="classe"' + (typeVal==='classe'?' selected':'') + '>Classe entière</option>'
             + '<option value="groupe"' + (typeVal==='groupe'?' selected':'') + '>Groupe (référentiel)</option>'
             + '<option value="libre"'  + (typeVal==='libre' ?' selected':'') + '>Groupe libre</option>'
@@ -868,7 +866,10 @@ const DGHEdt = (() => {
         ).join('') + '</div>';
 
     const sallesSection = '<div class="edt-etab-section">'
-      + '<h3 class="edt-synth-h3">Salles spécialisées</h3>'
+      + '<div class="edt-etab-section-header">'
+        + '<h3 class="edt-synth-h3">Salles spécialisées</h3>'
+        + (_editSalleId ? '' : '<button class="btn-primary btn-sm" data-action="salle-add">+ Ajouter une salle</button>')
+      + '</div>'
       + formSalle + listSalles
     + '</div>';
 
