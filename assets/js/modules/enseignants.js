@@ -768,7 +768,9 @@ const DGHEnseignants = (() => {
     document.getElementById('inputEnsComment').value    = ens ? (ens.commentaire||'') : '';
     _updateOrsPreview();
     modal.classList.add('modal-open');
-    document.getElementById('inputEnsNom').focus();
+    // Différer le focus hors du cycle d'événement courant pour éviter
+    // que le navigateur génère un clic fantôme sur l'overlay (bug fermeture immédiate).
+    setTimeout(() => { document.getElementById('inputEnsNom')?.focus(); }, 0);
   }
 
   function closeModalEns() { document.getElementById('modalEns')?.classList.remove('modal-open'); }

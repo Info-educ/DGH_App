@@ -108,6 +108,9 @@ const DGHPilotage = (() => {
       + '<th class="scen-th-r">Actions</th>'
       + '</tr>';
 
+    // Y a-t-il un scénario actif parmi la liste ?
+    const unAutreActif = scenarios.some(s => s.actif);
+
     const tbody = scenarios.map(scen => {
       const bilan    = Calculs.bilanScenario(data, scen.modificateurs);
       const scls     = bilan.depassement ? 'scen-solde-danger' : 'scen-solde-ok';
@@ -132,9 +135,12 @@ const DGHPilotage = (() => {
         + '<td class="scen-th-r font-mono">' + (bilan.coutHP > 0 ? '<span class="scen-cout-val">+' + bilan.coutHP + ' h</span>' : '<span class="scen-cout-zero">—</span>') + '</td>'
         + '<td class="scen-th-r font-mono">' + (bilan.coutHSA > 0 ? '<span class="scen-cout-val">+' + bilan.coutHSA + ' h</span>' : '<span class="scen-cout-zero">—</span>') + '</td>'
         + '<td class="scen-th-r font-mono ' + scls + '">' + ssign + bilan.soldeSimule + ' h</td>'
-        + '<td>' + (scen.actif
-            ? '<span class="scen-badge-actif">● Actif</span>'
-            : '<button class="btn-link" data-action="set-actif-scenario" data-id="' + scen.id + '">Activer</button>') + '</td>'
+        + '<td class="scen-td-statut">' + (scen.actif
+            ? '<span class="scen-badge-actif">\u25cf Actif</span>'
+            + '<button class="btn-sm btn-secondary scen-btn-desactiver" data-id="' + scen.id + '" id="btnDesactiverScen" title="D\u00e9sactiver ce sc\u00e9nario">D\u00e9sactiver</button>'
+            : '<button class="btn-sm btn-scen-activer" data-action="set-actif-scenario" data-id="' + scen.id + '">'
+              + (unAutreActif ? '\u21ba Activer \u00e0 la place' : '\u25b6 Activer')
+              + '</button>') + '</td>'
         + '<td class="scen-th-r">'
           + '<button class="btn-icon" data-action="edit-scenario" data-id="' + scen.id + '" title="' + (editing?'Fermer':'Éditer') + '">' + (editing?'▲':'▼') + '</button>'
           + '<button class="btn-icon" data-action="duplicate-scenario" data-id="' + scen.id + '" title="Dupliquer">⎘</button>'
@@ -1212,13 +1218,17 @@ const DGHPilotage = (() => {
     if (!scen) return;
     DGHData.setScenarioActif(id);
     renderPilotage();
-    if (typeof app !== 'undefined' && app.toast) app.toast('Scénario "' + scen.nom + '" activé.', 'success');
+    // Mettre à jour la topbar et le dashboard si on y revient
+    if (typeof DGHDashboard !== 'undefined') DGHDashboard.renderTopbar();
+    if (typeof app !== 'undefined' && app.toast) app.toast('Scénario \u00ab\u00a0' + scen.nom + '\u00a0\u00bb activé — le tableau de bord reflète maintenant ce scénario.', 'success');
   }
 
   function desactiverScenario() {
     DGHData.setScenarioActif(null);
     renderPilotage();
-    if (typeof app !== 'undefined' && app.toast) app.toast('Scénario désactivé.', 'info');
+    // Mettre à jour la topbar
+    if (typeof DGHDashboard !== 'undefined') DGHDashboard.renderTopbar();
+    if (typeof app !== 'undefined' && app.toast) app.toast('Scénario désactivé — retour aux valeurs réelles.', 'info');
   }
 
   /**
