@@ -74,7 +74,12 @@ const DGHData = (() => {
         nom: '', uai: '', academie: '', commune: '', typeEtab: 'college',
         enveloppePacte: 0, enveloppeImp: 0, logo: null,
         salles: [],
-        heuresBleues: { actif: false, creneaux: [], commentaire: '' }
+        heuresBleues: { actif: false, creneaux: [], commentaire: '' },
+        organisationSemaine: {
+          joursOuvres: ['lun','mar','mer','jeu','ven'],
+          mercrediMatin: true,
+          horaires: { debutMatin: '08:00', finMatin: '12:00', debutAprem: '13:00', finAprem: '17:00' }
+        }
       },
       annees: { '2025-2026': _annee('2025-2026') },
       anneeActive: '2025-2026'
@@ -269,6 +274,22 @@ const DGHData = (() => {
     if (!Array.isArray(_data.etablissement.heuresBleues.creneaux)) _data.etablissement.heuresBleues.creneaux = [];
     if (typeof _data.etablissement.heuresBleues.actif !== 'boolean') _data.etablissement.heuresBleues.actif = false;
     if (_data.etablissement.heuresBleues.commentaire === undefined) _data.etablissement.heuresBleues.commentaire = '';
+    // Migration v4.9.0 : organisationSemaine sur établissement
+    if (!_data.etablissement.organisationSemaine || typeof _data.etablissement.organisationSemaine !== 'object') {
+      _data.etablissement.organisationSemaine = {
+        joursOuvres: ['lun','mar','mer','jeu','ven'],
+        mercrediMatin: true,
+        horaires: { debutMatin: '08:00', finMatin: '12:00', debutAprem: '13:00', finAprem: '17:00' }
+      };
+    }
+    const os = _data.etablissement.organisationSemaine;
+    if (!Array.isArray(os.joursOuvres))   os.joursOuvres  = ['lun','mar','mer','jeu','ven'];
+    if (os.mercrediMatin === undefined)   os.mercrediMatin = true;
+    if (!os.horaires || typeof os.horaires !== 'object') os.horaires = { debutMatin:'08:00', finMatin:'12:00', debutAprem:'13:00', finAprem:'17:00' };
+    if (!os.horaires.debutMatin)  os.horaires.debutMatin  = '08:00';
+    if (!os.horaires.finMatin)    os.horaires.finMatin    = '12:00';
+    if (!os.horaires.debutAprem)  os.horaires.debutAprem  = '13:00';
+    if (!os.horaires.finAprem)    os.horaires.finAprem    = '17:00';
     // Migration v4.8.0 : indisponibilites[] + contraintesLibres[] (réintroduites avec nouveau schéma,
     // distinctes du champ retiré en v3.8) + frequence sur les slots de barrettes
     Object.values(_data.annees).forEach(ann => {
@@ -431,6 +452,25 @@ const DGHData = (() => {
     if (fields.actif       !== undefined) hb.actif       = !!fields.actif;
     if (fields.creneaux    !== undefined) hb.creneaux    = Array.isArray(fields.creneaux) ? fields.creneaux.slice() : [];
     if (fields.commentaire !== undefined) hb.commentaire = fields.commentaire || '';
+    save();
+    return true;
+  }
+
+  function getOrganisationSemaine() {
+    return _data.etablissement.organisationSemaine;
+  }
+
+  function setOrganisationSemaine(fields) {
+    const os = getOrganisationSemaine();
+    if (Array.isArray(fields.joursOuvres))         os.joursOuvres   = fields.joursOuvres.slice();
+    if (fields.mercrediMatin !== undefined)         os.mercrediMatin = !!fields.mercrediMatin;
+    if (fields.horaires && typeof fields.horaires === 'object') {
+      const h = os.horaires;
+      if (fields.horaires.debutMatin)  h.debutMatin  = fields.horaires.debutMatin;
+      if (fields.horaires.finMatin)    h.finMatin     = fields.horaires.finMatin;
+      if (fields.horaires.debutAprem)  h.debutAprem  = fields.horaires.debutAprem;
+      if (fields.horaires.finAprem)    h.finAprem     = fields.horaires.finAprem;
+    }
     save();
     return true;
   }
@@ -1435,6 +1475,7 @@ const DGHData = (() => {
     setEtab,setAnneeActive,setDotation,
     getSalles,getSalle,addSalle,updateSalle,deleteSalle,
     getHeuresBleues,setHeuresBleues,
+    getOrganisationSemaine,setOrganisationSemaine,
     addDivision,updateDivision,deleteDivision,duplicateDivisions,appliquerMatrice,
     addDiscipline,updateDiscipline,deleteDiscipline,setRepartition,initDisciplinesMEN,
     getGrilles,setGrille,

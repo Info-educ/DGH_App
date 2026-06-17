@@ -1,10 +1,15 @@
 /**
- * DGH App — Module Contraintes EDT v3.0.0 (Sprint 14 / v4.8.0)
+ * DGH App — Module Contraintes EDT v4.9.0 (Sprint 15)
  *
- * Onglets : Barrettes (avec fréquence hebdo/A/B par cours) · Co-interventions ·
- *           Indisponibilités & contraintes libres · Notice EDT (synthèse + alertes)
- * Les barrettes utilisent le référentiel Groupes défini dans le module Structures.
- * Les salles spécialisées et l'heure bleue sont gérées dans la modale Établissement (DGHEtab).
+ * Onglets :
+ *   1. Barrettes (fréquence hebdo/A/B par cours)
+ *   2. Co-interventions
+ *   3. Indisponibilités & contraintes libres (enseignants)
+ *   4. Contraintes établissement (organisation semaine, salles, heure bleue)
+ *   5. Notice EDT (synthèse consolidée + alertes)
+ *
+ * Salles spécialisées et heure bleue déplacées depuis la modale Établissement
+ * vers l'onglet "Contraintes établissement" (Sprint 15).
  *
  * Règles SKILL.md :
  *   - Zéro addEventListener sur éléments dynamiques
@@ -20,10 +25,13 @@ const DGHEdt = (() => {
   let _editCoIntervId  = null;
   let _editIndispoId   = null;
   let _editClibreId    = null;
+  let _editSalleId     = null;   // géré dans cet onglet (déplacé depuis DGHEtab)
+  let _prefillData     = null;   // données de pré-remplissage depuis un scénario (Sprint 17)
 
-  const FREQ_LABEL = { hebdo: 'Hebdo', 'semaine-A': 'Sem. A', 'semaine-B': 'Sem. B' };
-  const JOUR_LABEL = { lun:'Lundi', mar:'Mardi', mer:'Mercredi', jeu:'Jeudi', ven:'Vendredi' };
+  const FREQ_LABEL  = { hebdo: 'Hebdo', 'semaine-A': 'Sem.\u00a0A', 'semaine-B': 'Sem.\u00a0B' };
+  const JOUR_LABEL  = { lun:'Lundi', mar:'Mardi', mer:'Mercredi', jeu:'Jeudi', ven:'Vendredi' };
   const PLAGE_LABEL = { matin:'Matin', aprem:'Après-midi', journee:'Journée entière', creneau:'Créneau précis' };
+  const JOURS_ALL   = ['lun','mar','mer','jeu','ven'];
 
   // ── RENDU PRINCIPAL ────────────────────────────────────────────────
   function renderEdt() {
@@ -32,6 +40,7 @@ const DGHEdt = (() => {
       if      (_tab === 'barrettes') _renderBarrettes();
       else if (_tab === 'cointerv')  _renderCoInterv();
       else if (_tab === 'indispos')  _renderIndispos();
+      else if (_tab === 'etab')      _renderContraintesEtab();
       else if (_tab === 'notice')    _renderSynthese();
     } catch(e) { console.error('[DGHEdt] renderEdt:', e); }
   }
@@ -57,6 +66,8 @@ const DGHEdt = (() => {
     } else if (_tab === 'indispos') {
       el.innerHTML = '<button class="btn-primary" id="btnAddIndispo">+ Indisponibilité</button>'
         + '<button class="btn-secondary" id="btnAddClibre">+ Contrainte libre</button>';
+    } else if (_tab === 'etab') {
+      el.innerHTML = '<button class="btn-primary" id="btnAddSalleEdt">+ Ajouter une salle</button>';
     } else if (_tab === 'notice') {
       el.innerHTML = '<button class="btn-secondary" id="btnPrintEdt">⎙ Imprimer</button>';
     } else {
@@ -77,11 +88,22 @@ const DGHEdt = (() => {
     const enseignants = DGHData.getEnseignants();
     const disciplines = DGHData.getDisciplines();
     const repartition = DGHData.getRepartition();
+    const anneeData   = DGHData.getAnnee();
+
+    // Résoudre l'editData : soit une barrette existante, soit les données de pré-remplissage
+    let editData = null;
+    if (_editBarretteId && _editBarretteId !== '__new__') {
+      editData = barrettes.find(b => b.id === _editBarretteId) || null;
+    } else if (_editBarretteId === '__new__' && _prefillData) {
+      editData = _prefillData;  // pré-remplissage depuis scénario — pas d'id → pas de data-id
+    }
 
     const formHtml = _editBarretteId
-      ? _htmlFormBarrette(structures, groupes, enseignants, disciplines, repartition,
-          barrettes.find(b => b.id === _editBarretteId) || null)
+      ? _htmlFormBarrette(structures, groupes, enseignants, disciplines, repartition, editData)
       : '';
+
+    // Bandeau "Importer depuis le scénario actif" — visible uniquement si pas en mode édition
+    const scenBandeauHtml = _editBarretteId ? '' : _htmlBandeauScenDed(structures, disciplines, enseignants, anneeData);
 
     let listHtml = '';
     if (barrettes.length === 0 && !_editBarretteId) {
@@ -92,7 +114,97 @@ const DGHEdt = (() => {
     } else {
       listHtml = _htmlListeBarrettes(barrettes, structures, groupes, enseignants, disciplines);
     }
-    el.innerHTML = formHtml + listHtml;
+    el.innerHTML = scenBandeauHtml + formHtml + listHtml;
+  }
+
+  // ── Bandeau scénario actif → dédoublements importables ────────────
+  function _htmlBandeauScenDed(structures, disciplines, enseignants, anneeData) {
+    const scen = DGHData.getScenarioActif();
+    if (!scen) return '';
+
+    const mods = (scen.modificateurs || []).filter(m => m.type === 'dedoublement' && m.disciplineId && (m.classeIds||[]).length > 0);
+    if (mods.length === 0) return '';
+
+    const rows = mods.map(m => {
+      const disc     = disciplines.find(d => d.id === m.disciplineId);
+      const discNom  = disc ? disc.nom : '?';
+      const clsNoms  = (m.classeIds || []).map(id => structures.find(s => s.id === id)?.nom || '?').join(', ');
+      const hGr      = m.heuresParGroupe || 0;
+      // Enseignants depuis la répartition
+      const ensIds   = Calculs.profsDeClasseDiscipline(anneeData, m.disciplineId, m.classeIds);
+      const ensNoms  = ensIds.map(id => { const e = enseignants.find(en => en.id === id); return e ? _ensNomCourt(e) : '?'; }).join(', ');
+
+      // Encoder l'id du modificateur pour le data-attribute
+      return '<div class="edt-scen-ded-row">'
+        + '<div class="edt-scen-ded-info">'
+          + '<span class="edt-scen-ded-disc">' + _esc(discNom) + '</span>'
+          + '<span class="edt-scen-ded-cls">' + _esc(clsNoms) + '</span>'
+          + '<span class="edt-scen-ded-h font-mono">' + hGr + '\u00a0h/gr</span>'
+          + (ensNoms ? '<span class="edt-scen-ded-ens">' + _esc(ensNoms) + '</span>' : '')
+        + '</div>'
+        + '<button class="btn-sm btn-scen-activer" data-action="edt-import-ded"'
+          + ' data-mod-id="' + _esc(m.id) + '" data-scen-id="' + _esc(scen.id) + '">'
+          + '\u2192 Pré-remplir barrette'
+        + '</button>'
+      + '</div>';
+    }).join('');
+
+    return '<div class="edt-scen-ded-banner">'
+      + '<div class="edt-scen-ded-header">'
+        + '<span class="edt-scen-ded-tag">\u2295 Scénario actif</span>'
+        + '<strong class="edt-scen-ded-nom">' + _esc(scen.nom) + '</strong>'
+        + '<span class="edt-scen-ded-hint">' + mods.length + ' dédoublement' + (mods.length > 1 ? 's' : '') + ' — cliquez pour pré-remplir le formulaire</span>'
+      + '</div>'
+      + '<div class="edt-scen-ded-list">' + rows + '</div>'
+    + '</div>';
+  }
+
+  // ── Importer un dédoublement depuis le scénario actif ─────────────
+  function importerDedoublementBarrette(scenId, modId) {
+    const scen = DGHData.getScenario(scenId);
+    if (!scen) return;
+    const mod  = (scen.modificateurs || []).find(m => m.id === modId);
+    if (!mod || mod.type !== 'dedoublement') return;
+
+    const disc       = DGHData.getDisciplines().find(d => d.id === mod.disciplineId);
+    const anneeData  = DGHData.getAnnee();
+    const enseignants = DGHData.getEnseignants();
+
+    // Construire les slots : un slot par classe, avec les enseignants de la répartition
+    const classeIds = mod.classeIds || [];
+    const slots = classeIds.map(cid => {
+      // Enseignants affectés à cette classe+discipline spécifiquement
+      const ensIds = Calculs.profsDeClasseDiscipline(anneeData, mod.disciplineId, [cid]);
+      return {
+        type:     'classe',
+        ref:      cid,
+        nomLibre: '',
+        ensIds:   ensIds,
+        frequence:'hebdo'
+      };
+    });
+
+    // Nom suggéré
+    const discNom  = disc ? disc.nom : '';
+    const niveaux  = [...new Set((DGHData.getStructures().filter(s => classeIds.includes(s.id))).map(s => s.niveau))].join('/');
+    const nomSugge = discNom + (niveaux ? ' — ' + niveaux : '') + ' (dédoublement)';
+
+    // Mémoriser le pré-remplissage
+    _prefillData = {
+      nom:          nomSugge,
+      disciplineIds: mod.disciplineId ? [mod.disciplineId] : [],
+      slots,
+      commentaire:  'Importé depuis scénario « ' + scen.nom + ' »'
+    };
+    _editBarretteId = '__new__';
+    _renderBarrettes();
+
+    // Scroll vers le formulaire + focus
+    setTimeout(() => {
+      const form = document.getElementById('edtBarretteForm');
+      if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('edtBarretteNom')?.focus();
+    }, 50);
   }
 
   // ── Formulaire barrette ────────────────────────────────────────────
@@ -256,9 +368,9 @@ const DGHEdt = (() => {
   }
 
   // ── Actions formulaire ─────────────────────────────────────────────
-  function startAddBarrette()  { _editBarretteId = '__new__'; _renderBarrettes(); document.getElementById('edtBarretteNom')?.focus(); }
-  function editBarrette(id)    { _editBarretteId = id;        _renderBarrettes(); document.getElementById('edtBarretteNom')?.focus(); }
-  function cancelBarrette()    { _editBarretteId = null;      _renderBarrettes(); }
+  function startAddBarrette()  { _prefillData = null; _editBarretteId = '__new__'; _renderBarrettes(); setTimeout(() => document.getElementById('edtBarretteNom')?.focus(), 0); }
+  function editBarrette(id)    { _prefillData = null; _editBarretteId = id;        _renderBarrettes(); setTimeout(() => document.getElementById('edtBarretteNom')?.focus(), 0); }
+  function cancelBarrette()    { _prefillData = null; _editBarretteId = null;      _renderBarrettes(); }
   function onBarrDiscChange()  { _refreshSlotsOnly(); }
 
   function barrAddSlot() {
@@ -308,6 +420,7 @@ const DGHEdt = (() => {
     }
     if (id && id !== '__new__') { DGHData.updateBarrette(id, fs); app.toast('Barrette mise à jour.', 'success'); }
     else                        { DGHData.addBarrette(fs);        app.toast('Barrette ajoutée.', 'success'); }
+    _prefillData = null;
     _editBarretteId = null;
     _renderBarrettes();
   }
@@ -688,7 +801,225 @@ const DGHEdt = (() => {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // ONGLET 4 — NOTICE EDT (synthèse consolidée + alertes, v4.8.0)
+  // ONGLET 4 — CONTRAINTES ÉTABLISSEMENT (Sprint 15 / v4.9.0)
+  //   • Organisation de la semaine scolaire
+  //   • Salles spécialisées (déplacées depuis modale Établissement)
+  //   • Heure bleue — recommandation créneau optimal (déplacée)
+  // ══════════════════════════════════════════════════════════════════
+
+  function _renderContraintesEtab() {
+    const el = document.getElementById('edtEtabWrap');
+    if (!el) return;
+
+    const os    = DGHData.getOrganisationSemaine();
+    const salles = DGHData.getSalles();
+    const types  = DGHData.getTypesSalle();
+    const hb     = DGHData.getHeuresBleues();
+    const jours  = DGHData.getJoursSemaine();
+
+    const typeLabel = t => (types.find(x => x.value === t) || {}).label || t;
+
+    // ── Section 1 : Organisation de la semaine ──────────────────────
+    const joursBtns = JOURS_ALL.map(j =>
+      '<label class="edt-jour-toggle' + (os.joursOuvres.includes(j) ? ' active' : '') + '">'
+      + '<input type="checkbox" class="edt-jour-check" data-action="edt-etab-jour-toggle" value="' + j + '"'
+      + (os.joursOuvres.includes(j) ? ' checked' : '') + '> ' + JOUR_LABEL[j] + '</label>'
+    ).join('');
+
+    const org = '<div class="edt-etab-section">'
+      + '<h3 class="edt-synth-h3">Organisation de la semaine</h3>'
+      + '<div class="edt-etab-jours">' + joursBtns + '</div>'
+      + '<div class="edt-etab-options">'
+        + '<label class="mod-classe-label"><input type="checkbox" id="edtMercrediMatin"'
+          + (os.mercrediMatin ? ' checked' : '')
+          + ' data-action="edt-etab-mercredi-toggle"> Mercredi matin ouvert</label>'
+      + '</div>'
+      + '<div class="edt-etab-horaires">'
+        + '<div class="edt-etab-horaire-group">'
+          + '<span class="edt-etab-horaire-label">Matin</span>'
+          + '<input type="time" id="edtDebutMatin" value="' + _esc(os.horaires.debutMatin) + '" data-action="edt-etab-horaire" data-field="debutMatin" />'
+          + '<span class="edt-etab-horaire-sep">→</span>'
+          + '<input type="time" id="edtFinMatin" value="' + _esc(os.horaires.finMatin) + '" data-action="edt-etab-horaire" data-field="finMatin" />'
+        + '</div>'
+        + '<div class="edt-etab-horaire-group">'
+          + '<span class="edt-etab-horaire-label">Après-midi</span>'
+          + '<input type="time" id="edtDebutAprem" value="' + _esc(os.horaires.debutAprem) + '" data-action="edt-etab-horaire" data-field="debutAprem" />'
+          + '<span class="edt-etab-horaire-sep">→</span>'
+          + '<input type="time" id="edtFinAprem" value="' + _esc(os.horaires.finAprem) + '" data-action="edt-etab-horaire" data-field="finAprem" />'
+        + '</div>'
+      + '</div>'
+    + '</div>';
+
+    // ── Section 2 : Salles spécialisées ────────────────────────────
+    const formSalle = _editSalleId ? _htmlFormSalleEdt(types, salles.find(s => s.id === _editSalleId) || null) : '';
+    const visiblesSalles = salles.filter(s => s.id !== _editSalleId);
+    const listSalles = visiblesSalles.length === 0 && !_editSalleId
+      ? '<p class="form-hint">Aucune salle spécialisée renseignée — labo SVT, Physique, Musique, Arts, Techno…</p>'
+      : '<div class="salle-list">' + visiblesSalles.map(s =>
+          '<div class="salle-row">'
+            + '<span class="salle-row-nom">' + _esc(s.nom || typeLabel(s.type)) + '</span>'
+            + '<span class="salle-row-type">' + _esc(typeLabel(s.type)) + '</span>'
+            + '<span class="salle-row-nb">×' + (s.nb || 1) + '</span>'
+            + '<div class="edt-card-actions">'
+              + '<button class="btn-icon" data-action="salle-edit" data-id="' + s.id + '" title="Modifier">✎</button>'
+              + '<button class="btn-icon btn-icon-danger" data-action="salle-delete" data-id="' + s.id + '" title="Supprimer">✕</button>'
+            + '</div>'
+          + '</div>'
+        ).join('') + '</div>';
+
+    const sallesSection = '<div class="edt-etab-section">'
+      + '<h3 class="edt-synth-h3">Salles spécialisées</h3>'
+      + formSalle + listSalles
+    + '</div>';
+
+    // ── Section 3 : Heure bleue ─────────────────────────────────────
+    const creneaux     = hb.creneaux || [];
+    const joursOpts    = jours.map(j => '<option value="' + j.value + '">' + _esc(j.label) + '</option>').join('');
+    const creneauxHtml = creneaux.map((c, i) =>
+      '<div class="hb-creneau-row">'
+        + '<span class="hb-creneau-label">' + _esc((jours.find(j=>j.value===c.jour)||{}).label || c.jour) + ' ' + _esc(c.debut) + '–' + _esc(c.fin) + '</span>'
+        + '<button class="btn-icon btn-icon-danger" data-action="hb-remove-creneau" data-idx="' + i + '" title="Retirer">✕</button>'
+      + '</div>'
+    ).join('') || '<p class="form-hint">Ajoutez 1 à 4 créneaux candidats — l\'application recommandera le meilleur.</p>';
+
+    const hbSection = '<div class="edt-etab-section">'
+      + '<h3 class="edt-synth-h3">Heure bleue <span class="edt-form-hint">— créneau de réunion commun</span></h3>'
+      + '<label class="hb-actif-label"><input type="checkbox" id="inputHBActif"' + (hb.actif ? ' checked' : '') + '> Activer la recherche de créneau bleu</label>'
+      + '<div class="hb-creneaux-add">'
+        + '<select id="inputHBJour">' + joursOpts + '</select>'
+        + '<input type="time" id="inputHBDebut" value="12:00" />'
+        + '<input type="time" id="inputHBFin" value="13:00" />'
+        + '<button class="btn-secondary btn-sm" data-action="hb-add-creneau">+ Ajouter ce créneau</button>'
+      + '</div>'
+      + '<div class="hb-creneaux-list">' + creneauxHtml + '</div>'
+      + '<button class="btn-primary btn-sm" data-action="hb-calculer" ' + (creneaux.length === 0 ? 'disabled' : '') + '>Calculer le créneau optimal</button>'
+      + '<div id="hbResultatWrap"></div>'
+    + '</div>';
+
+    el.innerHTML = org + sallesSection + hbSection;
+  }
+
+  // ── Formulaire salle (dans l'onglet EDT) ──────────────────────────
+  function _htmlFormSalleEdt(types, editData) {
+    const nom = editData?.nom  || '';
+    const typ = editData?.type || 'svt';
+    const nb  = editData?.nb != null ? editData.nb : 1;
+    const opts = types.map(t => '<option value="' + t.value + '"' + (typ === t.value ? ' selected' : '') + '>' + _esc(t.label) + '</option>').join('');
+    const saveAttr = editData ? ' data-id="' + editData.id + '"' : '';
+    return '<div class="edt-form salle-form">'
+      + '<div class="form-row-3">'
+        + '<div class="form-group"><label>Nom</label><input type="text" id="inputSalleNom" value="' + _esc(nom) + '" placeholder="Ex : Labo SVT 1" /></div>'
+        + '<div class="form-group"><label>Type</label><select id="inputSalleType">' + opts + '</select></div>'
+        + '<div class="form-group"><label>Exemplaires disponibles</label><input type="number" id="inputSalleNb" value="' + nb + '" min="1" step="1" /></div>'
+      + '</div>'
+      + '<div class="edt-form-actions">'
+        + '<button class="btn-primary btn-sm" data-action="salle-save"' + saveAttr + '>Enregistrer ✓</button>'
+        + '<button class="btn-secondary btn-sm" data-action="salle-cancel">Annuler</button>'
+      + '</div>'
+    + '</div>';
+  }
+
+  // ── Actions salles (déplacées depuis DGHEtab) ─────────────────────
+  function startAddSalleEdt() { _editSalleId = '__new__'; _renderContraintesEtab(); setTimeout(() => document.getElementById('inputSalleNom')?.focus(), 0); }
+  function editSalleEdt(id)   { _editSalleId = id;        _renderContraintesEtab(); setTimeout(() => document.getElementById('inputSalleNom')?.focus(), 0); }
+  function cancelSalleEdt()   { _editSalleId = null;      _renderContraintesEtab(); }
+
+  function saveSalleEdt(id) {
+    const nom  = document.getElementById('inputSalleNom')?.value.trim() || '';
+    const type = document.getElementById('inputSalleType')?.value || 'svt';
+    const nb   = parseInt(document.getElementById('inputSalleNb')?.value, 10) || 1;
+    const fields = { nom, type, nb };
+    if (id && id !== '__new__') { DGHData.updateSalle(id, fields); app.toast('Salle mise à jour.', 'success'); }
+    else                        { DGHData.addSalle(fields);        app.toast('Salle ajoutée.', 'success'); }
+    _editSalleId = null;
+    _renderContraintesEtab();
+  }
+
+  function deleteSalleEdt(id) {
+    if (!confirm('Supprimer cette salle ?')) return;
+    DGHData.deleteSalle(id);
+    _renderContraintesEtab();
+    app.toast('Salle supprimée.', 'info');
+  }
+
+  // ── Actions organisation semaine ───────────────────────────────────
+  function etabJourToggle(jour, checked) {
+    const os = DGHData.getOrganisationSemaine();
+    let jours = os.joursOuvres.slice();
+    if (checked) { if (!jours.includes(jour)) jours.push(jour); }
+    else         { jours = jours.filter(j => j !== jour); }
+    // Conserver l'ordre naturel
+    const ordre = ['lun','mar','mer','jeu','ven'];
+    jours = ordre.filter(j => jours.includes(j));
+    DGHData.setOrganisationSemaine({ joursOuvres: jours });
+  }
+
+  function etabMercrediToggle(checked) {
+    DGHData.setOrganisationSemaine({ mercrediMatin: !!checked });
+  }
+
+  function etabHoraireChange(field, value) {
+    const os = DGHData.getOrganisationSemaine();
+    const h = Object.assign({}, os.horaires);
+    h[field] = value;
+    DGHData.setOrganisationSemaine({ horaires: h });
+  }
+
+  // ── Actions heure bleue (déplacées depuis DGHEtab) ─────────────────
+  function hbAddCreneau() {
+    const jour  = document.getElementById('inputHBJour')?.value  || 'lun';
+    const debut = document.getElementById('inputHBDebut')?.value || '';
+    const fin   = document.getElementById('inputHBFin')?.value   || '';
+    if (!debut || !fin || debut >= fin) { app.toast('Créneau invalide.', 'warning'); return; }
+    const hb = DGHData.getHeuresBleues();
+    const creneaux = (hb.creneaux || []).slice();
+    if (creneaux.length >= 4) { app.toast('Maximum 4 créneaux candidats.', 'warning'); return; }
+    creneaux.push({ jour, debut, fin });
+    DGHData.setHeuresBleues({ creneaux });
+    _renderContraintesEtab();
+  }
+
+  function hbRemoveCreneau(idx) {
+    const hb = DGHData.getHeuresBleues();
+    const creneaux = (hb.creneaux || []).slice();
+    creneaux.splice(parseInt(idx, 10), 1);
+    DGHData.setHeuresBleues({ creneaux });
+    _renderContraintesEtab();
+  }
+
+  function hbToggleActif(checked) {
+    DGHData.setHeuresBleues({ actif: !!checked });
+  }
+
+  function hbCalculer() {
+    try {
+      const hb = DGHData.getHeuresBleues();
+      const enseignants    = DGHData.getEnseignants();
+      const contraintesEDT = DGHData.getContraintesEDT();
+      const resultats = Calculs.creneauBleuOptimal(
+        enseignants, contraintesEDT.indisponibilites || [], contraintesEDT.contraintesLibres || [], hb.creneaux || []
+      );
+      const wrap = document.getElementById('hbResultatWrap');
+      if (!wrap) return;
+      if (resultats.length === 0) { wrap.innerHTML = '<p class="form-hint">Ajoutez au moins un créneau candidat.</p>'; return; }
+      const ICONES = { optimal: '★ Optimal', correct: 'Correct', deconseille: 'Déconseillé' };
+      wrap.innerHTML = '<table class="hb-result-table"><thead><tr>'
+        + '<th>Créneau</th><th>Disponibles</th><th>Indispo. dures</th><th>Vœux à éviter</th><th>Recommandation</th>'
+        + '</tr></thead><tbody>' + resultats.map(r =>
+          '<tr class="hb-row-' + r.recommandation + '">'
+            + '<td>' + _esc(r.jourLabel) + ' ' + _esc(r.debut) + '–' + _esc(r.fin) + '</td>'
+            + '<td>' + r.nbDisponibles + '/' + r.nbTotal + '</td>'
+            + '<td>' + r.indisponiblesDurs.length + (r.indisponiblesDurs.length ? ' <span class="hb-detail" title="' + _esc(r.indisponiblesDurs.map(x=>x.nom).join(', ')) + '">ⓘ</span>' : '') + '</td>'
+            + '<td>' + r.voeuxSouples.length + '</td>'
+            + '<td class="hb-reco-cell">' + ICONES[r.recommandation] + '</td>'
+          + '</tr>'
+        ).join('') + '</tbody></table>'
+        + '<p class="form-hint hb-limite-hint">Recommandation basée uniquement sur les contraintes saisies — elle ne connaît pas les cours déjà posés dans Index Éducation.</p>';
+    } catch(e) { console.error('[DGHEdt] hbCalculer:', e); app.toast('Erreur lors du calcul.', 'error'); }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // ONGLET 5 — NOTICE EDT (synthèse consolidée + alertes, v4.8.0)
   // ══════════════════════════════════════════════════════════════════
   function _renderSynthese() {
     const el = document.getElementById('edtSyntheseWrap');
@@ -837,10 +1168,15 @@ const DGHEdt = (() => {
   return {
     renderEdt, switchTab,
     startAddBarrette, editBarrette, cancelBarrette, saveBarrette, deleteBarrette,
+    importerDedoublementBarrette,
     onBarrDiscChange, barrAddSlot, barrRemoveSlot, barrSlotTypeChange,
     startAddCoInterv, editCoInterv, cancelCoInterv, saveCoInterv, deleteCoInterv,
     startAddIndispo, editIndispo, cancelIndispo, saveIndispo, deleteIndispo, onIndispoPlageChange,
     startAddClibre, editClibre, cancelClibre, saveClibre, deleteClibre,
+    // Onglet Contraintes établissement (Sprint 15)
+    startAddSalleEdt, editSalleEdt, cancelSalleEdt, saveSalleEdt, deleteSalleEdt,
+    etabJourToggle, etabMercrediToggle, etabHoraireChange,
+    hbAddCreneau, hbRemoveCreneau, hbToggleActif, hbCalculer,
     printSynthese
   };
 

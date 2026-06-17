@@ -4842,3 +4842,201 @@ td.col-grille {
     box-shadow: 0 2px 10px rgba(0,0,0,.3);
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Sprint 15 — Onglet Contraintes établissement (EDT)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Sections de l'onglet ────────────────────────────────────────────── */
+.edt-etab-section {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Jours de la semaine — boutons toggle ────────────────────────────── */
+.edt-etab-jours {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin: .75rem 0 .5rem;
+}
+
+.edt-jour-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: .35em;
+  padding: .35rem .8rem;
+  border-radius: 6px;
+  border: 1.5px solid var(--c-border);
+  background: var(--c-surface2);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  font-size: .82rem;
+  font-weight: 600;
+  user-select: none;
+  transition: background .13s, border-color .13s, color .13s;
+}
+
+.edt-jour-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.edt-jour-toggle.active,
+.edt-jour-toggle:has(input:checked) {
+  background: var(--c-accent-light);
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+
+.edt-jour-toggle:hover {
+  border-color: var(--c-accent);
+}
+
+/* ── Options (mercredi matin) ────────────────────────────────────────── */
+.edt-etab-options {
+  margin: .5rem 0 .9rem;
+  font-size: .85rem;
+}
+
+/* ── Horaires ────────────────────────────────────────────────────────── */
+.edt-etab-horaires {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: .5rem;
+}
+
+.edt-etab-horaire-group {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.edt-etab-horaire-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--c-text-muted);
+  min-width: 70px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.edt-etab-horaire-sep {
+  color: var(--c-text-dim);
+  font-size: .8rem;
+}
+
+.edt-etab-horaire-group input[type="time"] {
+  padding: .3rem .5rem;
+  border: 1px solid var(--c-border);
+  border-radius: 5px;
+  background: var(--c-surface2);
+  color: var(--c-text);
+  font-size: .85rem;
+  width: 98px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Sprint 17 — Bandeau scénario actif dans l'onglet Barrettes (EDT)
+   ══════════════════════════════════════════════════════════════════════ */
+
+.edt-scen-ded-banner {
+  background: linear-gradient(135deg, var(--c-accent-light) 0%, color-mix(in srgb, var(--c-accent-light) 50%, transparent) 100%);
+  border: 2px solid var(--c-accent);
+  border-radius: 10px;
+  padding: .9rem 1.1rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.edt-scen-ded-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .75rem;
+}
+
+.edt-scen-ded-tag {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--c-accent);
+  background: var(--c-surface);
+  border: 1px solid var(--c-accent);
+  border-radius: 99px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.edt-scen-ded-nom {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.edt-scen-ded-hint {
+  font-size: .78rem;
+  color: var(--c-text-muted);
+  margin-left: auto;
+}
+
+.edt-scen-ded-list {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.edt-scen-ded-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  padding: .5rem .85rem;
+  flex-wrap: wrap;
+}
+
+.edt-scen-ded-info {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.edt-scen-ded-disc {
+  font-weight: 700;
+  font-size: .85rem;
+  color: var(--c-text);
+  white-space: nowrap;
+}
+
+.edt-scen-ded-cls {
+  font-size: .82rem;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+.edt-scen-ded-h {
+  font-size: .8rem;
+  color: var(--c-amber);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.edt-scen-ded-ens {
+  font-size: .78rem;
+  color: var(--c-text-dim);
+  font-style: italic;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

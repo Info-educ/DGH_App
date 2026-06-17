@@ -231,11 +231,13 @@
           <button class="pil-tab active" data-action="edt-tab" data-tab="barrettes">⊞ Barrettes</button>
           <button class="pil-tab" data-action="edt-tab" data-tab="cointerv">◉ Co-interventions</button>
           <button class="pil-tab" data-action="edt-tab" data-tab="indispos">⚠ Indisponibilités</button>
+          <button class="pil-tab" data-action="edt-tab" data-tab="etab">🏫 Contraintes étab.</button>
           <button class="pil-tab" data-action="edt-tab" data-tab="notice">▤ Notice EDT</button>
         </div>
         <div class="pil-panel active" id="edt-panel-barrettes"><div id="edtBarrettesWrap"></div></div>
         <div class="pil-panel" id="edt-panel-cointerv"><div id="edtCoIntervWrap"></div></div>
         <div class="pil-panel" id="edt-panel-indispos"><div id="edtIndisposWrap"></div></div>
+        <div class="pil-panel" id="edt-panel-etab"><div id="edtEtabWrap"></div></div>
         <div class="pil-panel" id="edt-panel-notice"><div id="edtSyntheseWrap"></div></div>
       </section>
 
@@ -493,7 +495,6 @@
       <!-- Onglets internes -->
       <div class="modal-tabs">
         <button class="modal-tab active" data-tab="etab">Établissement</button>
-        <button class="modal-tab" data-tab="salles">Salles &amp; Heure bleue</button>
         <button class="modal-tab" data-tab="annees">Années</button>
         <button class="modal-tab" data-tab="danger">⚠ Danger</button>
       </div>
@@ -551,11 +552,6 @@
           </div>
         </div>
 
-        <!-- Onglet 2 : Salles & Heure bleue (v4.8.0) -->
-        <div class="modal-tab-panel is-hidden" id="tab-salles">
-          <div id="salleListWrap"></div>
-          <div id="heureBleueWrap"></div>
-        </div>
 
         <!-- Onglet 3 : Années scolaires -->
         <div class="modal-tab-panel is-hidden" id="tab-annees">

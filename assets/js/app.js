@@ -190,6 +190,7 @@ const app = (() => {
       if (action === 'struct-delete-groupe') { DGHStructures.deleteGroupe(id);                      return; }
       // ── EDT ──
       if (action === 'edt-tab')                  { DGHEdt.switchTab(actionBtn.dataset.tab);         return; }
+      if (action === 'edt-import-ded')           { DGHEdt.importerDedoublementBarrette(actionBtn.dataset.scenId, actionBtn.dataset.modId); return; }
       if (action === 'edt-edit-barrette')         { DGHEdt.editBarrette(id);                        return; }
       if (action === 'edt-save-barrette')         { DGHEdt.saveBarrette(id);                        return; }
       if (action === 'edt-cancel-barrette')       { DGHEdt.cancelBarrette();                         return; }
@@ -232,14 +233,17 @@ const app = (() => {
       if (action === 'rep-mode')              { DGHRepartition.setMode(actionBtn.dataset.mode);  return; }
       if (action === 'rep-del-aff')           { DGHRepartition.deleteAff(actionBtn.dataset.id);  return; }
       // ── Salles & Heure bleue (modale établissement, v4.8.0) ──
-      if (action === 'salle-add')             { DGHEtab.startAddSalle();                          return; }
-      if (action === 'salle-edit')            { DGHEtab.editSalle(id);                            return; }
-      if (action === 'salle-save')            { DGHEtab.saveSalle(id);                            return; }
-      if (action === 'salle-cancel')          { DGHEtab.cancelSalle();                             return; }
-      if (action === 'salle-delete')          { DGHEtab.deleteSalle(id);                          return; }
-      if (action === 'hb-add-creneau')        { DGHEtab.hbAddCreneau();                            return; }
-      if (action === 'hb-remove-creneau')     { DGHEtab.hbRemoveCreneau(actionBtn.dataset.idx);    return; }
-      if (action === 'hb-calculer')           { DGHEtab.hbCalculer();                              return; }
+      if (action === 'salle-add')             { DGHEdt.startAddSalleEdt();                          return; }
+      if (action === 'salle-edit')            { DGHEdt.editSalleEdt(id);                            return; }
+      if (action === 'salle-save')            { DGHEdt.saveSalleEdt(id);                            return; }
+      if (action === 'salle-cancel')          { DGHEdt.cancelSalleEdt();                            return; }
+      if (action === 'salle-delete')          { DGHEdt.deleteSalleEdt(id);                          return; }
+      if (action === 'hb-add-creneau')        { DGHEdt.hbAddCreneau();                              return; }
+      if (action === 'hb-remove-creneau')     { DGHEdt.hbRemoveCreneau(actionBtn.dataset.idx);      return; }
+      if (action === 'hb-calculer')           { DGHEdt.hbCalculer();                                return; }
+      if (action === 'edt-etab-jour-toggle')  { DGHEdt.etabJourToggle(actionBtn.value, actionBtn.checked); return; }
+      if (action === 'edt-etab-mercredi-toggle') { DGHEdt.etabMercrediToggle(actionBtn.checked);    return; }
+      if (action === 'edt-etab-horaire')      { DGHEdt.etabHoraireChange(actionBtn.dataset.field, actionBtn.value); return; }
     }
 
     // btn-toggle-gc (généré dynamiquement) — délégué ici
@@ -261,6 +265,7 @@ const app = (() => {
     if (e.target.closest('#btnDesactiverScen')) { DGHPilotage.desactiverScenario();  return; }
     if (e.target.closest('#btnAddGroupe'))      { DGHStructures.startAddGroupe();    return; }
     if (e.target.closest('#btnAddBarrette'))    { DGHEdt.startAddBarrette();         return; }
+    if (e.target.closest('#btnAddSalleEdt'))    { DGHEdt.startAddSalleEdt();         return; }
     if (e.target.closest('#btnAddCoInterv'))    { DGHEdt.startAddCoInterv();         return; }
     if (e.target.closest('#btnAddIndispo'))     { DGHEdt.startAddIndispo();          return; }
     if (e.target.closest('#btnAddClibre'))      { DGHEdt.startAddClibre();           return; }
@@ -379,7 +384,7 @@ const app = (() => {
     if (e.target.classList.contains('grille-input'))      { DGHDotation.handleGrilleInput(e.target); return; }
     if (e.target.id==='inputEnvHP'||e.target.id==='inputEnvHSA') { DGHDotation.saveEnveloppe();     return; }
     if (e.target.id==='modalYearSelect')                  { DGHEtab.onModalYearChange(e.target.value); return; }
-    if (e.target.id==='inputHBActif')                     { DGHEtab.hbToggleActif(e.target.checked);   return; }
+    if (e.target.id==='inputHBActif')                     { DGHEdt.hbToggleActif(e.target.checked);    return; }
     if (e.target.classList.contains('classe-check'))      { DGHDotation.updateGCEffectif();           return; }
     if (e.target.classList.contains('hpc-classe-check'))  { DGHHPC.updateHPCEffectif();               return; }
     if (e.target.id==='inputEnsGrade'||e.target.id==='inputEnsOrsManuel'||e.target.id==='inputEnsHeures') { DGHEnseignants.updateOrsPreview(); return; }
