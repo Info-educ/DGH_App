@@ -137,6 +137,7 @@ const app = (() => {
       confirmEns:         DGHEnseignants.closeConfirmEns,
       confirmEnsAll:      DGHEnseignants.closeConfirmAll,
       modalSelEns:        DGHEnseignants.closeModalSelEns,
+      modalGenBarrettes:  DGHEdt.fermerModalGenBarrettes,
       modalMission:       DGHMissions.closeModal,
       confirmMission:     DGHMissions.closeConfirmMission
     };
@@ -190,7 +191,13 @@ const app = (() => {
       if (action === 'struct-delete-groupe') { DGHStructures.deleteGroupe(id);                      return; }
       // ── EDT ──
       if (action === 'edt-tab')                  { DGHEdt.switchTab(actionBtn.dataset.tab);         return; }
+      if (action === 'kanban-drag-start')       { DGHEdt.kanbanDragStart(actionBtn.dataset.barretteId, actionBtn.dataset.slotIdx); return; }
+      if (action === 'kanban-drop')             { DGHEdt.kanbanDrop(actionBtn.dataset.barretteId, actionBtn.dataset.slotIdx);      return; }
       if (action === 'edt-import-ded')           { DGHEdt.importerDedoublementBarrette(actionBtn.dataset.scenId, actionBtn.dataset.modId); return; }
+      if (action === 'grille-cell-toggle')       { DGHEdt.grilleToggleCell(actionBtn.dataset.ensId, actionBtn.dataset.key); return; }
+      if (action === 'grille-ens-reset')         { DGHEdt.grilleEnsReset(actionBtn.dataset.ensId); return; }
+      if (action === 'grille-hb-toggle')         { DGHEdt.grilleHbToggle(actionBtn.dataset.key); return; }
+      if (action === 'hb-reset-grille')          { DGHEdt.hbResetGrille(); return; }
       if (action === 'edt-edit-barrette')         { DGHEdt.editBarrette(id);                        return; }
       if (action === 'edt-save-barrette')         { DGHEdt.saveBarrette(id);                        return; }
       if (action === 'edt-cancel-barrette')       { DGHEdt.cancelBarrette();                         return; }
@@ -264,9 +271,13 @@ const app = (() => {
     if (e.target.closest('#btnDesactiverScen')) { DGHPilotage.desactiverScenario();  return; }
     if (e.target.closest('#btnAddGroupe'))      { DGHStructures.startAddGroupe();    return; }
     if (e.target.closest('#btnAddBarrette'))    { DGHEdt.startAddBarrette();         return; }
+    if (e.target.closest('#btnGenBarrettes'))   { DGHEdt.ouvrirModalGenBarrettes();  return; }
     if (e.target.closest('#btnAddCoInterv'))    { DGHEdt.startAddCoInterv();         return; }
     if (e.target.closest('#btnAddIndispo'))     { DGHEdt.startAddIndispo();          return; }
     if (e.target.closest('#btnAddClibre'))      { DGHEdt.startAddClibre();           return; }
+    if (e.target.closest('#modalGenBarrettesClose'))  { DGHEdt.fermerModalGenBarrettes(); return; }
+    if (e.target.closest('#modalGenBarrettesCancel')) { DGHEdt.fermerModalGenBarrettes(); return; }
+    if (e.target.closest('#modalGenBarrettesSave'))   { DGHEdt.genererBarrettesGroupees(); return; }
     if (e.target.closest('#btnPrintEdt'))       { DGHEdt.printSynthese();            return; }
     if (e.target.closest('#btnAddMission'))     { DGHMissions.openModal(null);         return; }
     if (e.target.closest('#btnAddDiv'))       { DGHStructures.openModalDiv(null);    return; }
@@ -288,7 +299,7 @@ const app = (() => {
     if (e.target.closest('#btnEtab'))         { DGHEtab.openModal();                      return; }
 
     // Fermeture modales par clic overlay
-    const overlays = ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice','confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee','modalEns','modalCSV','confirmEns','confirmEnsAll','modalSelEns','modalMission','confirmMission'];
+    const overlays = ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice','confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee','modalEns','modalCSV','confirmEns','confirmEnsAll','modalSelEns','modalMission','confirmMission','modalGenBarrettes'];
     for (const oid of overlays) {
       if (e.target === document.getElementById(oid)) { _closeModalById(oid); return; }
     }
@@ -398,6 +409,7 @@ const app = (() => {
     if (e.target.id === 'impactScenSelect')               { DGHPilotage.setImpactScen(e.target.value); return; }
     if (e.target.id === 'edtBarretteDiscs')               { DGHEdt.onBarrDiscChange(); return; }
     if (e.target.classList.contains('edt-slot-type-sel')) { DGHEdt.barrSlotTypeChange(); return; }
+    if (e.target.id === 'grilleEnsSelect')                { DGHEdt.grilleEnsChange(e.target.value); return; }
     if (e.target.dataset.action === 'edt-indispo-plage-change') { DGHEdt.onIndispoPlageChange(); return; }
     if (e.target.id === 'inputMissionHeures')              { DGHMissions.updateHHebdo(); return; }
     if (e.target.id === 'inputMissionEns')                 { DGHMissions.updateEnsInfo(); return; }
@@ -425,6 +437,11 @@ const app = (() => {
   }
 
   // ── DÉLÉGATION GLOBALE BLUR (capture) ────────────────────────────
+  function _onGlobalDragOver(e) {
+    const drop = e.target.closest('[data-action="kanban-drop"]');
+    if (drop) DGHEdt.kanbanDragOver(e, drop.dataset.barretteId, drop.dataset.slotIdx);
+  }
+
   function _onGlobalBlur(e) {
     if (e.target.id==='inputEnvHP'||e.target.id==='inputEnvHSA') DGHDotation.saveEnveloppe();
     // Edition inline texte enseignants (blur = sauvegarde)
@@ -442,6 +459,8 @@ const app = (() => {
     document.addEventListener('change',   _onGlobalChange);
     document.addEventListener('dblclick', _onGlobalDblClick);
     document.addEventListener('blur',     _onGlobalBlur, true);
+    document.addEventListener('dragover',  _onGlobalDragOver);
+    document.addEventListener('dragend',   () => DGHEdt.kanbanDragEnd());
 
     document.addEventListener('input', e => {
       if (e.target.id==='inputDivNom'||e.target.id==='inputDivDup') DGHStructures.updateDupPreview();

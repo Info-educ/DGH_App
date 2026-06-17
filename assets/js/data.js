@@ -87,7 +87,8 @@ const DGHData = (() => {
   }
 
   function _contraintesVides() {
-    return { barrettes: [], coInterventions: [], indisponibilites: [], contraintesLibres: [] };
+    return { barrettes: [], coInterventions: [], indisponibilites: [], contraintesLibres: [],
+             grillesIndispo: {}, grilleHeureBleue: {} };
   }
 
   function _annee(annee) {
@@ -282,6 +283,7 @@ const DGHData = (() => {
         horaires: { debutMatin: '08:00', finMatin: '12:00', debutAprem: '13:00', finAprem: '17:00' }
       };
     }
+    if (!_data.etablissement.grilleHeureBleue || typeof _data.etablissement.grilleHeureBleue !== 'object') _data.etablissement.grilleHeureBleue = { creneaux: {} };
     const os = _data.etablissement.organisationSemaine;
     if (!Array.isArray(os.joursOuvres))   os.joursOuvres  = ['lun','mar','mer','jeu','ven'];
     if (os.mercrediMatin === undefined)   os.mercrediMatin = true;
@@ -295,6 +297,9 @@ const DGHData = (() => {
     Object.values(_data.annees).forEach(ann => {
       if (!ann.contraintesEDT || typeof ann.contraintesEDT !== 'object') ann.contraintesEDT = _contraintesVides();
       if (!Array.isArray(ann.contraintesEDT.indisponibilites))   ann.contraintesEDT.indisponibilites   = [];
+      // Migration v4.9.3 : grilles indispo et heure bleue (planning visuel)
+      if (!ann.contraintesEDT.grillesIndispo  || typeof ann.contraintesEDT.grillesIndispo  !== 'object') ann.contraintesEDT.grillesIndispo  = {};
+      if (!ann.contraintesEDT.grilleHeureBleue || typeof ann.contraintesEDT.grilleHeureBleue !== 'object') ann.contraintesEDT.grilleHeureBleue = {};
       if (!Array.isArray(ann.contraintesEDT.contraintesLibres)) ann.contraintesEDT.contraintesLibres = [];
       ann.contraintesEDT.indisponibilites.forEach(ind => {
         if (!ind.type)  ind.type  = 'dure';
@@ -310,7 +315,11 @@ const DGHData = (() => {
         if (!cl.commentaire) cl.commentaire = '';
       });
       (ann.contraintesEDT.barrettes || []).forEach(b => {
-        (b.slots || []).forEach(s => { if (!s.frequence) s.frequence = 'hebdo'; });
+        (b.slots || []).forEach(s => {
+          if (!s.frequence) s.frequence = 'hebdo';
+          // Migration v4.9.4 : discId par slot
+          if (s.discId === undefined) s.discId = (b.disciplineIds && b.disciplineIds[0]) ? b.disciplineIds[0] : null;
+        });
       });
     });
     _data._meta.version = VERSION;
@@ -1033,7 +1042,8 @@ const DGHData = (() => {
       ref:       s.ref || '',
       nomLibre:  s.nomLibre || '',
       ensIds:    Array.isArray(s.ensIds) ? s.ensIds.slice() : [],
-      frequence: s.frequence || 'hebdo'   // 'hebdo' | 'semaine-A' | 'semaine-B'
+      frequence: s.frequence || 'hebdo',   // 'hebdo' | 'semaine-A' | 'semaine-B'
+      discId:    s.discId || null           // discipline propre au slot (v4.9.4)
     })) : [];
   }
 
@@ -1163,6 +1173,37 @@ const DGHData = (() => {
     c.indisponibilites = c.indisponibilites.filter(i => i.id !== id);
     if (c.indisponibilites.length < before) { save(); return true; }
     return false;
+  }
+
+  /**
+   * Grille hebdomadaire d'indisponibilité d'un enseignant.
+   * Stockée sous contraintesEDT.grillesIndispo[ensId] = { creneaux: { 'lun-08': 'dure'|'voeu'|null, ... } }
+   */
+  function getGrilleIndispo(ensId) {
+    const c = getContraintesEDT();
+    if (!c.grillesIndispo) c.grillesIndispo = {};
+    return c.grillesIndispo[ensId] || { creneaux: {} };
+  }
+
+  function setGrilleIndispo(ensId, creneaux) {
+    const ann = getAnnee();
+    if (!ann.contraintesEDT.grillesIndispo) ann.contraintesEDT.grillesIndispo = {};
+    ann.contraintesEDT.grillesIndispo[ensId] = { creneaux };
+    save();
+  }
+
+  /**
+   * Grille heure bleue établissement.
+   * Stockée sous etablissement.grilleHeureBleue = { creneaux: { 'lun-08': 'candidat'|null, ... } }
+   */
+  function getGrilleHeureBleue() {
+    return _data.etablissement.grilleHeureBleue || { creneaux: {} };
+  }
+
+  function setGrilleHeureBleue(creneaux) {
+    if (!_data.etablissement.grilleHeureBleue) _data.etablissement.grilleHeureBleue = {};
+    _data.etablissement.grilleHeureBleue.creneaux = creneaux;
+    save();
   }
 
   // ── Contraintes libres (v4.8.0) ───────────────────────────────────

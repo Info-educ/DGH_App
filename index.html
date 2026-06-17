@@ -953,5 +953,23 @@
   <script src="assets/js/modules/instances.js?v=4.8.0"></script>
   <script src="assets/js/app.js?v=4.8.0"></script>
   <script src="assets/js/tutorial.js?v=4.8.0"></script>
+
+  <!-- Modale génération groupée de barrettes (Sprint 18) -->
+  <div class="modal-overlay" id="modalGenBarrettes" role="dialog" aria-modal="true">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2>Générer des barrettes depuis le scénario actif</h2>
+        <button class="modal-close" id="modalGenBarrettesClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="modalGenBarrettesBody"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="modalGenBarrettesCancel">Annuler</button>
+        <button class="btn-primary" id="modalGenBarrettesSave">⚡ Générer les barrettes sélectionnées</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
