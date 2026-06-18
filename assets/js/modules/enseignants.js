@@ -17,6 +17,8 @@ const DGHEnseignants = (() => {
   let _pendingDeleteId = null;
   let _csvLignes       = [];
   let _vueMode         = 'liste'; // 'liste' | 'discipline' | 'hpc'
+  let _sortKey         = 'nom';   // 'nom' | 'discipline' | 'ors' | 'hsa' | 'hpdisc'
+  let _sortDir         = 1;       // 1 = asc, -1 = desc
   let _discOpen        = new Set(); // disciplines dépliées dans vue disc
   let _hpcOpen         = new Set(); // catégories HPC dépliées
 
@@ -25,6 +27,8 @@ const DGHEnseignants = (() => {
     { value: 'agrege',      label: 'Agrégé',     ors: 15 },
     { value: 'plp',         label: 'PLP',         ors: 17 },
     { value: 'eps',         label: 'Prof. EPS',   ors: 20 },
+    { value: 'pstg',        label: 'PSTG',        ors: 18 },
+    { value: 'fstg',        label: 'FSTG',        ors: 18 },
     { value: 'contractuel', label: 'Contractuel', ors: 0 }
   ];
   const STATUTS = [
@@ -98,16 +102,37 @@ const DGHEnseignants = (() => {
       return '<option value="' + g.value + '">' + g.label + labelORS + '</option>';
     }).join('');
     const statutOpts = STATUTS.map(s => '<option value="' + s.value + '">' + s.label + '</option>').join('');
+
+    // Tri : copie triée selon _sortKey / _sortDir (le service est recalculé pour les clés HP/HSA/ORS)
+    const sorted = enseignants.slice().sort((a, b) => {
+      const sa = Calculs.serviceTotalEnseignant(a, hpcs);
+      const sb = Calculs.serviceTotalEnseignant(b, hpcs);
+      let va, vb;
+      switch (_sortKey) {
+        case 'discipline': va = (a.disciplinePrincipale||'').toLowerCase(); vb = (b.disciplinePrincipale||'').toLowerCase(); break;
+        case 'ors':        va = sa.ors||0;     vb = sb.ors||0;     break;
+        case 'hsa':        va = sa.hsaTotal||0; vb = sb.hsaTotal||0; break;
+        case 'hpdisc':     va = sa.hpDisc||0;  vb = sb.hpDisc||0;  break;
+        default:           va = (a.nom||'').toLowerCase(); vb = (b.nom||'').toLowerCase();
+      }
+      if (typeof va === 'string') { const c = va.localeCompare(vb, 'fr'); return c !== 0 ? c * _sortDir : 0; }
+      return (va - vb) * _sortDir;
+    });
+
+    const arrow = k => _sortKey === k ? (_sortDir === 1 ? ' ▲' : ' ▼') : '';
+    const sortCls = 'ens-th-sort';
     let html = '<table class="ens-table ens-table-service"><thead><tr>'
-      + '<th>Nom</th><th>Prénom</th><th>Grade</th><th>Statut</th><th>Discipline(s)</th>'
-      + '<th class="ens-col-num" title="ORS réglementaire — éditable">ORS</th>'
-      + '<th class="ens-col-num ens-th-hp" title="HP disciplines uniquement">HP disc.</th>'
+      + '<th class="' + sortCls + '" data-action="ens-sort" data-key="nom" title="Trier par nom">Nom' + arrow('nom') + '</th>'
+      + '<th>Prénom</th><th>Grade</th><th>Statut</th>'
+      + '<th class="' + sortCls + '" data-action="ens-sort" data-key="discipline" title="Trier par discipline">Discipline(s)' + arrow('discipline') + '</th>'
+      + '<th class="ens-col-num ' + sortCls + '" data-action="ens-sort" data-key="ors" title="Trier par ORS">ORS' + arrow('ors') + '</th>'
+      + '<th class="ens-col-num ens-th-hp ' + sortCls + '" data-action="ens-sort" data-key="hpdisc" title="Trier par HP disc.">HP disc.' + arrow('hpdisc') + '</th>'
       + '<th class="ens-col-num ens-th-hpc" title="HPC typées HP — déduites de l’ORS">HPC-HP</th>'
-      + '<th class="ens-col-num ens-th-hsa" title="HSA : survoler pour le détail">HSA</th>'
+      + '<th class="ens-col-num ens-th-hsa ' + sortCls + '" data-action="ens-sort" data-key="hsa" title="Trier par HSA">HSA' + arrow('hsa') + '</th>'
       + '<th class="ens-col-num ens-th-dispo" title="Heures disponibles pour disciplines = ORS − HPC-HP">Dispo.</th>'
       + '<th class="ens-col-actions">Actions</th>'
       + '</tr></thead><tbody>';
-    enseignants.forEach(ens => {
+    sorted.forEach(ens => {
       const sv    = Calculs.serviceTotalEnseignant(ens, hpcs);
       const gOpts = gradeOpts.replace('value="' + ens.grade + '"', 'value="' + ens.grade + '" selected');
       const sOpts = statutOpts.replace('value="' + ens.statut + '"', 'value="' + ens.statut + '" selected');
@@ -725,6 +750,15 @@ const DGHEnseignants = (() => {
   function setVueDisc()  { _vueMode = 'discipline'; renderEnseignants(); }
   function setVueHPC()   { _vueMode = 'hpc';         renderEnseignants(); }
 
+  // Tri du tableau : re-clic sur la même colonne inverse le sens
+  function setSort(key) {
+    const valid = ['nom','discipline','ors','hsa','hpdisc'];
+    if (!valid.includes(key)) return;
+    if (_sortKey === key) _sortDir = -_sortDir;
+    else { _sortKey = key; _sortDir = 1; }
+    renderEnseignants();
+  }
+
   function toggleDiscBloc(discNom) {
     if (_discOpen.has(discNom)) _discOpen.delete(discNom);
     else                        _discOpen.add(discNom);
@@ -1144,7 +1178,7 @@ const DGHEnseignants = (() => {
   // ── API PUBLIQUE ────────────────────────────────────────────────────────
   return {
     renderEnseignants,
-    setVueListe, setVueDisc, setVueHPC,
+    setVueListe, setVueDisc, setVueHPC, setSort,
     toggleDiscBloc, toggleAllDiscs,
     toggleHPCCat, toggleAllHPC,
     openModalAffecterHPC, affecterEnsHPCDirect, retirerEnsHPC,

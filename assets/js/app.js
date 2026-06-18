@@ -18,11 +18,14 @@
 
 const app = (() => {
 
+  let _mousedownOnOverlay = false; // garde anti-fermeture parasite des modales
+
   const VIEWS = {
     dashboard:   'Tableau de bord',
     structures:  'Structures',
     dotation:    'Dotation DGH',
     equipe:      'Équipe & HP/HSA',
+    besoins:     'Besoins & apports',
     hpc:         'H. péda. complémentaires',
     enseignants: 'Équipe pédagogique',
     repartition: 'Répartition de service',
@@ -75,6 +78,7 @@ const app = (() => {
     if (realViewId === 'alertes')    DGHEtab.renderAlertes();
     if (realViewId === 'dotation')   DGHDotation.renderDotation();
     if (realViewId === 'equipe')     DGHEquipe.renderEquipe();
+    if (realViewId === 'besoins')    DGHBesoins.renderBesoins();
     if (realViewId === 'hpc')        DGHHPC.renderHPC();
     if (realViewId === 'enseignants') DGHEnseignants.renderEnseignants();
     if (realViewId === 'repartition') DGHRepartition.renderRepartition();
@@ -226,7 +230,10 @@ const app = (() => {
       if (action === 'inst-export-csv') { DGHInstances.exporterCSV();                     return; }
       if (action === 'dot-export-csv')  { DGHDotation.exporterCSV();                      return; }
       if (action === 'equipe-export-csv') { DGHEquipe.exporterCSV();                      return; }
+      if (action === 'besoins-export-csv') { DGHBesoins.exporterCSV();                    return; }
+      if (action === 'ba-toggle')       { DGHBesoins.toggle(actionBtn.dataset.disc);     return; }
       if (action === 'open-ens-modal')  { DGHEnseignants.openModalEns(null);              return; }
+      if (action === 'ens-sort')        { DGHEnseignants.setSort(actionBtn.dataset.key);  return; }
       if (action === 'inst-sort-serv')  { DGHInstances.sortServices(actionBtn.dataset.col); return; }
       // ── Historique ──
       if (action === 'hist-select-gauche')    { DGHHistorique.selectGauche(actionBtn.value || actionBtn.dataset.annee); return; }
@@ -303,10 +310,13 @@ const app = (() => {
     if (e.target.closest('#btnCSVConfirm'))   { DGHEnseignants.confirmImportCSV();        return; }
     if (e.target.closest('#btnEtab'))         { DGHEtab.openModal();                      return; }
 
-    // Fermeture modales par clic overlay
+    // Fermeture modales par clic overlay — uniquement si le geste a DÉBUTÉ sur l'overlay
     const overlays = ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice','confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee','modalEns','modalCSV','confirmEns','confirmEnsAll','modalSelEns','modalMission','confirmMission','modalGenBarrettes'];
     for (const oid of overlays) {
-      if (e.target === document.getElementById(oid)) { _closeModalById(oid); return; }
+      if (e.target === document.getElementById(oid)) {
+        if (!_mousedownOnOverlay) return; // clic relâché sur overlay mais initié ailleurs → ignorer
+        _closeModalById(oid); return;
+      }
     }
 
     if (e.target.closest('#modalClose'))           { DGHEtab.closeModal();                    return; }
@@ -401,6 +411,7 @@ const app = (() => {
     if (e.target.id==='inputHBActif')                     { DGHEdt.hbToggleActif(e.target.checked);    return; }
     if (e.target.classList.contains('classe-check'))      { DGHDotation.updateGCEffectif();           return; }
     if (e.target.classList.contains('hpc-classe-check'))  { DGHHPC.updateHPCEffectif();               return; }
+    if (e.target.classList.contains('ba-hsa-input'))      { DGHBesoins.saveHsa(e.target);             return; }
     if (e.target.id==='inputEnsGrade'||e.target.id==='inputEnsOrsManuel'||e.target.id==='inputEnsHeures'||e.target.id==='inputEnsStatut'||e.target.id==='inputEnsVolumeBMP') { DGHEnseignants.updateOrsPreview(); return; }
     if (e.target.id==='csvFileInput') { DGHEnseignants.handleCSVFile(e.target.files[0]); return; }
     // Edition inline tableau enseignants (selects -> change immediat)
@@ -467,6 +478,13 @@ const app = (() => {
     document.addEventListener('blur',     _onGlobalBlur, true);
     document.addEventListener('dragover',  _onGlobalDragOver);
     document.addEventListener('dragend',   () => DGHEdt.kanbanDragEnd());
+    // Fermeture overlay : on ne ferme que si le clic A COMMENCÉ sur l'overlay
+    // lui-même. Évite les fermetures parasites quand on relâche la souris sur
+    // l'overlay après avoir sélectionné une valeur dans un <select> ou glissé
+    // depuis un champ interne.
+    document.addEventListener('mousedown', e => {
+      _mousedownOnOverlay = e.target.classList && e.target.classList.contains('modal-overlay');
+    }, true);
 
     document.addEventListener('input', e => {
       if (e.target.id==='inputDivNom'||e.target.id==='inputDivDup') DGHStructures.updateDupPreview();

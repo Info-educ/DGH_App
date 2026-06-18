@@ -5,6 +5,35 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.9.7 — Sprint 19.1 : Besoins & apports, tri, grades stagiaires, fix modales (2026-06-18)
+
+### Ajouté
+- **Nouvel onglet « Besoins & apports établissement »** (Cadre de l'année).
+  Par discipline : besoin (répartition × divisions, + scénario actif si présent)
+  vs apport HP de l'équipe, HSA dans une colonne séparée, écart chiffré pour
+  calibrer les BMP. **HSA absorbées** saisissables par discipline, avec détail
+  dépliable par enseignant de la discipline. Export Excel.
+  Calcul : `Calculs.bilanBesoinsApports`. Persistance : `ann.hsaAbsorbees`.
+- **Grades PSTG et FSTG** (professeur / fonctionnaire stagiaire), ORS 18 h par
+  défaut, éditable. Ajoutés dans `calculs.js`, `enseignants.js` et la fiche.
+- **Tri du tableau Équipe pédagogique** (vue par enseignant) : colonnes Nom,
+  Discipline, ORS, HP disc. et HSA cliquables — re-clic = sens inverse.
+
+### Corrigé
+- **Boîtes de dialogue qui se fermaient au clic.** Sélectionner une valeur dans
+  un menu déroulant pouvait fermer la modale si la souris était relâchée sur le
+  fond. La fermeture par fond ne se déclenche désormais que si le geste a
+  *débuté* sur le fond (suivi du `mousedown`).
+
+### Schéma
+- Année : ajout de `hsaAbsorbees` ({ [disciplineId]: { total, profs } }).
+  Migration automatique (v4.9.7).
+
+### À venir (noté)
+- Vue Équipe : afficher réel + simulé côte à côte quand un scénario est actif.
+
+---
+
 ## v4.9.6 — Sprint 19 : bascule automatique HP / HSA et vue Équipe (2026-06-18)
 
 ### Contexte

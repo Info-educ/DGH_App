@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DGH App — Pilotage de la Dotation Globale Horaire</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=4.9.6" />
+  <link rel="stylesheet" href="assets/css/style.css?v=4.9.7" />
 </head>
 <body>
 
@@ -34,6 +34,7 @@
       <li class="nav-item" data-view="structures"><span class="nav-icon">⊞</span><span class="nav-label">Structures</span></li>
       <li class="nav-item" data-view="dotation"><span class="nav-icon">◎</span><span class="nav-label">Dotation DGH</span></li>
       <li class="nav-item" data-view="equipe"><span class="nav-icon">◉</span><span class="nav-label">Équipe & HP/HSA</span></li>
+      <li class="nav-item" data-view="besoins"><span class="nav-icon">⊜</span><span class="nav-label">Besoins & apports</span></li>
       <li class="nav-item" data-view="hpc"><span class="nav-icon">◈</span><span class="nav-label">H. péda. complémentaires</span></li>
 
       <!-- PILOTER -->
@@ -65,7 +66,7 @@
       <input type="file" id="fileImport" accept=".json" style="display:none" />
     </div>
     <div class="sidebar-footer">
-      <span>v4.9.6</span>
+      <span>v4.9.7</span>
       <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -436,6 +437,34 @@
         <div class="eq-table-wrap" id="eq-table-wrap"></div>
 
         <p class="dot-footnote">Seuils ORS de référence : Agrégé 15 h · Certifié / PLP (CPC) 18 h · PLP 17 h · Prof. EPS 20 h (+3 h AS). Pour un BMP, le seuil est le volume du bloc implanté. Toute ORS dérogatoire doit être motivée (mission, décharge, temps partiel) — le motif est repris dans l\'export TRM.</p>
+      </section>
+
+      <!-- ══ BESOINS & APPORTS ÉTABLISSEMENT ════════════════════════ -->
+      <section class="view" id="view-besoins">
+        <div class="view-header">
+          <div class="view-header-row">
+            <div>
+              <h1 class="view-title">Besoins & apports établissement</h1>
+              <p class="view-subtitle">Par discipline : besoin (répartition × divisions) vs apport de l\'équipe — pour calibrer les BMP et tracer les HSA absorbées</p>
+            </div>
+            <div class="view-header-actions">
+              <button class="btn-secondary" data-action="besoins-export-csv" title="Exporter (Excel)">⬇ Exporter Excel</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="is-hidden ba-scen-banner" id="baScenBanner"></div>
+
+        <div class="ba-kpi-grid">
+          <div class="ba-kpi"><div class="ba-kpi-label">Besoin total</div><div class="ba-kpi-value" id="ba-kpi-besoin">— h</div><div class="ba-kpi-sub">répartition × divisions</div></div>
+          <div class="ba-kpi ba-kpi-hp"><div class="ba-kpi-label">Apport HP équipe</div><div class="ba-kpi-value" id="ba-kpi-hp">— h</div><div class="ba-kpi-sub">heures-poste couvertes</div></div>
+          <div class="ba-kpi ba-kpi-hsa"><div class="ba-kpi-label">HSA équipe</div><div class="ba-kpi-value" id="ba-kpi-hsa">— h</div><div class="ba-kpi-sub">hors heures-poste</div></div>
+          <div class="ba-kpi ba-kpi-ecart"><div class="ba-kpi-label">Écart (besoin − HP)</div><div class="ba-kpi-value" id="ba-kpi-ecart">— h</div><div class="ba-kpi-sub">à couvrir (BMP, HSA…)</div></div>
+        </div>
+
+        <div class="ba-table-wrap" id="ba-table-wrap"></div>
+
+        <p class="dot-footnote">L\'écart positif indique un besoin non couvert par les heures-poste de l\'équipe : à arbitrer en BMP, HSA ou compléments de service. Les HSA absorbées se saisissent par discipline (et se détaillent par enseignant en dépliant la ligne).</p>
       </section>
 
       <!-- ══ HEURES PÉDAGOGIQUES COMPLÉMENTAIRES ═════════════════════ -->
@@ -837,6 +866,8 @@
               <option value="agrege">Agrégé</option>
               <option value="plp">PLP</option>
               <option value="eps">Prof. EPS</option>
+              <option value="pstg">PSTG (prof. stagiaire)</option>
+              <option value="fstg">FSTG (fonctionnaire stagiaire)</option>
               <option value="contractuel">Contractuel</option>
             </select>
           </div>
@@ -1010,23 +1041,24 @@
     </div>
   </div>
 
-  <script src="assets/js/data.js?v=4.9.6"></script>
-  <script src="assets/js/calculs.js?v=4.9.6"></script>
-  <script src="assets/js/modules/dashboard.js?v=4.9.6"></script>
-  <script src="assets/js/modules/structures.js?v=4.9.6"></script>
-  <script src="assets/js/modules/dotation.js?v=4.9.6"></script>
-  <script src="assets/js/modules/equipe.js?v=4.9.6"></script>
-  <script src="assets/js/modules/hpc.js?v=4.9.6"></script>
-  <script src="assets/js/modules/etab.js?v=4.9.6"></script>
-  <script src="assets/js/modules/enseignants.js?v=4.9.6"></script>
-  <script src="assets/js/modules/repartition.js?v=4.9.6"></script>
-  <script src="assets/js/modules/pilotage.js?v=4.9.6"></script>
-  <script src="assets/js/modules/edt.js?v=4.9.6"></script>
-  <script src="assets/js/modules/historique.js?v=4.9.6"></script>
-  <script src="assets/js/modules/missions.js?v=4.9.6"></script>
-  <script src="assets/js/modules/instances.js?v=4.9.6"></script>
-  <script src="assets/js/app.js?v=4.9.6"></script>
-  <script src="assets/js/tutorial.js?v=4.9.6"></script>
+  <script src="assets/js/data.js?v=4.9.7"></script>
+  <script src="assets/js/calculs.js?v=4.9.7"></script>
+  <script src="assets/js/modules/dashboard.js?v=4.9.7"></script>
+  <script src="assets/js/modules/structures.js?v=4.9.7"></script>
+  <script src="assets/js/modules/dotation.js?v=4.9.7"></script>
+  <script src="assets/js/modules/equipe.js?v=4.9.7"></script>
+  <script src="assets/js/modules/besoins.js?v=4.9.7"></script>
+  <script src="assets/js/modules/hpc.js?v=4.9.7"></script>
+  <script src="assets/js/modules/etab.js?v=4.9.7"></script>
+  <script src="assets/js/modules/enseignants.js?v=4.9.7"></script>
+  <script src="assets/js/modules/repartition.js?v=4.9.7"></script>
+  <script src="assets/js/modules/pilotage.js?v=4.9.7"></script>
+  <script src="assets/js/modules/edt.js?v=4.9.7"></script>
+  <script src="assets/js/modules/historique.js?v=4.9.7"></script>
+  <script src="assets/js/modules/missions.js?v=4.9.7"></script>
+  <script src="assets/js/modules/instances.js?v=4.9.7"></script>
+  <script src="assets/js/app.js?v=4.9.7"></script>
+  <script src="assets/js/tutorial.js?v=4.9.7"></script>
 
   <!-- Modale génération groupée de barrettes (Sprint 18) -->
   <div class="modal-overlay" id="modalGenBarrettes" role="dialog" aria-modal="true">

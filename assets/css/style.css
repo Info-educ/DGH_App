@@ -5641,3 +5641,58 @@ td.col-grille {
 .dash-equipe-bar-hsa{background:var(--c-indigo);transition:width .3s;}
 .dash-equipe-note{font-size:.78rem;color:var(--c-text-dim);margin-top:8px;}
 @media(max-width:768px){.dash-equipe-row{grid-template-columns:repeat(2,1fr);}}
+
+/* Tri tableau enseignants — Sprint 19.1 */
+.ens-th-sort{cursor:pointer;user-select:none;white-space:nowrap;}
+.ens-th-sort:hover{color:var(--c-accent);background:var(--c-surface3);}
+
+/* ═══════════════════════════════════════════════════════════════
+   BESOINS & APPORTS ÉTABLISSEMENT — Sprint 19.1
+   ═══════════════════════════════════════════════════════════════ */
+.ba-scen-banner{background:var(--c-indigo-bg);color:var(--c-indigo);border:1px solid var(--c-indigo);
+  border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:.88rem;font-weight:600;}
+.ba-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.ba-kpi{background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;
+  padding:16px 18px;box-shadow:var(--sh-sm);position:relative;overflow:hidden;}
+.ba-kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c-text-muted);}
+.ba-kpi-hp::before{background:var(--c-green);}
+.ba-kpi-hsa::before{background:var(--c-indigo);}
+.ba-kpi-ecart::before{background:var(--c-amber);}
+.ba-kpi-label{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--c-text-muted);font-weight:600;}
+.ba-kpi-value{font-size:1.8rem;font-weight:800;font-variant-numeric:tabular-nums;margin:4px 0 2px;color:var(--c-text);}
+.ba-kpi-value.is-over{color:var(--c-red);}
+.ba-kpi-value.is-ok{color:var(--c-green);}
+.ba-kpi-sub{font-size:.78rem;color:var(--c-text-dim);}
+
+.ba-table-wrap{background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;overflow:hidden;box-shadow:var(--sh-sm);}
+.ba-table{width:100%;border-collapse:collapse;font-size:.88rem;}
+.ba-table thead th{background:var(--c-surface3);color:var(--c-text-muted);font-size:.72rem;
+  text-transform:uppercase;letter-spacing:.04em;font-weight:700;padding:10px 12px;text-align:left;
+  border-bottom:1px solid var(--c-border2);}
+.ba-table th.ba-num,.ba-table td.ba-num{text-align:right;font-variant-numeric:tabular-nums;}
+.ba-table tbody td{padding:10px 12px;border-bottom:1px solid var(--c-border);vertical-align:middle;}
+.ba-disc-row{cursor:pointer;}
+.ba-disc-row:hover{background:var(--c-surface2);}
+.ba-disc-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:middle;}
+.ba-disc-name{font-weight:600;color:var(--c-text);}
+.ba-caret{display:inline-block;width:14px;color:var(--c-text-dim);transition:transform .15s;}
+.ba-caret.open{transform:rotate(90deg);}
+.ba-besoin-val{font-variant-numeric:tabular-nums;}
+.ba-delta{font-size:.74rem;color:var(--c-indigo);}
+.ba-hp-val{color:var(--c-green);font-weight:700;font-variant-numeric:tabular-nums;}
+.ba-hsa-val{color:var(--c-indigo);font-weight:700;font-variant-numeric:tabular-nums;}
+.ba-zero{color:var(--c-text-dim);}
+.ba-ecart-pos{color:var(--c-red);font-weight:700;}
+.ba-ecart-neg{color:var(--c-green);font-weight:700;}
+.ba-ecart-zero{color:var(--c-text-muted);}
+.ba-hsa-input{width:64px;padding:4px 6px;border:1px solid var(--c-border2);border-radius:6px;
+  text-align:right;font-variant-numeric:tabular-nums;background:var(--c-surface);color:var(--c-text);}
+.ba-hsa-input:focus{outline:none;border-color:var(--c-accent);box-shadow:0 0 0 2px var(--c-accent-light);}
+.ba-prof-row td{background:var(--c-surface2);border-bottom:1px solid var(--c-border);padding:7px 12px 7px 34px;font-size:.84rem;}
+.ba-prof-name{color:var(--c-text);}
+.ba-prof-statut{font-size:.72rem;color:var(--c-text-muted);margin-left:6px;}
+.ba-prof-sum{font-size:.74rem;color:var(--c-text-dim);margin-top:6px;font-style:italic;}
+.ba-table tfoot td{padding:12px;background:var(--c-surface3);font-weight:800;border-top:2px solid var(--c-border2);font-variant-numeric:tabular-nums;}
+.ba-empty{padding:48px 20px;text-align:center;color:var(--c-text-muted);}
+.ba-empty-hint{font-size:.85rem;color:var(--c-text-dim);margin-top:6px;}
+@media(max-width:900px){.ba-kpi-grid{grid-template-columns:repeat(2,1fr);}}

@@ -17,6 +17,8 @@ const Calculs = (() => {
     agrege:         { label: 'Agrégé',               ors: 15 },
     plp:            { label: 'PLP',                  ors: 17 },
     eps:            { label: 'Prof. EPS',            ors: 20 },
+    pstg:           { label: 'PSTG (prof. stagiaire)', ors: 18 },
+    fstg:           { label: 'FSTG (fonct. stagiaire)', ors: 18 },
     documentaliste: { label: 'Prof. documentaliste', ors: 0  },
     cpe:            { label: 'CPE',                  ors: 0  },
     psy_en:         { label: 'Psy-EN',               ors: 0  },
@@ -1057,11 +1059,100 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
     };
   }
 
+  /**
+   * Besoins vs apports par discipline — base de l'onglet "Besoins & apports".
+   * Besoin = répartition par discipline × divisions (besoinTheorique de
+   * besoinsParDiscipline), + delta du scénario actif si fourni.
+   * Apport = HP des enseignants de la discipline (plafonné), HSA à part.
+   */
+  function bilanBesoinsApports(anneeData, scenModificateurs) {
+    const structures  = anneeData.structures  || [];
+    const disciplines = anneeData.disciplines || [];
+    const repartition = anneeData.repartition || [];
+    const grilles     = anneeData.grilles     || {};
+    const enseignants = anneeData.enseignants || [];
+    const hpcs        = anneeData.heuresPedaComp || [];
+
+    const besoins = besoinsParDiscipline(structures, disciplines, repartition, grilles);
+    const besoinByDisc = {};
+    besoins.forEach(b => { besoinByDisc[b.nom] = b.besoinTheorique; });
+
+    // Delta scénario par disciplineId → nom
+    const deltaByDisc = {};
+    if (Array.isArray(scenModificateurs)) {
+      const nomById = {}; disciplines.forEach(d => { nomById[d.id] = d.nom; });
+      scenModificateurs.forEach(mod => {
+        if (!mod.disciplineId) return;
+        const nom = nomById[mod.disciplineId]; if (!nom) return;
+        const nbClasses = (mod.classeIds || []).length;
+        let delta = 0;
+        if (mod.type === 'groupes-besoins') {
+          delta = (mod.heuresParGroupe || 0) * Math.max(1, Math.ceil(nbClasses / 2));
+        } else if (['dedoublement','co-enseignement','groupe-effectif-reduit','autre'].includes(mod.type)) {
+          delta = (mod.heuresParGroupe || 0) * nbClasses;
+        }
+        deltaByDisc[nom] = (deltaByDisc[nom] || 0) + delta;
+      });
+    }
+
+    // Apport HP/HSA par discipline depuis les enseignants
+    const apportByDisc = {};
+    enseignants.forEach(ens => {
+      const sv = serviceTotalEnseignant(ens, hpcs);
+      const discs = Array.isArray(ens.disciplines) ? ens.disciplines : [];
+      const totApport = sv.apportPoste > 0 ? sv.apportPoste : 1;
+      discs.forEach(d => {
+        const nom = d.discNom; if (!nom) return;
+        const part = (parseFloat(d.heures) || 0) / totApport;
+        const hpD  = Math.round(sv.hpTotal  * part * 2) / 2;
+        const hsaD = Math.round(sv.hsaTotal * part * 2) / 2;
+        if (!apportByDisc[nom]) apportByDisc[nom] = { hp: 0, hsa: 0, profs: [] };
+        apportByDisc[nom].hp  += hpD;
+        apportByDisc[nom].hsa += hsaD;
+        apportByDisc[nom].profs.push({
+          id: ens.id, nom: ens.nom || '', prenom: ens.prenom || '',
+          statut: ens.statut || 'titulaire',
+          heures: parseFloat(d.heures) || 0, hp: hpD, hsa: hsaD
+        });
+      });
+    });
+
+    let totBesoin = 0, totApportHP = 0, totApportHSA = 0;
+    const rows = disciplines.map(disc => {
+      const besoinBase = besoinByDisc[disc.nom] || 0;
+      const delta      = deltaByDisc[disc.nom] || 0;
+      const besoin     = Math.round((besoinBase + delta) * 2) / 2;
+      const ap         = apportByDisc[disc.nom] || { hp: 0, hsa: 0, profs: [] };
+      const apHP       = Math.round(ap.hp  * 2) / 2;
+      const apHSA      = Math.round(ap.hsa * 2) / 2;
+      const ecart      = Math.round((besoin - apHP) * 2) / 2;
+      totBesoin    += besoin;
+      totApportHP  += apHP;
+      totApportHSA += apHSA;
+      return {
+        disciplineId: disc.id, nom: disc.nom, couleur: disc.couleur,
+        besoin, besoinBase, deltaScen: Math.round(delta * 2) / 2,
+        apportHP: apHP, apportHSA: apHSA, ecart,
+        profs: ap.profs.sort((a, b) => (a.nom||'').localeCompare(b.nom||'', 'fr'))
+      };
+    });
+
+    return {
+      rows,
+      totBesoin:    Math.round(totBesoin * 2) / 2,
+      totApportHP:  Math.round(totApportHP * 2) / 2,
+      totApportHSA: Math.round(totApportHSA * 2) / 2,
+      totEcart:     Math.round((totBesoin - totApportHP) * 2) / 2,
+      scenActif:    Array.isArray(scenModificateurs) && scenModificateurs.length > 0
+    };
+  }
+
   return {
     GRILLES_MEN,
     getORS, plafondHP, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
     resumeStructures, bilanDotation, besoinsParDiscipline,
     suggererRepartition, bilanHPC, genererAlertes, serviceTotalEnseignant, bilanEquipe,
+    bilanBesoinsApports,
     bilanScenario, comparerScenarios, comparatifDisciplines,
     syntheseCA, dialogueGestion, recapServices,
     heuresGrille, affectationsExistent, profsDeClasseDiscipline,

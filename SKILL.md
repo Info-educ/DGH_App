@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **4.9.6** — Dernière mise à jour : Sprint 19 — bascule automatique HP → HSA (apport plafonné par ORS du grade ou volume BMP), champs volumeBMP + motifORS sur la fiche enseignant, nouvelle vue « Équipe & HP/HSA » dans Cadre de l'année (bilanEquipe, source de la remontée TRM), carte équipe sur le tableau de bord.
+> Version courante : **4.9.7** — Sprint 19.1 — onglet Besoins & apports établissement (besoin vs apport HP/HSA par discipline, écart BMP, HSA absorbées par discipline+enseignant), grades PSTG/FSTG, tri du tableau enseignants (nom/discipline/ORS/HP/HSA), correctif fermeture parasite des modales.
 
 ---
 

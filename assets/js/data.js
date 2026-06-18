@@ -17,7 +17,7 @@
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '4.9.6';
+  const VERSION = '4.9.7';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   const TYPES_SALLE = [
@@ -109,6 +109,7 @@ const DGHData = (() => {
       scenarios: [],
       contraintesEDT: _contraintesVides(),
       missions: [],
+      hsaAbsorbees: {},     // Sprint 19.1 — { [disciplineId]: { total, profs:{ [ensId]: h } } }
       snapshot: null,
       alertes: []
     };
@@ -253,6 +254,7 @@ const DGHData = (() => {
     Object.values(_data.annees).forEach(ann => {
       if (!Array.isArray(ann.missions)) ann.missions = [];
       if (ann.snapshot === undefined) ann.snapshot = null;
+      if (ann.hsaAbsorbees === undefined || ann.hsaAbsorbees === null) ann.hsaAbsorbees = {};
     });
     // Migration v4.2 : affectations[] (répartition de service) + ppEnsId sur divisions
     Object.values(_data.annees).forEach(ann => {
@@ -1455,6 +1457,30 @@ const DGHData = (() => {
     return (ann.affectations||[]).some(a => a.ensId === ensId && a.disciplineId === disc.id);
   }
 
+  // ── HSA ABSORBÉES (Sprint 19.1) ──────────────────────────────────
+  // Structure : ann.hsaAbsorbees[disciplineId] = { total:Number, profs:{ [ensId]:Number } }
+  function getHsaAbsorbees(annee) {
+    const ann = getAnnee(annee);
+    if (!ann.hsaAbsorbees) ann.hsaAbsorbees = {};
+    return ann.hsaAbsorbees;
+  }
+  function setHsaAbsorbeeDiscipline(disciplineId, total, annee) {
+    const ann = getAnnee(annee);
+    if (!ann.hsaAbsorbees) ann.hsaAbsorbees = {};
+    if (!ann.hsaAbsorbees[disciplineId]) ann.hsaAbsorbees[disciplineId] = { total: 0, profs: {} };
+    ann.hsaAbsorbees[disciplineId].total = Math.round((parseFloat(total)||0) * 2) / 2;
+    save(); return true;
+  }
+  function setHsaAbsorbeeEnseignant(disciplineId, ensId, heures, annee) {
+    const ann = getAnnee(annee);
+    if (!ann.hsaAbsorbees) ann.hsaAbsorbees = {};
+    if (!ann.hsaAbsorbees[disciplineId]) ann.hsaAbsorbees[disciplineId] = { total: 0, profs: {} };
+    const h = Math.round((parseFloat(heures)||0) * 2) / 2;
+    if (h > 0) ann.hsaAbsorbees[disciplineId].profs[ensId] = h;
+    else       delete ann.hsaAbsorbees[disciplineId].profs[ensId];
+    save(); return true;
+  }
+
   // ── SAUVEGARDE ───────────────────────────────────────────────────
   function save() {
     if(!_data) return;
@@ -1586,6 +1612,7 @@ const DGHData = (() => {
     getCategoriesHPC,getDisciplinesMEN,getTypesSalle,getJoursSemaine,
     getStructures,getDivision,
     getDisciplines,getDiscipline,getRepartition,getGroupeCours,
+    getHsaAbsorbees,setHsaAbsorbeeDiscipline,setHsaAbsorbeeEnseignant,
     getHeuresPedaComp,getHPC,
     setEtab,setAnneeActive,setDotation,
     getSalles,getSalle,addSalle,updateSalle,deleteSalle,
