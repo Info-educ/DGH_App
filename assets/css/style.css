@@ -5549,3 +5549,95 @@ td.col-grille {
   flex-shrink: 0;
 }
 .gen-granularite label { display: flex; align-items: center; gap: .3rem; cursor: pointer; }
+
+/* ═══════════════════════════════════════════════════════════════
+   ÉQUIPE & HP/HSA — Sprint 19
+   ═══════════════════════════════════════════════════════════════ */
+.eq-rule-banner{display:flex;gap:14px;align-items:flex-start;background:var(--c-surface);
+  border:1px solid var(--c-border);border-left:4px solid var(--c-accent);
+  border-radius:10px;padding:14px 18px;margin-bottom:20px;box-shadow:var(--sh-sm);}
+.eq-rule-icon{font-size:1.5rem;line-height:1;color:var(--c-accent);flex-shrink:0;}
+.eq-rule-text{font-size:.9rem;line-height:1.5;color:var(--c-text);}
+.eq-tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:.78rem;
+  font-weight:700;letter-spacing:.02em;white-space:nowrap;}
+.eq-tag-hp{background:var(--c-green-bg);color:var(--c-green);}
+.eq-tag-hsa{background:var(--c-indigo-bg);color:var(--c-indigo);}
+
+.eq-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.eq-kpi{background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;
+  padding:16px 18px;box-shadow:var(--sh-sm);position:relative;overflow:hidden;}
+.eq-kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;}
+.eq-kpi-hp::before{background:var(--c-green);}
+.eq-kpi-hsa::before{background:var(--c-indigo);}
+.eq-kpi-tot::before{background:var(--c-accent);}
+.eq-kpi-env::before{background:var(--c-amber);}
+.eq-kpi-label{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--c-text-muted);font-weight:600;}
+.eq-kpi-value{font-size:1.9rem;font-weight:800;font-variant-numeric:tabular-nums;
+  margin:4px 0 2px;color:var(--c-text);}
+.eq-kpi-sub{font-size:.78rem;color:var(--c-text-dim);}
+.eq-kpi-value.is-over{color:var(--c-red);}
+.eq-kpi-value.is-ok{color:var(--c-green);}
+
+.eq-statut-strip{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;}
+.eq-statut-chip{display:flex;flex-direction:column;gap:2px;background:var(--c-surface2);
+  border:1px solid var(--c-border);border-radius:10px;padding:8px 14px;min-width:130px;}
+.eq-statut-chip-name{font-size:.78rem;font-weight:700;color:var(--c-text);text-transform:capitalize;}
+.eq-statut-chip-detail{font-size:.74rem;color:var(--c-text-muted);font-variant-numeric:tabular-nums;}
+.eq-statut-chip-detail .eq-mini-hp{color:var(--c-green);font-weight:700;}
+.eq-statut-chip-detail .eq-mini-hsa{color:var(--c-indigo);font-weight:700;}
+
+.eq-table-wrap{background:var(--c-surface);border:1px solid var(--c-border);
+  border-radius:12px;overflow:hidden;box-shadow:var(--sh-sm);}
+.eq-table{width:100%;border-collapse:collapse;font-size:.88rem;}
+.eq-table thead th{background:var(--c-surface3);color:var(--c-text-muted);
+  font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;font-weight:700;
+  padding:10px 12px;text-align:left;border-bottom:1px solid var(--c-border2);position:sticky;top:0;}
+.eq-table th.eq-num,.eq-table td.eq-num{text-align:right;font-variant-numeric:tabular-nums;}
+.eq-table tbody td{padding:10px 12px;border-bottom:1px solid var(--c-border);vertical-align:middle;}
+.eq-table tbody tr:last-child td{border-bottom:none;}
+.eq-table tbody tr:hover{background:var(--c-surface2);}
+.eq-name{font-weight:600;color:var(--c-text);}
+.eq-firstname{color:var(--c-text-muted);font-weight:400;}
+.eq-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:700;}
+.eq-badge-titulaire{background:var(--c-green-bg);color:var(--c-green);}
+.eq-badge-bmp{background:var(--c-amber-bg);color:var(--c-amber);}
+.eq-badge-tzr{background:var(--c-blue-bg);color:var(--c-blue);}
+.eq-badge-contractuel{background:var(--c-surface3);color:var(--c-text-muted);}
+.eq-badge-temps-partiel{background:var(--c-indigo-bg);color:var(--c-indigo);}
+.eq-hp-val{font-weight:700;color:var(--c-green);font-variant-numeric:tabular-nums;}
+.eq-hsa-val{font-weight:700;color:var(--c-indigo);font-variant-numeric:tabular-nums;}
+.eq-hsa-zero{color:var(--c-text-dim);}
+.eq-seuil{color:var(--c-text-muted);font-variant-numeric:tabular-nums;}
+.eq-seuil-src{font-size:.7rem;color:var(--c-text-dim);display:block;}
+.eq-motif{font-size:.74rem;color:var(--c-amber);font-style:italic;}
+.eq-bar{display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--c-surface3);min-width:90px;}
+.eq-bar-hp{background:var(--c-green);}
+.eq-bar-hsa{background:var(--c-indigo);}
+.eq-table tfoot td{padding:12px;background:var(--c-surface3);font-weight:800;
+  border-top:2px solid var(--c-border2);font-variant-numeric:tabular-nums;}
+.eq-empty{padding:48px 20px;text-align:center;color:var(--c-text-muted);}
+.eq-empty-hint{font-size:.85rem;color:var(--c-text-dim);margin-top:6px;}
+.eq-action-btn{background:none;border:none;cursor:pointer;color:var(--c-text-dim);
+  font-size:1rem;padding:4px 6px;border-radius:6px;}
+.eq-action-btn:hover{background:var(--c-surface3);color:var(--c-text);}
+
+@media(max-width:900px){
+  .eq-kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .eq-table{font-size:.8rem;}
+  .eq-table .eq-hide-sm{display:none;}
+}
+
+/* Dashboard — carte équipe (apport réel HP/HSA) — Sprint 19 */
+.dash-equipe-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:14px 0 12px;}
+.dash-equipe-stat{display:flex;flex-direction:column;gap:2px;}
+.dash-equipe-lbl{font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--c-text-muted);font-weight:600;}
+.dash-equipe-val{font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--c-text);}
+.dash-equipe-hp .dash-equipe-val{color:var(--c-green);}
+.dash-equipe-hsa .dash-equipe-val{color:var(--c-indigo);}
+.dash-equipe-val.is-over{color:var(--c-red);}
+.dash-equipe-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--c-surface3);}
+.dash-equipe-bar-hp{background:var(--c-green);transition:width .3s;}
+.dash-equipe-bar-hsa{background:var(--c-indigo);transition:width .3s;}
+.dash-equipe-note{font-size:.78rem;color:var(--c-text-dim);margin-top:8px;}
+@media(max-width:768px){.dash-equipe-row{grid-template-columns:repeat(2,1fr);}}

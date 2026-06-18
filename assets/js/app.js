@@ -22,6 +22,7 @@ const app = (() => {
     dashboard:   'Tableau de bord',
     structures:  'Structures',
     dotation:    'Dotation DGH',
+    equipe:      'Équipe & HP/HSA',
     hpc:         'H. péda. complémentaires',
     enseignants: 'Équipe pédagogique',
     repartition: 'Répartition de service',
@@ -73,6 +74,7 @@ const app = (() => {
     if (realViewId === 'dashboard')  DGHDashboard.renderDashboard();
     if (realViewId === 'alertes')    DGHEtab.renderAlertes();
     if (realViewId === 'dotation')   DGHDotation.renderDotation();
+    if (realViewId === 'equipe')     DGHEquipe.renderEquipe();
     if (realViewId === 'hpc')        DGHHPC.renderHPC();
     if (realViewId === 'enseignants') DGHEnseignants.renderEnseignants();
     if (realViewId === 'repartition') DGHRepartition.renderRepartition();
@@ -223,6 +225,8 @@ const app = (() => {
       if (action === 'inst-imprimer')   { DGHInstances.imprimer();                        return; }
       if (action === 'inst-export-csv') { DGHInstances.exporterCSV();                     return; }
       if (action === 'dot-export-csv')  { DGHDotation.exporterCSV();                      return; }
+      if (action === 'equipe-export-csv') { DGHEquipe.exporterCSV();                      return; }
+      if (action === 'open-ens-modal')  { DGHEnseignants.openModalEns(null);              return; }
       if (action === 'inst-sort-serv')  { DGHInstances.sortServices(actionBtn.dataset.col); return; }
       // ── Historique ──
       if (action === 'hist-select-gauche')    { DGHHistorique.selectGauche(actionBtn.value || actionBtn.dataset.annee); return; }
@@ -397,7 +401,7 @@ const app = (() => {
     if (e.target.id==='inputHBActif')                     { DGHEdt.hbToggleActif(e.target.checked);    return; }
     if (e.target.classList.contains('classe-check'))      { DGHDotation.updateGCEffectif();           return; }
     if (e.target.classList.contains('hpc-classe-check'))  { DGHHPC.updateHPCEffectif();               return; }
-    if (e.target.id==='inputEnsGrade'||e.target.id==='inputEnsOrsManuel'||e.target.id==='inputEnsHeures') { DGHEnseignants.updateOrsPreview(); return; }
+    if (e.target.id==='inputEnsGrade'||e.target.id==='inputEnsOrsManuel'||e.target.id==='inputEnsHeures'||e.target.id==='inputEnsStatut'||e.target.id==='inputEnsVolumeBMP') { DGHEnseignants.updateOrsPreview(); return; }
     if (e.target.id==='csvFileInput') { DGHEnseignants.handleCSVFile(e.target.files[0]); return; }
     // Edition inline tableau enseignants (selects -> change immediat)
     if (e.target.classList.contains('ens-inline-select')) { DGHEnseignants.handleInlineEdit(e.target); return; }
@@ -468,6 +472,7 @@ const app = (() => {
       if (e.target.id==='inputDivNom'||e.target.id==='inputDivDup') DGHStructures.updateDupPreview();
       if (e.target.id==='inputDiscCouleur') DGHDotation.updateColorHint(e.target.value);
       if (e.target.id==='inputDGH_HP'||e.target.id==='inputDGH_HSA') DGHEtab.updateModalDotTotal();
+      if (e.target.id==='inputEnsOrsManuel'||e.target.id==='inputEnsHeures'||e.target.id==='inputEnsVolumeBMP') DGHEnseignants.updateOrsPreview();
     });
 
     // Éléments garantis dans le DOM au chargement initial (SKILL.md §3)

@@ -52,6 +52,30 @@ const Calculs = (() => {
     return (ORS[grade] && ORS[grade].ors) || 0;
   }
 
+  /**
+   * Plafond HP d'un enseignant : seuil au-delà duquel les heures basculent en HSA.
+   *
+   *  - Titulaire / TZR / certifié / agrégé / PLP / EPS : plafond = ORS (grade ou orsManuel).
+   *  - BMP : plafond = volume du bloc (champ ens.volumeBMP), à défaut orsManuel, à défaut ORS du grade.
+   *  - Contractuel / sans ORS : plafond = orsManuel s'il est saisi, sinon 0 (pas de bascule auto).
+   *
+   * @returns {{ plafond:number, source:'bmp'|'ors-manuel'|'ors-grade'|'aucun' }}
+   */
+  function plafondHP(ens) {
+    const statut = ens.statut || 'titulaire';
+    if (statut === 'bmp') {
+      const vol = parseFloat(ens.volumeBMP);
+      if (!isNaN(vol) && vol > 0) return { plafond: vol, source: 'bmp' };
+    }
+    const manuel = ens.orsManuel;
+    if (manuel !== null && manuel !== undefined && manuel !== '' && !isNaN(manuel)) {
+      return { plafond: parseFloat(manuel), source: 'ors-manuel' };
+    }
+    const grade = getORS(ens.grade, null);
+    if (grade > 0) return { plafond: grade, source: 'ors-grade' };
+    return { plafond: 0, source: 'aucun' };
+  }
+
   function calcHeuresEnseignant(ens) {
     // Phase 1 : heures est un Number direct
     // Compatibilité descendante : si services[] existe encore, somme des heures
@@ -153,12 +177,23 @@ const Calculs = (() => {
       if ((h.typeHeure||'hp') === 'hsa') totalHSAHPC += h.heures||0;
       else                               totalHPHPC  += h.heures||0;
     });
+    // HP/HSA consommées par l'ÉQUIPE (apport réel plafonné par ORS / volume BMP).
+    // C'est la source de vérité pour la remontée TRM.
+    const eq = bilanEquipe(anneeData.enseignants || [], heuresPedaComp);
+    const equipeHP  = eq.totalHP;
+    const equipeHSA = eq.totalHSA;
+    const equipeTotal  = Math.round((equipeHP + equipeHSA) * 2) / 2;
+    const soldeEquipe  = Math.round((enveloppe - equipeTotal) * 2) / 2;
+    const pctEquipe    = enveloppe > 0 ? Math.round((equipeTotal / enveloppe) * 100) : 0;
     return { enveloppe, hPosteEnv, hsaEnv, totalHP, totalHSA, totalAlloue, solde,
              pctConsomme, nbDisciplines:(anneeData.disciplines||[]).length, depassement:solde<0,
              totalHPDisc: Math.round(totalHPDisc*2)/2,
              totalHSADisc: Math.round(totalHSADisc*2)/2,
              totalHPHPC: Math.round(totalHPHPC*2)/2,
-             totalHSAHPC: Math.round(totalHSAHPC*2)/2 };
+             totalHSAHPC: Math.round(totalHSAHPC*2)/2,
+             // — Source ÉQUIPE (apport réel, plafonné) —
+             equipeHP, equipeHSA, equipeTotal, soldeEquipe, pctEquipe,
+             depassementEquipe: soldeEquipe < 0, nbEns: eq.nbEns };
   }
 
   function besoinsParDiscipline(structures, disciplines, repartition, grilles) {
@@ -385,16 +420,18 @@ const Calculs = (() => {
    *             detailHSA, ecartORS, ors, statutORS }}
    */
   function serviceTotalEnseignant(ens, hpcs) {
-    // 1. HP issues des disciplines (saisie manuelle dans vue "Par discipline")
-    const hpDisc = Math.round(
+    // 1. Heures issues des disciplines (apport "structurel" dans l'établissement)
+    const hDisc = Math.round(
       (Array.isArray(ens.disciplines) ? ens.disciplines : [])
         .reduce((s, d) => s + (parseFloat(d.heures) || 0), 0) * 2
     ) / 2;
 
-    // 2. Heures HPC affectées → séparées HP / HSA
-    let hpHPC = 0, hsaTotal = 0;
-    const detailHSA   = []; // sources HSA (tooltip)
-    const detailHPCHp = []; // sources HPC-HP (tooltip + déduction ORS)
+    // 2. Heures HPC affectées. On distingue :
+    //    - HPC marquées 'hsa' → TOUJOURS HSA (forçage explicite, ne compte pas dans l'apport-poste)
+    //    - HPC marquées 'hp'  → entrent dans l'apport comptabilisable HP/HSA comme les disciplines
+    let hHPCposte = 0, hsaForce = 0;
+    const detailHSAforce = []; // HPC explicitement HSA
+    const detailHPCHp    = []; // HPC entrant dans l'apport-poste
     (hpcs || []).forEach(hpc => {
       const aff = (Array.isArray(hpc.enseignants) ? hpc.enseignants : [])
                     .find(a => a.ensId === ens.id);
@@ -402,35 +439,65 @@ const Calculs = (() => {
       const h = parseFloat(aff.heures) || 0;
       if (h <= 0) return;
       if ((hpc.typeHeure || 'hp') === 'hsa') {
-        hsaTotal += h;
-        detailHSA.push({ source: 'HPC', nom: hpc.nom, heures: h });
+        hsaForce += h;
+        detailHSAforce.push({ source: 'HPC', nom: hpc.nom, heures: h });
       } else {
-        hpHPC += h;
+        hHPCposte += h;
         detailHPCHp.push({ source: 'HPC', nom: hpc.nom, heures: h });
       }
     });
+    hHPCposte = Math.round(hHPCposte * 2) / 2;
+    hsaForce  = Math.round(hsaForce  * 2) / 2;
 
-    hpHPC    = Math.round(hpHPC    * 2) / 2;
-    hsaTotal = Math.round(hsaTotal * 2) / 2;
-    const hpTotal      = Math.round((hpDisc + hpHPC) * 2) / 2;
+    // 3. Apport-poste total = disciplines + HPC-HP. C'est ce volume qui est plafonné par l'ORS.
+    const apportPoste = Math.round((hDisc + hHPCposte) * 2) / 2;
+
+    // 4. Plafond HP (ORS grade, ORS manuel motivé, ou volume BMP)
+    const cap   = plafondHP(ens);
+    const seuil = cap.plafond;
+    const sansSeuil = seuil === 0; // contractuel sans volume → tout reste HP, pas de bascule
+
+    // 5. Bascule automatique : HP jusqu'au seuil, le dépassement → HSA
+    let hpTotal, hsaAuto;
+    if (sansSeuil) {
+      hpTotal = apportPoste;
+      hsaAuto = 0;
+    } else {
+      hpTotal = Math.min(apportPoste, seuil);
+      hsaAuto = Math.max(0, Math.round((apportPoste - seuil) * 2) / 2);
+    }
+    hpTotal = Math.round(hpTotal * 2) / 2;
+
+    // HSA totale = dépassement d'apport (auto) + HPC forcées en HSA
+    const hsaTotal = Math.round((hsaAuto + hsaForce) * 2) / 2;
+
+    // detailHSA = sources HSA pour tooltip (dépassement + HPC forcées)
+    const detailHSA = [];
+    if (hsaAuto > 0) detailHSA.push({ source: 'Dépassement ORS', nom: 'Apport > ' + seuil + 'h', heures: hsaAuto });
+    detailHSAforce.forEach(d => detailHSA.push(d));
+
+    // Ventilation HP : part disciplines / part HPC (pour affichages détaillés).
+    // On impute d'abord les disciplines, puis les HPC-HP, dans la limite du seuil HP.
+    const hpDisc = sansSeuil ? hDisc : Math.min(hDisc, seuil);
+    const hpHPC  = Math.round((hpTotal - hpDisc) * 2) / 2;
+
     const totalGeneral = Math.round((hpTotal + hsaTotal) * 2) / 2;
 
-    // 3. ORS sur HP — disponible pour TOUS les statuts si orsManuel renseigné ou grade avec ORS
-    //    Contractuel sans orsManuel → ORS=0 → pas d'écart
-    const ors      = getORS(ens.grade, ens.orsManuel);
-    const sansORS  = ors === 0;
-    const ecartORS = sansORS ? null : Math.round((hpTotal - ors) * 2) / 2;
-    const statutORS = sansORS ? 'sans-ors'
+    // Écart ORS (informatif) : apport-poste vs seuil
+    const ecartORS = sansSeuil ? null : Math.round((apportPoste - seuil) * 2) / 2;
+    const statutORS = sansSeuil ? 'sans-ors'
       : ecartORS > 0  ? 'hsa'
       : ecartORS < 0  ? 'sous-service'
       : 'equilibre';
 
     return {
       hpDisc, hpHPC, hpTotal,
-      hsaTotal, totalGeneral,
+      hsaAuto, hsaForce, hsaTotal,
+      apportPoste, totalGeneral,
       detailHSA,    // sources HSA pour tooltip
-      detailHPCHp,  // sources HPC-HP pour tooltip + déduction ORS vue discipline
-      ors, ecartORS, statutORS
+      detailHPCHp,  // sources HPC-HP pour tooltip
+      ors: seuil, plafondSource: cap.source,
+      ecartORS, statutORS
     };
   }
 
@@ -942,11 +1009,59 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
   return resultats;
 }
 
+  /**
+   * Bilan HP/HSA de l'équipe — agrège l'apport réel de chaque enseignant.
+   * C'est la vue "remontée TRM" : HP consommées par l'équipe, HSA générées,
+   * répartition par statut. Fonction pure.
+   *
+   * @param {Array} enseignants
+   * @param {Array} hpcs  DGHData.getHeuresPedaComp()
+   * @returns {{ nbEns, totalHP, totalHSA, totalGeneral, parStatut, rows }}
+   */
+  function bilanEquipe(enseignants, hpcs) {
+    const list = Array.isArray(enseignants) ? enseignants : [];
+    let totalHP = 0, totalHSA = 0, totalGeneral = 0;
+    const parStatut = {};
+    const rows = list.map(ens => {
+      const sv = serviceTotalEnseignant(ens, hpcs || []);
+      totalHP      += sv.hpTotal;
+      totalHSA     += sv.hsaTotal;
+      totalGeneral += sv.totalGeneral;
+      const st = ens.statut || 'titulaire';
+      if (!parStatut[st]) parStatut[st] = { statut: st, nb: 0, hp: 0, hsa: 0 };
+      parStatut[st].nb++;
+      parStatut[st].hp  += sv.hpTotal;
+      parStatut[st].hsa += sv.hsaTotal;
+      return {
+        id: ens.id, nom: ens.nom || '', prenom: ens.prenom || '',
+        grade: ens.grade || '', statut: st,
+        disciplinePrincipale: ens.disciplinePrincipale || '',
+        ors: sv.ors, plafondSource: sv.plafondSource,
+        apportPoste: sv.apportPoste,
+        hpTotal: sv.hpTotal, hsaAuto: sv.hsaAuto, hsaForce: sv.hsaForce,
+        hsaTotal: sv.hsaTotal, totalGeneral: sv.totalGeneral,
+        ecartORS: sv.ecartORS, statutORS: sv.statutORS,
+        detailHSA: sv.detailHSA, motifORS: ens.motifORS || ''
+      };
+    }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+    Object.values(parStatut).forEach(s => {
+      s.hp = Math.round(s.hp * 2) / 2; s.hsa = Math.round(s.hsa * 2) / 2;
+    });
+    return {
+      nbEns: list.length,
+      totalHP:      Math.round(totalHP * 2) / 2,
+      totalHSA:     Math.round(totalHSA * 2) / 2,
+      totalGeneral: Math.round(totalGeneral * 2) / 2,
+      parStatut: Object.values(parStatut),
+      rows
+    };
+  }
+
   return {
     GRILLES_MEN,
-    getORS, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
+    getORS, plafondHP, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
     resumeStructures, bilanDotation, besoinsParDiscipline,
-    suggererRepartition, bilanHPC, genererAlertes, serviceTotalEnseignant,
+    suggererRepartition, bilanHPC, genererAlertes, serviceTotalEnseignant, bilanEquipe,
     bilanScenario, comparerScenarios, comparatifDisciplines,
     syntheseCA, dialogueGestion, recapServices,
     heuresGrille, affectationsExistent, profsDeClasseDiscipline,

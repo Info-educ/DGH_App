@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **4.8.0** — Dernière mise à jour : Préparation EDT (Sprint 14) — salles spécialisées, heure bleue avec recommandation de créneau optimal, indisponibilités enseignants (dures/souples), contraintes libres, fréquence semaine A/B sur les barrettes, notice EDT consolidée avec détection d'alertes
+> Version courante : **4.9.6** — Dernière mise à jour : Sprint 19 — bascule automatique HP → HSA (apport plafonné par ORS du grade ou volume BMP), champs volumeBMP + motifORS sur la fiche enseignant, nouvelle vue « Équipe & HP/HSA » dans Cadre de l'année (bilanEquipe, source de la remontée TRM), carte équipe sur le tableau de bord.
 
 ---
 
@@ -175,40 +175,54 @@ historique.js → missions.js → instances.js → app.js
 - **H-Poste (HP)** : constituent les postes. Décidées par la DSDEN.
 - **HSA** : heures supplémentaires payées. Budget CA. Ne constituent pas de postes.
 
-### Service enseignant — modèle Option B (v3.3)
+### Bascule automatique HP → HSA (v4.9.6 — Sprint 19) — RÈGLE CENTRALE
+L'apport de chaque enseignant dans l'établissement compte en **heures-poste
+jusqu'à son seuil**. Tout dépassement bascule **automatiquement en HSA**.
+Aucune ressaisie : un seul chiffre d'apport pilote HP et HSA partout.
 
 ```
-ORS (grade ou orsManuel)
-  ├── HPC-HP  = heures HPC typées HP affectées à cet enseignant
-  ├── H.dispo = ORS − HPC-HP   ← heures disponibles pour disciplines
-  └── HP disc.= heures saisies "Par discipline" (doit rester ≤ H.dispo)
-
-HSA = heures HPC typées HSA  (hors ORS)
-Total = HP disc. + HPC-HP + HSA
+apportPoste = somme(disciplines.heures) + somme(HPC typées 'hp')
+seuil       = plafondHP(ens)        ← voir ci-dessous
+HP  = min(apportPoste, seuil)
+HSA = max(0, apportPoste − seuil)  +  HPC typées 'hsa' (forçage explicite)
 ```
 
-**Implication** : les HPC-HP sont déduites de l'ORS avant les disciplines.
-Un certifié (18h ORS) affecté à une Chorale HP 2h → 16h disponibles pour ses disciplines.
+### `plafondHP(ens)` — seuil HP par statut (v4.9.6)
+```js
+// Retourne { plafond:Number, source:'bmp'|'ors-manuel'|'ors-grade'|'aucun' }
+```
+- **BMP** : seuil = `ens.volumeBMP` (volume du bloc implanté). BMP 15h → 15h HP max.
+- ORS manuelle saisie (`ens.orsManuel`) : seuil = cette valeur. **Motif obligatoire**
+  (`ens.motifORS`) dès qu'elle diffère de l'ORS du grade — tracé pour la TRM.
+- Sinon : seuil = ORS du grade (18 certifié, 15 agrégé, 17 PLP, 20 EPS).
+- Contractuel sans seuil → tout reste HP, pas de bascule.
 
-### `serviceTotalEnseignant(ens, hpcs)` — API publique de calculs.js
+### `serviceTotalEnseignant(ens, hpcs)` — API publique de calculs.js (v4.9.6)
 
 ```js
 // Retourne :
 {
-  hpDisc,      // HP disciplines (somme ens.disciplines[].heures)
-  hpHPC,       // HP depuis HPC typées HP
-  hpTotal,     // hpDisc + hpHPC
-  hsaTotal,    // HSA depuis HPC typées HSA
-  totalGeneral,// hpTotal + hsaTotal
-  detailHSA,   // [{source, nom, heures}] — tooltip HSA
-  detailHPCHp, // [{source, nom, heures}] — tooltip HPC-HP + déduction ORS vue discipline
-  ors,         // ORS effectif (manuel ou grade)
-  ecartORS,    // hpTotal - ors (null si sans-ors)
-  statutORS    // 'sans-ors'|'hsa'|'sous-service'|'equilibre'
+  hpDisc,       // part disciplines imputée en HP (≤ seuil)
+  hpHPC,        // part HPC-HP imputée en HP (hpTotal − hpDisc)
+  hpTotal,      // HP total = min(apportPoste, seuil)
+  hsaAuto,      // HSA issue du dépassement d'apport
+  hsaForce,     // HSA issue des HPC typées 'hsa'
+  hsaTotal,     // hsaAuto + hsaForce
+  apportPoste,  // disciplines + HPC-HP (avant plafonnement)
+  totalGeneral, // hpTotal + hsaTotal
+  detailHSA,    // [{source, nom, heures}] — tooltip HSA (dépassement + HPC HSA)
+  detailHPCHp,  // [{source, nom, heures}] — tooltip HPC-HP
+  ors,          // seuil HP effectif (= plafondHP.plafond)
+  plafondSource,// 'bmp'|'ors-manuel'|'ors-grade'|'aucun'
+  ecartORS,     // apportPoste − seuil (null si sans seuil)
+  statutORS     // 'sans-ors'|'hsa'|'sous-service'|'equilibre'
 }
 ```
 
-**Règle ORS** : tous les statuts peuvent avoir un ORS (BMP, TZR, temps-partiel avec orsManuel). Contractuel sans orsManuel → ORS=0 → pas d'écart.
+### `bilanEquipe(enseignants, hpcs)` — agrégat établissement (v4.9.6)
+Source de vérité pour la remontée TRM. Retourne `{ nbEns, totalHP, totalHSA,
+totalGeneral, parStatut:[{statut,nb,hp,hsa}], rows:[…] }`. Intégré à
+`bilanDotation` via `equipeHP`, `equipeHSA`, `equipeTotal`, `soldeEquipe`.
 
 ### Vue liste — colonnes (v3.3)
 `Nom | Prénom | Grade | Statut | Discipline(s) | ORS | HP disc. | HPC-HP | HSA | Dispo. | Actions`
@@ -241,9 +255,21 @@ hpc.enseignants = [{ ensId: 'ens_xxx', heures: 2 }, { ensId: 'ens_yyy', heures: 
 
 ### ORS — règles par statut
 - Titulaire → ORS grade, modifiable
-- BMP / TZR → ORS grade, modifiable (service partiel/complément)
+- BMP → **volume du bloc** (`volumeBMP`) = seuil HP (Sprint 19)
+- TZR → ORS grade, modifiable
 - Temps partiel → orsManuel obligatoire
 - Contractuel → orsManuel si renseigné, sinon ORS=0 → pas d'écart
+- Toute ORS dérogatoire (≠ ORS du grade) → `motifORS` obligatoire (Sprint 19)
+
+### Vue « Équipe & HP/HSA » (Cadre de l'année) — `DGHEquipe` (v4.9.6)
+- Fichier : `assets/js/modules/equipe.js` — `renderEquipe()`, `exporterCSV()`
+- Vue : `#view-equipe` · nav `data-view="equipe"` · router dans `app.js`
+- Tableau : Nom | Statut | Discipline | Apport | Seuil HP | HP | HSA | Répartition
+- KPI : HP équipe, HSA équipe, Total service, solde vs enveloppe
+- Bandeau par statut (`bilanEquipe.parStatut`), export CSV « TRM »
+- Carte miroir sur le dashboard : `#dashEquipeCard` (`_renderEquipeCard`)
+- Champs fiche enseignant ajoutés : `#inputEnsVolumeBMP` (visible si statut=bmp),
+  `#inputEnsMotifORS` (visible si ORS ≠ grade). Aperçu HP/HSA live.
 
 ---
 

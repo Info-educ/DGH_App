@@ -10,12 +10,14 @@
  * v4.8.0 — Sprint 14 : Préparation EDT — salles[] + heuresBleues sur établissement,
  *                      indisponibilites[] + contraintesLibres[] sur contraintesEDT,
  *                      frequence (hebdo/semaine-A/semaine-B) sur chaque slot de barrette
+ * v4.9.6 — Sprint 19 : volumeBMP + motifORS sur enseignant (bascule auto HP→HSA :
+ *                      HP jusqu'au seuil ORS/volume BMP, dépassement en HSA)
  */
 
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '4.8.0';
+  const VERSION = '4.9.6';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   const TYPES_SALLE = [
@@ -191,6 +193,8 @@ const DGHData = (() => {
           const statutsValides = ['titulaire','bmp','tzr','contractuel','temps-partiel'];
           if (!statutsValides.includes(ens.statut)) ens.statut = 'titulaire';
           if (ens.disciplinePrincipale === undefined) ens.disciplinePrincipale = '';
+          if (ens.motifORS  === undefined) ens.motifORS  = '';
+          if (ens.volumeBMP === undefined) ens.volumeBMP = null;
           if (ens.heures === undefined) {
             // Compatibilité : ancienne structure services[]
             ens.heures = Array.isArray(ens.services)
@@ -751,6 +755,9 @@ const DGHData = (() => {
       heures:               totalH,
       orsManuel:            (fields.orsManuel!==undefined&&fields.orsManuel!==''&&fields.orsManuel!==null)
                               ? parseFloat(fields.orsManuel) : null,
+      motifORS:             (fields.motifORS||'').trim(),
+      volumeBMP:            (fields.volumeBMP!==undefined&&fields.volumeBMP!==''&&fields.volumeBMP!==null)
+                              ? parseFloat(fields.volumeBMP) : null,
       commentaire:          fields.commentaire||''
     };
     ann.enseignants.push(ens); save(); return ens;
@@ -772,6 +779,9 @@ const DGHData = (() => {
     if (fields.commentaire!==undefined) ens.commentaire = fields.commentaire||'';
     if (fields.orsManuel!==undefined) ens.orsManuel = (fields.orsManuel!==''&&fields.orsManuel!==null)
                                                         ? parseFloat(fields.orsManuel) : null;
+    if (fields.motifORS!==undefined)  ens.motifORS  = (fields.motifORS||'').trim();
+    if (fields.volumeBMP!==undefined) ens.volumeBMP = (fields.volumeBMP!==''&&fields.volumeBMP!==null)
+                                                        ? parseFloat(fields.volumeBMP) : null;
     // Mise a jour des disciplines par matiere
     if (Array.isArray(fields.disciplines)) {
       ens.disciplines = fields.disciplines.map(d => ({ discNom:(d.discNom||'').trim(), heures:parseFloat(d.heures)||0 }));

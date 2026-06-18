@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DGH App — Pilotage de la Dotation Globale Horaire</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=4.9.5" />
+  <link rel="stylesheet" href="assets/css/style.css?v=4.9.6" />
 </head>
 <body>
 
@@ -33,6 +33,7 @@
       <li class="nav-section-label">Cadre de l'année</li>
       <li class="nav-item" data-view="structures"><span class="nav-icon">⊞</span><span class="nav-label">Structures</span></li>
       <li class="nav-item" data-view="dotation"><span class="nav-icon">◎</span><span class="nav-label">Dotation DGH</span></li>
+      <li class="nav-item" data-view="equipe"><span class="nav-icon">◉</span><span class="nav-label">Équipe & HP/HSA</span></li>
       <li class="nav-item" data-view="hpc"><span class="nav-icon">◈</span><span class="nav-label">H. péda. complémentaires</span></li>
 
       <!-- PILOTER -->
@@ -64,7 +65,7 @@
       <input type="file" id="fileImport" accept=".json" style="display:none" />
     </div>
     <div class="sidebar-footer">
-      <span>v4.9.5</span>
+      <span>v4.9.6</span>
       <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -136,6 +137,23 @@
             <div class="gauge-sim is-hidden" id="dash-hsa-sim"></div>
           </div>
         </div>
+
+        <!-- Équipe : apport réel HP/HSA (source TRM) -->
+        <div class="section-card dash-equipe-card is-hidden" id="dashEquipeCard">
+          <div class="dash-resume-col-header">
+            <h2>Service de l\'équipe — apport réel</h2>
+            <button class="btn-link" data-navigate="equipe">Voir le tableau →</button>
+          </div>
+          <div class="dash-equipe-row">
+            <div class="dash-equipe-stat dash-equipe-hp"><span class="dash-equipe-lbl">HP équipe</span><span class="dash-equipe-val" id="dash-eq-hp">— h</span></div>
+            <div class="dash-equipe-stat dash-equipe-hsa"><span class="dash-equipe-lbl">HSA équipe</span><span class="dash-equipe-val" id="dash-eq-hsa">— h</span></div>
+            <div class="dash-equipe-stat"><span class="dash-equipe-lbl">Total service</span><span class="dash-equipe-val" id="dash-eq-tot">— h</span></div>
+            <div class="dash-equipe-stat"><span class="dash-equipe-lbl">vs enveloppe</span><span class="dash-equipe-val" id="dash-eq-solde">— h</span></div>
+          </div>
+          <div class="dash-equipe-bar"><div class="dash-equipe-bar-hp" id="dash-eq-bar-hp" style="width:0%"></div><div class="dash-equipe-bar-hsa" id="dash-eq-bar-hsa" style="width:0%"></div></div>
+          <p class="dash-equipe-note">HP plafonnées par l\'ORS (ou le volume du bloc pour les BMP) — le dépassement bascule en HSA.</p>
+        </div>
+
         <div class="empty-state" id="emptyState">
           <div class="empty-icon">DGH</div>
           <h2>Bienvenue dans DGH App</h2>
@@ -375,6 +393,49 @@
           </div>
         </div>
         <p class="dot-footnote">Besoin théorique calculé d'après les volumes horaires des enseignements obligatoires (arrêté du 19 mai 2015 relatif à l'organisation des enseignements dans les classes de collège, J.O. du 20 mai 2015, modifié) × nombre de divisions par niveau.</p>
+      </section>
+
+      <!-- ══ ÉQUIPE & HP/HSA ═════════════════════════════════════════ -->
+      <section class="view" id="view-equipe">
+        <div class="view-header">
+          <div class="view-header-row">
+            <div>
+              <h1 class="view-title">Équipe & répartition HP / HSA</h1>
+              <p class="view-subtitle">Tableau de l\'équipe · apport de chacun dans l\'établissement · bascule automatique HP → HSA · prêt pour la remontée TRM de février</p>
+            </div>
+            <div class="view-header-actions">
+              <button class="btn-secondary" data-action="equipe-export-csv" title="Exporter le tableau équipe (Excel)">⬇ Exporter Excel</button>
+              <button class="btn-primary" data-action="open-ens-modal">+ Enseignant</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bandeau pédagogique : la règle HP/HSA en une phrase -->
+        <div class="eq-rule-banner">
+          <span class="eq-rule-icon">⚖</span>
+          <div class="eq-rule-text">
+            <strong>Règle appliquée automatiquement.</strong>
+            L\'apport de chaque enseignant compte en <span class="eq-tag eq-tag-hp">heures-poste</span> jusqu\'à son seuil
+            (ORS du grade, ou volume du bloc pour un BMP). Tout dépassement bascule en <span class="eq-tag eq-tag-hsa">HSA</span>.
+            Aucune ressaisie : modifiez l\'apport, les HP/HSA se recalculent partout.
+          </div>
+        </div>
+
+        <!-- KPI synthèse équipe -->
+        <div class="eq-kpi-grid">
+          <div class="eq-kpi eq-kpi-hp"><div class="eq-kpi-label">Heures-poste (équipe)</div><div class="eq-kpi-value" id="eq-kpi-hp">— h</div><div class="eq-kpi-sub" id="eq-kpi-hp-sub">apport plafonné</div></div>
+          <div class="eq-kpi eq-kpi-hsa"><div class="eq-kpi-label">HSA (équipe)</div><div class="eq-kpi-value" id="eq-kpi-hsa">— h</div><div class="eq-kpi-sub" id="eq-kpi-hsa-sub">dépassements + HPC HSA</div></div>
+          <div class="eq-kpi eq-kpi-tot"><div class="eq-kpi-label">Total service</div><div class="eq-kpi-value" id="eq-kpi-tot">— h</div><div class="eq-kpi-sub" id="eq-kpi-tot-sub">HP + HSA</div></div>
+          <div class="eq-kpi eq-kpi-env"><div class="eq-kpi-label">vs Enveloppe DGH</div><div class="eq-kpi-value" id="eq-kpi-solde">— h</div><div class="eq-kpi-sub" id="eq-kpi-solde-sub">solde</div></div>
+        </div>
+
+        <!-- Répartition par statut -->
+        <div class="eq-statut-strip" id="eq-statut-strip"></div>
+
+        <!-- Tableau de l\'équipe -->
+        <div class="eq-table-wrap" id="eq-table-wrap"></div>
+
+        <p class="dot-footnote">Seuils ORS de référence : Agrégé 15 h · Certifié / PLP (CPC) 18 h · PLP 17 h · Prof. EPS 20 h (+3 h AS). Pour un BMP, le seuil est le volume du bloc implanté. Toute ORS dérogatoire doit être motivée (mission, décharge, temps partiel) — le motif est repris dans l\'export TRM.</p>
       </section>
 
       <!-- ══ HEURES PÉDAGOGIQUES COMPLÉMENTAIRES ═════════════════════ -->
@@ -803,6 +864,18 @@
             <span class="form-hint">Temps partiel : saisir les heures réduites directement. Réduction réglementaire, BMP…</span>
           </div>
         </div>
+        <!-- Volume BMP : visible uniquement si statut = BMP -->
+        <div class="form-group is-hidden" id="grpVolumeBMP">
+          <label for="inputEnsVolumeBMP">Volume du BMP (h) <span class="form-required">*</span></label>
+          <input type="number" id="inputEnsVolumeBMP" placeholder="ex. 15" min="0" max="40" step="0.5" />
+          <span class="form-hint">Plafond HP du bloc : l'apport compte en HP jusqu'à ce volume, le dépassement bascule en HSA.</span>
+        </div>
+        <!-- Motif ORS : visible uniquement si ORS manuelle saisie -->
+        <div class="form-group is-hidden" id="grpMotifORS">
+          <label for="inputEnsMotifORS">Motif de l'ORS modifiée <span class="form-required">*</span></label>
+          <input type="text" id="inputEnsMotifORS" placeholder="ex. Décharge labo, mission référent numérique, temps partiel 80 %…" maxlength="120" />
+          <span class="form-hint">Obligatoire dès que l'ORS diffère de l'ORS réglementaire du grade — tracé pour la remontée TRM.</span>
+        </div>
         <div class="ens-ors-preview" id="ensOrsPreview"></div>
         <div class="form-group"><label for="inputEnsComment">Commentaire</label><input type="text" id="inputEnsComment" placeholder="Notes éventuelles…" maxlength="200" /></div>
       </div>
@@ -937,22 +1010,23 @@
     </div>
   </div>
 
-  <script src="assets/js/data.js?v=4.9.5"></script>
-  <script src="assets/js/calculs.js?v=4.9.5"></script>
-  <script src="assets/js/modules/dashboard.js?v=4.9.5"></script>
-  <script src="assets/js/modules/structures.js?v=4.9.5"></script>
-  <script src="assets/js/modules/dotation.js?v=4.9.5"></script>
-  <script src="assets/js/modules/hpc.js?v=4.9.5"></script>
-  <script src="assets/js/modules/etab.js?v=4.9.5"></script>
-  <script src="assets/js/modules/enseignants.js?v=4.9.5"></script>
-  <script src="assets/js/modules/repartition.js?v=4.9.5"></script>
-  <script src="assets/js/modules/pilotage.js?v=4.9.5"></script>
-  <script src="assets/js/modules/edt.js?v=4.9.5"></script>
-  <script src="assets/js/modules/historique.js?v=4.9.5"></script>
-  <script src="assets/js/modules/missions.js?v=4.9.5"></script>
-  <script src="assets/js/modules/instances.js?v=4.9.5"></script>
-  <script src="assets/js/app.js?v=4.9.5"></script>
-  <script src="assets/js/tutorial.js?v=4.9.5"></script>
+  <script src="assets/js/data.js?v=4.9.6"></script>
+  <script src="assets/js/calculs.js?v=4.9.6"></script>
+  <script src="assets/js/modules/dashboard.js?v=4.9.6"></script>
+  <script src="assets/js/modules/structures.js?v=4.9.6"></script>
+  <script src="assets/js/modules/dotation.js?v=4.9.6"></script>
+  <script src="assets/js/modules/equipe.js?v=4.9.6"></script>
+  <script src="assets/js/modules/hpc.js?v=4.9.6"></script>
+  <script src="assets/js/modules/etab.js?v=4.9.6"></script>
+  <script src="assets/js/modules/enseignants.js?v=4.9.6"></script>
+  <script src="assets/js/modules/repartition.js?v=4.9.6"></script>
+  <script src="assets/js/modules/pilotage.js?v=4.9.6"></script>
+  <script src="assets/js/modules/edt.js?v=4.9.6"></script>
+  <script src="assets/js/modules/historique.js?v=4.9.6"></script>
+  <script src="assets/js/modules/missions.js?v=4.9.6"></script>
+  <script src="assets/js/modules/instances.js?v=4.9.6"></script>
+  <script src="assets/js/app.js?v=4.9.6"></script>
+  <script src="assets/js/tutorial.js?v=4.9.6"></script>
 
   <!-- Modale génération groupée de barrettes (Sprint 18) -->
   <div class="modal-overlay" id="modalGenBarrettes" role="dialog" aria-modal="true">

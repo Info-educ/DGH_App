@@ -5,6 +5,40 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.9.6 — Sprint 19 : bascule automatique HP / HSA et vue Équipe (2026-06-18)
+
+### Contexte
+Clarification de la répartition Heures-Poste (HP) / HSA, qui conditionne le
+calcul de la dotation et la remontée TRM de février. Les enseignants en poste
+et les BMP sont comptabilisés en heures-poste sur leur apport dans
+l'établissement ; tout dépassement bascule automatiquement en HSA.
+
+### Ajouté
+- **Bascule automatique HP → HSA** (`calculs.js` › `serviceTotalEnseignant`).
+  L'apport de chaque enseignant compte en HP jusqu'à son seuil, le dépassement
+  devient HSA. Aucune ressaisie : un seul chiffre d'apport pilote tout.
+- **Seuil HP par statut** (`calculs.js` › `plafondHP`) : ORS du grade pour les
+  titulaires/TZR ; volume du bloc pour les BMP ; ORS manuelle motivée sinon.
+- **Champ « Volume du BMP »** dans la fiche enseignant — visible uniquement
+  pour le statut BMP, sert de plafond HP.
+- **Champ « Motif de l'ORS modifiée »** — obligatoire dès que l'ORS diffère de
+  l'ORS réglementaire du grade (mission, décharge, temps partiel). Repris dans
+  l'export TRM.
+- **Aperçu HP/HSA en direct** dans la fiche enseignant pendant la saisie.
+- **Nouvelle vue « Équipe & HP/HSA »** (Cadre de l'année) : tableau de
+  constitution de l'équipe, apport de chacun, seuil, HP, HSA, barre de
+  répartition, totaux par statut et synthèse vs enveloppe. Export CSV « TRM ».
+- **Carte « Service de l'équipe — apport réel »** sur le tableau de bord :
+  HP/HSA consommées par l'équipe, solde vs enveloppe.
+- **`bilanEquipe`** (`calculs.js`) : agrégat HP/HSA établissement, source de
+  vérité pour la TRM. Intégré à `bilanDotation` (`equipeHP`, `equipeHSA`…).
+
+### Schéma
+- Enseignant : ajout de `volumeBMP` et `motifORS`. Migration automatique
+  (v4.9.6) — les enseignants existants reçoivent ces champs vides.
+
+---
+
 ## v4.9.5 — Audit métier : indisponibilités effectives, cascades de suppression, validations (2026-06-18)
 
 ### Contexte

@@ -154,6 +154,9 @@ const DGHDashboard = (() => {
       if (emptyEl)  emptyEl.classList.toggle('is-hidden', !isEmpty);
       if (resumeEl) resumeEl.classList.toggle('is-hidden', isEmpty);
 
+      // Carte équipe — apport réel HP/HSA (source TRM)
+      _renderEquipeCard(bilanBase);
+
       // Résumé disciplines (passé bilanEff pour que les ecarts reflètent le scénario)
       _renderDiscResume(bilanBase);
 
@@ -399,6 +402,35 @@ const DGHDashboard = (() => {
   }
 
   // ── UTILITAIRES LOCAUX ─────────────────────────────────────────────
+  function _renderEquipeCard(bilanBase) {
+    const card = document.getElementById('dashEquipeCard');
+    if (!card) return;
+    const bilan = Calculs.bilanEquipe(DGHData.getEnseignants(), DGHData.getHeuresPedaComp());
+    if (!bilan.nbEns) { card.classList.add('is-hidden'); return; }
+    card.classList.remove('is-hidden');
+    const r = n => Math.round((n||0)*2)/2;
+    _set('dash-eq-hp',  r(bilan.totalHP)  + ' h');
+    _set('dash-eq-hsa', r(bilan.totalHSA) + ' h');
+    _set('dash-eq-tot', r(bilan.totalGeneral) + ' h');
+
+    const env = bilanBase.enveloppe || 0;
+    const soldeEl = document.getElementById('dash-eq-solde');
+    if (soldeEl) {
+      if (env <= 0) { soldeEl.textContent = '— h'; soldeEl.className = 'dash-equipe-val'; }
+      else {
+        const solde = r(env - bilan.totalGeneral);
+        soldeEl.textContent = (solde >= 0 ? '+' : '') + solde + ' h';
+        soldeEl.className = 'dash-equipe-val' + (solde < 0 ? ' is-over' : '');
+      }
+    }
+    const tot = bilan.totalGeneral > 0 ? bilan.totalGeneral : 1;
+    const pctHP = Math.round((bilan.totalHP / tot) * 100);
+    const barHP = document.getElementById('dash-eq-bar-hp');
+    const barHSA = document.getElementById('dash-eq-bar-hsa');
+    if (barHP)  barHP.style.width  = pctHP + '%';
+    if (barHSA) barHSA.style.width = (100 - pctHP) + '%';
+  }
+
   function _set(id, val)  { const el=document.getElementById(id); if(el) el.textContent=val; }
   function _esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
