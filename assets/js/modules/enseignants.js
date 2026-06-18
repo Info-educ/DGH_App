@@ -188,13 +188,6 @@ const DGHEnseignants = (() => {
     return '<div class="ens-disc-multi">' + badges + '</div>';
   }
 
-  function _heuresHint(statut) {
-    if (statut === 'tzr') return 'ici seulement';
-    if (statut === 'bmp') return 'partiel';
-    if (statut === 'contractuel') return 'selon contrat';
-    return '';
-  }
-
   // _affORS/_affEcart : compat descendante (vue discipline)
   function _affORS(d) {
     if (!d || d.ors === 0) return '<span class="ens-disc-vide">—</span>';

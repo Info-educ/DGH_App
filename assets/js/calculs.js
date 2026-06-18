@@ -1,5 +1,5 @@
 /**
- * DGH App — Moteur de calcul v3.0.0
+ * DGH App — Moteur de calcul v4.9.5
  * Fonctions pures : zéro DOM, zéro localStorage
  *
  * v3.0.0 — Sprint 5 :
@@ -783,11 +783,13 @@ function _frequencesConflit(f1, f2) {
  * salles spécialisées saturées, indisponibilités dures sans aucun créneau libre.
  * @returns {Array<{severite, categorie, message, ref}>}
  */
-function controlesEDT(anneeData, etab) {
+function controlesEDT(anneeData, etab, indisponibilitesResolues) {
   const out = [];
   const contraintesEDT = anneeData.contraintesEDT || {};
   const barrettes      = contraintesEDT.barrettes || [];
-  const indispos        = contraintesEDT.indisponibilites || [];
+  const indispos        = Array.isArray(indisponibilitesResolues)
+    ? indisponibilitesResolues
+    : (contraintesEDT.indisponibilites || []);
   const enseignants     = anneeData.enseignants || [];
   const salles          = (etab && etab.salles) || [];
 
@@ -849,15 +851,19 @@ function controlesEDT(anneeData, etab) {
     });
   }
 
-  // 3. Indisponibilité dure couvrant la totalité de la semaine (aucun créneau restant)
+  // 3. Indisponibilité dure couvrant tous les jours ouvrés (saisie probablement erronée)
+  const joursOuvres = (anneeData.organisationSemaine && Array.isArray(anneeData.organisationSemaine.joursOuvres) && anneeData.organisationSemaine.joursOuvres.length)
+    ? anneeData.organisationSemaine.joursOuvres
+    : ['lun', 'mar', 'mer', 'jeu', 'ven'];
   const parEnsIndispo = {};
   indispos.filter(i => i.type === 'dure').forEach(i => { (parEnsIndispo[i.ensId] = parEnsIndispo[i.ensId] || []).push(i); });
   Object.entries(parEnsIndispo).forEach(([ensId, list]) => {
-    const joursIndispoTotal = new Set(list.filter(i => i.plage === 'journee').map(i => i.jour));
-    if (joursIndispoTotal.size >= 5) {
+    const joursCouverts = new Set(list.map(i => i.jour));
+    const toutCouvert = joursOuvres.every(j => joursCouverts.has(j));
+    if (toutCouvert && joursOuvres.length > 0) {
       const ens = enseignants.find(e => e.id === ensId);
       const nom = ens ? ((ens.prenom||'')+' '+ens.nom).trim() : '?';
-      out.push({ severite:'error', categorie:'indisponibilite', message: nom + ' : indisponible la journée entière sur tous les jours — vérifier la saisie.', ref: ensId });
+      out.push({ severite:'warning', categorie:'indisponibilite', message: nom + ' : marqué indisponible sur tous les jours ouvrés — vérifier la saisie.', ref: ensId });
     }
   });
 
@@ -937,6 +943,7 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
 }
 
   return {
+    GRILLES_MEN,
     getORS, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
     resumeStructures, bilanDotation, besoinsParDiscipline,
     suggererRepartition, bilanHPC, genererAlertes, serviceTotalEnseignant,

@@ -252,7 +252,6 @@ ${_htmlKpis(totalPacte, envPacte, totalImp, envImp)}
 
     const fields = { type, intitule, enseignantId: ensId, heures, disciplineId: discId, commentaire: comment };
     if (_editId) {
-      DGHMissions._editId = _editId; // pour ne pas perdre l'id
       DGHData.updateMission(_editId, fields);
       app.toast('Mission mise à jour.', 'success');
     } else {

@@ -5,6 +5,96 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.9.5 — Audit métier : indisponibilités effectives, cascades de suppression, validations (2026-06-18)
+
+### Contexte
+Seconde revue approfondie, orientée attentes métier (DGH, structure, préparation
+EDT et compatibilité Index Éducation). Objectif : que chaque fonctionnalité
+produise réellement l'effet attendu par un chef d'établissement, et que les
+données restent cohérentes après toute opération.
+
+### Corrigé — fonctionnel métier
+- **Indisponibilités enseignants : saisie sans effet sur les calculs.** La saisie
+  se fait via la grille visuelle (`grillesIndispo`), mais le calcul de l'heure
+  bleue (`creneauBleuOptimal`) et les contrôles EDT (`controlesEDT`) lisaient
+  l'ancien tableau `indisponibilites[]`, désormais non alimenté par l'interface.
+  Conséquence : les indisponibilités saisies étaient **ignorées** par les deux
+  fonctionnalités phares du module EDT. Ajout d'un adaptateur unique
+  `DGHData.getIndisponibilitesPourCalcul()` qui convertit la grille
+  (`'lun-08':'dure'` → créneau horaire typé) et fusionne avec l'ancien format ;
+  branché sur l'heure bleue et la notice EDT. La recommandation d'heure bleue et
+  les alertes tiennent maintenant compte des indisponibilités réelles.
+- **Détection « indisponible toute la semaine »** : le seuil fixe de 5 jours en
+  « journée entière » ne se déclenchait jamais avec la grille (créneaux horaires)
+  ni pour les établissements à 4 jours. Remplacé par une comparaison aux jours
+  réellement ouvrés de l'établissement.
+
+### Corrigé — intégrité des données (cascades de suppression)
+- **Suppression d'une division** : nettoie désormais aussi les groupes EDT
+  rattachés (et supprime ceux devenus vides), ainsi que les slots de barrettes
+  pointant sur la division ou sur un groupe supprimé. Plus de groupes ni de slots
+  orphelins.
+- **Suppression d'un enseignant** : nettoie désormais sa grille d'indisponibilités
+  (`grillesIndispo[ensId]`), qui restait auparavant en base.
+- **Suppression d'une discipline** : nettoie désormais les `disciplineIds` des
+  barrettes et des groupes EDT, et les `discId` de slots concernés (plus de « ? »
+  résiduels).
+
+### Ajouté — validations de saisie (compatibilité Index Éducation)
+- **Divisions** : refus des libellés en doublon (Index Éducation impose des
+  libellés de division uniques) et des effectifs négatifs.
+
+### Nettoyé — qualité de code (règle « zéro code zombie » du SKILL.md)
+- Suppression de trois fonctions mortes : `_htmlListeBarrettes` (ancienne vue
+  liste remplacée par le kanban, ~40 lignes), `_heuresHint` (enseignants),
+  `_set` (répartition).
+
+### Vérifications
+Banc d'essai d'exécution étendu : chargement des 16 fichiers, rendu des 10 vues,
+parcours des 5 onglets EDT, cycles écriture/relecture, cascades de suppression et
+validations — tous au vert sur les données d'exemple. Audit RGPD : zéro appel
+réseau, stockage strictement local. Audit XSS : échappement systématique au point
+d'insertion HTML confirmé.
+
+## v4.9.4 — Correctifs de robustesse : audit complet et réparation des chemins EDT/Structures (2026-06-17)
+
+### Contexte
+Audit développement approfondi de l'ensemble du code (≈11 000 lignes JS). Plusieurs
+régressions silencieuses introduites lors des sprints EDT (v4.8/v4.9) ne se
+manifestaient qu'à l'exécution, sur des onglets précis — non détectables par une
+simple vérification de syntaxe. Toutes ont été reproduites puis corrigées, et un
+banc d'essai d'exécution (chargement des modules + rendu de toutes les vues +
+parcours des onglets EDT + cycles écriture/relecture sur données d'exemple) valide
+désormais l'ensemble.
+
+### Corrigé
+- **EDT — module entièrement cassé au chargement.** Les fonctions
+  `startAddClibre / editClibre / cancelClibre / saveClibre / deleteClibre` étaient
+  listées dans l'API publique de `DGHEdt` mais jamais définies ; l'évaluation du
+  bloc `return` levait une `ReferenceError`, laissant `DGHEdt` indéfini et faisant
+  planter toute l'application (app.js appelle `DGHEdt.renderEdt()`). Les cinq
+  fonctions et le formulaire `_htmlFormClibre` (intitulé, jour, plage horaire,
+  enseignants et classes concernés) ont été implémentés dans le style des
+  formulaires existants (co-interventions).
+- **EDT — onglets « Indisponibilités » et « Heure bleue » non fonctionnels.** Les
+  méthodes `getGrilleIndispo / setGrilleIndispo / getGrilleHeureBleue /
+  setGrilleHeureBleue` existaient dans `data.js` mais étaient absentes de l'export
+  de `DGHData` (« is not a function » au rendu). Exportées.
+- **Dotation — modale « Ajouter un groupe de cours » plantait.** Lecture de
+  `Calculs.GRILLES_MEN`, constante non exportée par `Calculs` → `Object.entries(undefined)`.
+  Constante exportée + garde défensive côté appelant.
+- **Structures — onglet « Groupes » plantait au rendu** (`genBannerHtml is not
+  defined`) : la bannière de génération rapide n'était jamais construite. Appel au
+  constructeur existant `_htmlGenGroupesRapides()` rétabli.
+- **Structures — bouton « Génération rapide — demi-classes » inactif** : aucun
+  handler ne reliait `data-action="sg-generer-groupes-rapides"` à
+  `genererGroupesRapides()`. Délégation ajoutée dans `app.js`.
+
+### Modifié
+- Nettoyage d'une écriture morte `DGHMissions._editId = _editId` (jamais relue).
+- Harmonisation des numéros de version : l'archive annonçait v4.9.4 alors que tout
+  le code restait figé en v4.8.0 (badge, cache-busters `?v=`, en-têtes de modules).
+
 ## v4.8.0 — Préparation EDT : salles, heure bleue, indisponibilités, notice consolidée (2026-06-17)
 
 ### Contexte

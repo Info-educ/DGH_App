@@ -379,7 +379,7 @@ const DGHDotation = (() => {
     const disc = DGHData.getDiscipline(discId);
     const hint = document.getElementById('inputGCHeuresHint');
     if (hint && disc) {
-      const grille = Calculs.GRILLES_MEN;
+      const grille = Calculs.GRILLES_MEN || {};
       const hParNiv = Object.entries(grille)
         .filter(([,g]) => g[disc.nom])
         .map(([niv,g]) => niv + ':' + g[disc.nom] + 'h')

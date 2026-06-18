@@ -167,10 +167,16 @@ const DGHStructures = (() => {
     const id  = document.getElementById('modalDivId')?.value||'';
     const nom = (document.getElementById('inputDivNom')?.value||'').trim();
     if (!nom) { app.toast('Le nom est requis','warning'); return; }
+    const effectifSaisi = parseInt(document.getElementById('inputDivEffectif')?.value, 10);
+    if (!isNaN(effectifSaisi) && effectifSaisi < 0) { app.toast('L\u2019effectif ne peut pas être négatif.','warning'); return; }
+    // Unicité du libellé de division (exigence Index Éducation)
+    const nomNorm = nom.toLowerCase();
+    const doublon = DGHData.getStructures().some(d => d.id !== id && (d.nom||'').trim().toLowerCase() === nomNorm);
+    if (doublon) { app.toast('Une division « ' + nom + ' » existe déjà.','warning'); return; }
     const fields = {
       niveau:      document.getElementById('inputDivNiveau')?.value||'6e',
       nom,
-      effectif:    parseInt(document.getElementById('inputDivEffectif')?.value,10)||0,
+      effectif:    Math.max(0, parseInt(document.getElementById('inputDivEffectif')?.value,10)||0),
       options:     [],
       dispositif:  document.getElementById('inputDivDispositif')?.value||null
     };
@@ -296,6 +302,7 @@ const DGHStructures = (() => {
       listHtml += '</div>';
     }
 
+    const genBannerHtml = _htmlGenGroupesRapides(structures, groupes);
     el.innerHTML = genBannerHtml + formHtml + listHtml;
   }
 

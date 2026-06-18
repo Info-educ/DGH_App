@@ -29,7 +29,6 @@ const DGHRepartition = (() => {
     return String(s == null ? '' : s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-  function _set(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
   function _nomEns(ens) {
     if (!ens) return '?';
     return ((ens.nom || '') + (ens.prenom ? ' ' + ens.prenom : '')).trim() || '?';

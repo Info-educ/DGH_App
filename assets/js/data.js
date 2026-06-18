@@ -1,5 +1,5 @@
 /**
- * DGH App — Couche données v4.8.0
+ * DGH App — Couche données v4.9.5
  * SEUL fichier qui touche localStorage
  *
  * v3.0.0 — Sprint 5 : enveloppe HP/HSA, groupesCours, heuresPedaComp, sélection classes
@@ -532,6 +532,25 @@ const DGHData = (() => {
     if (ann.contraintesEDT) {
       (ann.contraintesEDT.contraintesLibres||[]).forEach(cl => { cl.classeIds = (cl.classeIds||[]).filter(c=>c!==id); });
       (ann.contraintesEDT.coInterventions||[]).forEach(ci => { ci.classeIds = (ci.classeIds||[]).filter(c=>c!==id); });
+      // Slots de barrette pointant directement sur la division supprimée
+      (ann.contraintesEDT.barrettes||[]).forEach(b => {
+        b.slots = (b.slots||[]).filter(s => !(s.type === 'classe' && s.ref === id));
+      });
+    }
+    // Groupes EDT : retirer la classe ; supprimer les groupes devenus vides + leurs slots
+    if (Array.isArray(ann.groupes)) {
+      const groupesVides = [];
+      ann.groupes.forEach(g => { g.classeIds = (g.classeIds||[]).filter(c => c !== id); });
+      ann.groupes = ann.groupes.filter(g => {
+        if ((g.classeIds||[]).length === 0) { groupesVides.push(g.id); return false; }
+        return true;
+      });
+      if (groupesVides.length && ann.contraintesEDT) {
+        const vides = new Set(groupesVides);
+        (ann.contraintesEDT.barrettes||[]).forEach(b => {
+          b.slots = (b.slots||[]).filter(s => !(s.type === 'groupe' && vides.has(s.ref)));
+        });
+      }
     }
     if (ann.structures.length<before){save();return true;} return false;
   }
@@ -579,6 +598,15 @@ const DGHData = (() => {
     ann.repartition = ann.repartition.filter(r=>r.disciplineId!==id);
     (ann.heuresPedaComp||[]).forEach(h => { if(h.disciplineId===id) h.disciplineId=null; });
     ann.affectations = (ann.affectations||[]).filter(a => a.disciplineId !== id);
+    if (ann.contraintesEDT) {
+      (ann.contraintesEDT.barrettes||[]).forEach(b => {
+        b.disciplineIds = (b.disciplineIds||[]).filter(did => did !== id);
+        (b.slots||[]).forEach(s => { if (s.discId === id) s.discId = null; });
+      });
+    }
+    if (Array.isArray(ann.groupes)) {
+      ann.groupes.forEach(g => { g.disciplineIds = (g.disciplineIds||[]).filter(did => did !== id); });
+    }
     if (ann.disciplines.length<before){save();return true;} return false;
   }
 
@@ -783,6 +811,7 @@ const DGHData = (() => {
     // Nettoyer indisponibilités, contraintes libres et slots de barrettes (v4.8.0)
     if (ann.contraintesEDT) {
       ann.contraintesEDT.indisponibilites = (ann.contraintesEDT.indisponibilites||[]).filter(i => i.ensId !== id);
+      if (ann.contraintesEDT.grillesIndispo) delete ann.contraintesEDT.grillesIndispo[id];
       (ann.contraintesEDT.contraintesLibres||[]).forEach(cl => { cl.ensIds = (cl.ensIds||[]).filter(eid => eid !== id); });
       (ann.contraintesEDT.barrettes||[]).forEach(b => (b.slots||[]).forEach(s => { s.ensIds = (s.ensIds||[]).filter(eid => eid !== id); }));
       (ann.contraintesEDT.coInterventions||[]).forEach(ci => { ci.ensIds = (ci.ensIds||[]).filter(eid => eid !== id); });
@@ -1131,6 +1160,41 @@ const DGHData = (() => {
   function getIndisponibilites(annee)        { return getContraintesEDT(annee).indisponibilites.slice(); }
   function getIndisponibilitesEnseignant(ensId, annee) {
     return getIndisponibilites(annee).filter(i => i.ensId === ensId);
+  }
+
+  /**
+   * Source de vérité unique pour les calculs (heure bleue, contrôles EDT).
+   * Fusionne :
+   *   - les indisponibilités saisies via l'ancien formulaire texte (indisponibilites[]),
+   *   - les indisponibilités saisies via la grille visuelle (grillesIndispo[ensId]).
+   * Chaque cellule 'jour-HH' de la grille devient un créneau d'une heure
+   * { ensId, jour, heureDebut:'HH:00', heureFin:'HH+1:00', plage:'creneau', type:'dure'|'souple' }.
+   * 'dure' = indisponibilité réelle (bloquante) ; 'voeu' = vœu souple (à éviter).
+   */
+  function getIndisponibilitesPourCalcul(annee) {
+    const c = getContraintesEDT(annee);
+    const out = (c.indisponibilites || []).map(i => ({ ...i }));
+    const grilles = c.grillesIndispo || {};
+    Object.keys(grilles).forEach(ensId => {
+      const creneaux = (grilles[ensId] && grilles[ensId].creneaux) || {};
+      Object.keys(creneaux).forEach(key => {
+        const etat = creneaux[key];
+        if (etat !== 'dure' && etat !== 'voeu') return;
+        const sep = key.lastIndexOf('-');
+        if (sep < 0) return;
+        const jour = key.slice(0, sep);
+        const h    = parseInt(key.slice(sep + 1), 10);
+        if (isNaN(h)) return;
+        out.push({
+          ensId, jour, plage: 'creneau',
+          heureDebut: String(h).padStart(2, '0') + ':00',
+          heureFin:   String(h + 1).padStart(2, '0') + ':00',
+          type: etat === 'dure' ? 'dure' : 'souple',
+          motif: ''
+        });
+      });
+    });
+    return out;
   }
 
   function addIndisponibilite(fields) {
@@ -1531,9 +1595,10 @@ const DGHData = (() => {
     addAffectation,updateAffectation,deleteAffectation,
     setProfesseurPrincipal,disciplinePiloteeParAffectation,
     getContraintesEDT,
+    getGrilleIndispo,setGrilleIndispo,getGrilleHeureBleue,setGrilleHeureBleue,
     getBarrettes,addBarrette,updateBarrette,deleteBarrette,
     getCoInterventions,addCoIntervention,updateCoIntervention,deleteCoIntervention,
-    getIndisponibilites,getIndisponibilitesEnseignant,
+    getIndisponibilites,getIndisponibilitesEnseignant,getIndisponibilitesPourCalcul,
     addIndisponibilite,updateIndisponibilite,deleteIndisponibilite,
     getContraintesLibres,addContrainteLibre,updateContrainteLibre,deleteContrainteLibre,
     resetAnnee,deleteAnnee,

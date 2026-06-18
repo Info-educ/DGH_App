@@ -444,46 +444,6 @@ const DGHEdt = (() => {
     app.toast('Barrette supprimée.', 'info');
   }
 
-  // ── Liste des barrettes ────────────────────────────────────────────
-  function _htmlListeBarrettes(barrettes, structures, groupes, enseignants, disciplines) {
-    const visible = barrettes.filter(b => b.id !== _editBarretteId);
-    if (visible.length === 0) return '';
-    return '<div class="edt-barrette-list">' + visible.map(b => {
-      const discNoms = (b.disciplineIds||[]).map(did => disciplines.find(d=>d.id===did)?.nom||'?').join(' / ') || '—';
-      const slots    = b.slots || [];
-      let tableHtml  = '';
-      if (slots.length > 0) {
-        const ths = slots.map((_,i) => '<th>Cours ' + (i+1) + '</th>').join('');
-        const cls  = slots.map(s => {
-          const dNom = s.discId ? (disciplines.find(d=>d.id===s.discId)?.nom||'') : '';
-          return '<td class="edt-slot-cell-classe">' + _esc(_slotLabel(s, structures, groupes)) + (dNom ? '<br><span class="edt-slot-disc-chip">' + _esc(dNom) + '</span>' : '') + '</td>';
-        }).join('');
-        const ens = slots.map(s => '<td class="edt-slot-cell-ens">'
-          + ((s.ensIds||[]).map(eid => { const e = enseignants.find(en=>en.id===eid); return e ? (e.prenom?e.prenom[0]+'. ':'')+e.nom : '?'; }).join(', ') || '—')
-          + '</td>').join('');
-        const freq = slots.map(s => '<td class="edt-slot-cell-ens"><span class="edt-freq-tag ' + (s.frequence||'hebdo') + '">' + _esc(FREQ_LABEL[s.frequence||'hebdo']) + '</span></td>').join('');
-        tableHtml = '<div class="edt-barr-slots-table-wrap"><table class="edt-barr-slots-table">'
-          + '<thead><tr>' + ths + '</tr></thead>'
-          + '<tbody><tr>' + cls + '</tr><tr>' + ens + '</tr><tr>' + freq + '</tr></tbody>'
-          + '</table></div>';
-      } else {
-        tableHtml = '<div class="edt-barrette-body"><span class="edt-synth-aucune">Aucun cours.</span></div>';
-      }
-      return '<div class="edt-barrette-card">'
-        + '<div class="edt-barrette-header">'
-          + '<span class="edt-barrette-nom">' + _esc(b.nom||discNoms) + '</span>'
-          + '<span class="edt-barr-disc-tag">' + _esc(discNoms) + '</span>'
-          + '<div class="edt-card-actions">'
-            + '<button class="btn-icon" data-action="edt-edit-barrette" data-id="' + b.id + '" title="Modifier">✎</button>'
-            + '<button class="btn-icon btn-icon-danger" data-action="edt-delete-barrette" data-id="' + b.id + '" title="Supprimer">✕</button>'
-          + '</div>'
-        + '</div>'
-        + tableHtml
-        + (b.commentaire ? '<div class="edt-barrette-body edt-barrette-comment">' + _esc(b.commentaire) + '</div>' : '')
-      + '</div>';
-    }).join('') + '</div>';
-  }
-
   // ══════════════════════════════════════════════════════════════════
   // ONGLET 2 — CO-INTERVENTIONS
   // ══════════════════════════════════════════════════════════════════
@@ -581,6 +541,82 @@ const DGHEdt = (() => {
     DGHData.deleteCoIntervention(id);
     _renderCoInterv();
     app.toast('Co-intervention supprimée.', 'info');
+  }
+
+  // ── Contraintes libres : formulaire + actions ──────────────────────
+  function _htmlFormClibre(enseignants, structures, jours, editData) {
+    const titre   = editData?.titre || '';
+    const comment = editData?.commentaire || '';
+    const jourSel = editData?.jour || 'lun';
+    const hDeb    = editData?.heureDebut || '';
+    const hFin    = editData?.heureFin || '';
+    const ensSel  = new Set(editData?.ensIds    || []);
+    const clsSel  = new Set(editData?.classeIds || []);
+    const joursOpts = (Array.isArray(jours) && jours.length ? jours : JOURS_ALL)
+      .map(j => '<option value="' + j + '"' + (jourSel === j ? ' selected' : '') + '>' + _esc(JOUR_LABEL[j] || j) + '</option>').join('');
+    const ensHtml = enseignants.length === 0
+      ? '<span class="edt-empty-hint">Aucun enseignant.</span>'
+      : enseignants.map(e => '<label class="mod-classe-label"><input type="checkbox" class="edt-clibre-ens-check" value="' + e.id + '"' + (ensSel.has(e.id)?' checked':'') + '> '
+          + _esc(_ensNomCourt(e)) + '<span class="edt-ens-disc-label"> ' + _esc(e.disciplinePrincipale||'') + '</span></label>').join('');
+    const parNiv  = {};
+    structures.forEach(s => { if (!parNiv[s.niveau]) parNiv[s.niveau]=[]; parNiv[s.niveau].push(s); });
+    const niveauxOrd = ['6e','5e','4e','3e','SEGPA','ULIS','UPE2A'];
+    const clsHtml = niveauxOrd.filter(n => parNiv[n]?.length).map(niv =>
+      '<div class="edt-form-niv"><span class="edt-form-niv-label">' + niv + '</span>'
+        + parNiv[niv].map(s => '<label class="mod-classe-label"><input type="checkbox" class="edt-clibre-classe-check" value="' + s.id + '"' + (clsSel.has(s.id)?' checked':'') + '> ' + _esc(s.nom) + '</label>').join('')
+      + '</div>').join('') || '<span class="edt-empty-hint">Aucune classe.</span>';
+    const saveAttr = editData ? ' data-id="' + editData.id + '"' : '';
+    return '<div class="edt-form" id="edtClibreForm">'
+      + '<div class="edt-form-title">' + (editData ? 'Modifier la contrainte libre' : 'Nouvelle contrainte libre') + '</div>'
+      + '<div class="edt-form-grid">'
+        + '<div class="edt-form-col">'
+          + '<div class="edt-form-field"><label>Intitulé <span class="edt-form-req">*</span></label><input type="text" id="edtClibreTitre" value="' + _esc(titre) + '" placeholder="Ex : Orchestre — Conservatoire" /></div>'
+          + '<div class="edt-form-field"><label>Jour</label><select id="edtClibreJour">' + joursOpts + '</select></div>'
+          + '<div class="edt-form-row">'
+            + '<div class="edt-form-field"><label>Début</label><input type="time" id="edtClibreDebut" value="' + _esc(hDeb) + '" /></div>'
+            + '<div class="edt-form-field"><label>Fin</label><input type="time" id="edtClibreFin" value="' + _esc(hFin) + '" /></div>'
+          + '</div>'
+          + '<div class="edt-form-field"><label>Commentaire</label><input type="text" id="edtClibreComment" value="' + _esc(comment) + '" placeholder="Précisions" /></div>'
+        + '</div>'
+        + '<div class="edt-form-col">'
+          + '<div class="edt-form-field"><label>Enseignants concernés (optionnel)</label><div class="edt-check-list">' + ensHtml + '</div></div>'
+          + '<div class="edt-form-field"><label>Classes concernées (optionnel)</label><div class="edt-check-list">' + clsHtml + '</div></div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="edt-form-actions">'
+        + '<button class="btn-primary" data-action="edt-save-clibre"' + saveAttr + '>Enregistrer ✓</button>'
+        + '<button class="btn-secondary" data-action="edt-cancel-clibre">Annuler</button>'
+      + '</div>'
+    + '</div>';
+  }
+
+  function startAddClibre()  { _editClibreId = '__new__'; _renderIndispos(); document.getElementById('edtClibreTitre')?.focus(); }
+  function editClibre(id)    { _editClibreId = id;        _renderIndispos(); document.getElementById('edtClibreTitre')?.focus(); }
+  function cancelClibre()    { _editClibreId = null;      _renderIndispos(); }
+
+  function saveClibre(id) {
+    const titre   = document.getElementById('edtClibreTitre')?.value.trim()   || '';
+    const jour    = document.getElementById('edtClibreJour')?.value           || 'lun';
+    const hDeb    = document.getElementById('edtClibreDebut')?.value          || '';
+    const hFin    = document.getElementById('edtClibreFin')?.value            || '';
+    const comment = document.getElementById('edtClibreComment')?.value.trim() || '';
+    const ensIds    = Array.from(document.querySelectorAll('.edt-clibre-ens-check:checked')).map(c => c.value);
+    const classeIds = Array.from(document.querySelectorAll('.edt-clibre-classe-check:checked')).map(c => c.value);
+    if (!titre) { app.toast('L\u2019intitulé est obligatoire.', 'warning'); return; }
+    if (hDeb && hFin && hFin <= hDeb) { app.toast('L\u2019heure de fin doit être après le début.', 'warning'); return; }
+    const scope = ensIds.length && classeIds.length ? 'mixte' : (ensIds.length ? 'enseignant' : 'classe');
+    const fields = { titre, jour, heureDebut: hDeb, heureFin: hFin, scope, ensIds, classeIds, commentaire: comment };
+    if (id && id !== '__new__') { DGHData.updateContrainteLibre(id, fields); app.toast('Contrainte libre mise à jour.', 'success'); }
+    else                        { DGHData.addContrainteLibre(fields);        app.toast('Contrainte libre ajoutée.', 'success'); }
+    _editClibreId = null;
+    _renderIndispos();
+  }
+
+  function deleteClibre(id) {
+    if (!confirm('Supprimer cette contrainte libre ?')) return;
+    DGHData.deleteContrainteLibre(id);
+    _renderIndispos();
+    app.toast('Contrainte libre supprimée.', 'info');
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -979,8 +1015,9 @@ const DGHEdt = (() => {
         });
       const enseignants    = DGHData.getEnseignants();
       const contraintesEDT = DGHData.getContraintesEDT();
+      const indispoResolues = DGHData.getIndisponibilitesPourCalcul();
       const resultats = Calculs.creneauBleuOptimal(
-        enseignants, contraintesEDT.indisponibilites || [], contraintesEDT.contraintesLibres || [], creneauxCandidats
+        enseignants, indispoResolues, contraintesEDT.contraintesLibres || [], creneauxCandidats
       );
       const wrap = document.getElementById('hbResultatWrap');
       if (!wrap) return;
@@ -1026,7 +1063,8 @@ const DGHEdt = (() => {
         + '<p class="edt-empty-hint">Renseignez au moins une barrette ou un enseignant pour générer la notice.</p></div>'; return;
     }
     const date = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
-    const alertes = Calculs.controlesEDT(anneeData, etab);
+    const indispoResolues = DGHData.getIndisponibilitesPourCalcul();
+    const alertes = Calculs.controlesEDT(anneeData, etab, indispoResolues);
 
     let html = '<div class="edt-synthese" id="edtSyntheseContent">'
       + '<div class="edt-synthese-entete"><strong>' + _esc(etab.nom||'Établissement') + '</strong>'

@@ -1,5 +1,5 @@
 /**
- * DGH App — Contrôleur principal v3.2.0
+ * DGH App — Contrôleur principal v4.9.5
  * Noyau : init, navigation, délégation événements globaux, utilitaires.
  *
  * ARCHITECTURE :
@@ -189,6 +189,7 @@ const app = (() => {
       if (action === 'struct-save-groupe')   { DGHStructures.saveGroupe(id);                        return; }
       if (action === 'struct-cancel-groupe') { DGHStructures.cancelGroupe();                         return; }
       if (action === 'struct-delete-groupe') { DGHStructures.deleteGroupe(id);                      return; }
+      if (action === 'sg-generer-groupes-rapides') { DGHStructures.genererGroupesRapides();          return; }
       // ── EDT ──
       if (action === 'edt-tab')                  { DGHEdt.switchTab(actionBtn.dataset.tab);         return; }
       if (action === 'kanban-drag-start')       { DGHEdt.kanbanDragStart(actionBtn.dataset.barretteId, actionBtn.dataset.slotIdx); return; }
