@@ -427,6 +427,7 @@ const app = (() => {
       if (ra === 'rep-add')              { DGHRepartition.addFromSelect(e.target);    return; }
       if (ra === 'rep-add-disc-ens')     { DGHRepartition.addDiscToEns(e.target);     return; }
       if (ra === 'rep-toggle-ens-classe'){ DGHRepartition.toggleEnsClasse(e.target);  return; }
+      if (ra === 'rep-rapid-tout-col')   { DGHRepartition.toutColonne(e.target);       return; }
       if (ra === 'rep-aff-h')            { DGHRepartition.setHeures(e.target);        return; }
       if (ra === 'rep-set-pp')           { DGHRepartition.setPP(e.target);            return; }
     }
