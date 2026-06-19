@@ -160,6 +160,7 @@ const app = (() => {
     const actionBtn = e.target.closest('[data-action]');
     if (actionBtn) {
       const { action, id, discId, gcId } = actionBtn.dataset;
+      if (action==='toggle-verifs')   { const box=actionBtn.closest('.dash-verifs'); const d=box&&box.querySelector('.dash-verifs-detail'); if(d){d.classList.toggle('is-hidden');box.classList.toggle('is-open');} return; }
       if (action==='edit-div')        { DGHStructures.openModalDiv(id);                                                              return; }
       if (action==='delete-div')      { DGHStructures.confirmDeleteDiv(id);                                                         return; }
       if (action==='edit-disc')       { DGHDotation.openModalDisc(id);                                                              return; }

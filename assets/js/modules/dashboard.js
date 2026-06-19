@@ -166,6 +166,9 @@ const DGHDashboard = (() => {
       // ── Bandeau scénario actif (bien visible, en haut du dashboard) ──
       _renderBandeauScenario(scenActif, bilanBase, bilanScen);
 
+      // ── Encart Vérification du moteur de calcul (discret si OK, alarmant si problème) ──
+      _renderVerifs();
+
     } catch(e) { console.error('[DGH] renderDashboard:', e); }
     updateBtnEtab();
   }
@@ -232,6 +235,83 @@ const DGHDashboard = (() => {
           + '<button class="btn-secondary btn-sm dash-scen-actif-off" id="btnDesactiverScen">Désactiver</button>'
         + '</div>'
       + '</div>';
+  }
+
+  /**
+   * Encart « Vérification du moteur de calcul ».
+   * Rejoue Verifs.lancer() à chaque rendu du dashboard.
+   *  - Tout OK  → ligne verte sobre, repliée, non intrusive.
+   *  - Échec(s) → bandeau rouge bien visible, déplié d'office sur les contrôles fautifs.
+   */
+  function _renderVerifs() {
+    const el = document.getElementById('dashVerifs');
+    if (!el) return;
+    if (typeof Verifs === 'undefined') { el.classList.add('is-hidden'); el.innerHTML = ''; return; }
+
+    let r;
+    try { r = Verifs.lancer(); }
+    catch (e) {
+      console.error('[DGH] Verifs:', e);
+      el.classList.remove('is-hidden');
+      el.innerHTML = '<div class="dash-verifs dash-verifs-ko">'
+        + '<span class="dash-verifs-icon">\u26a0</span>'
+        + '<span class="dash-verifs-txt">Impossible de lancer la vérification du moteur de calcul.</span>'
+        + '</div>';
+      return;
+    }
+
+    el.classList.remove('is-hidden');
+
+    if (r.ok) {
+      // État sain : sobre, repliable. data-open piloté par délégation globale.
+      el.innerHTML =
+        '<div class="dash-verifs dash-verifs-ok" id="dashVerifsBox">'
+          + '<button class="dash-verifs-head" data-action="toggle-verifs">'
+            + '<span class="dash-verifs-icon">\u2713</span>'
+            + '<span class="dash-verifs-txt">Moteur de calcul vérifié \u2014 '
+              + r.total + ' contrôles OK</span>'
+            + '<span class="dash-verifs-chevron">\u203a</span>'
+          + '</button>'
+          + '<div class="dash-verifs-detail is-hidden">' + _verifsDetailHTML(r) + '</div>'
+        + '</div>';
+    } else {
+      // État problème : rouge, visible, détail ouvert d'emblée.
+      el.innerHTML =
+        '<div class="dash-verifs dash-verifs-ko" id="dashVerifsBox">'
+          + '<button class="dash-verifs-head" data-action="toggle-verifs">'
+            + '<span class="dash-verifs-icon">\u26a0</span>'
+            + '<span class="dash-verifs-txt"><strong>'
+              + r.echoues + ' contrôle' + (r.echoues > 1 ? 's' : '') + ' en échec</strong> '
+              + 'sur le moteur de calcul \u2014 le résultat des heures peut être faux.</span>'
+            + '<span class="dash-verifs-chevron">\u203a</span>'
+          + '</button>'
+          + '<div class="dash-verifs-detail">' + _verifsDetailHTML(r, true) + '</div>'
+        + '</div>';
+    }
+  }
+
+  // Détail des contrôles. echecsSeuls=true → n'affiche que les groupes en échec.
+  function _verifsDetailHTML(r, echecsSeuls) {
+    let html = '';
+    r.groupes.forEach(g => {
+      const koLignes = g.lignes.filter(l => !l.ok);
+      if (echecsSeuls && koLignes.length === 0) return;
+      html += '<div class="dash-verifs-groupe"><div class="dash-verifs-groupe-titre">'
+            + _esc(g.titre) + '</div>';
+      g.lignes.forEach(l => {
+        if (echecsSeuls && l.ok) return;
+        html += '<div class="dash-verifs-ligne ' + (l.ok ? 'is-ok' : 'is-ko') + '">'
+              + '<span class="dash-verifs-ligne-icon">' + (l.ok ? '\u2713' : '\u2717') + '</span>'
+              + '<span class="dash-verifs-ligne-lbl">' + _esc(l.label) + '</span>'
+              + '<span class="dash-verifs-ligne-val font-mono">'
+              + (l.ok ? _esc(String(l.obtenu))
+                      : 'obtenu ' + _esc(String(l.obtenu)) + ', attendu ' + _esc(String(l.attendu)))
+              + '</span>'
+              + '</div>';
+      });
+      html += '</div>';
+    });
+    return html;
   }
 
   // Barre supérieure — rendue sur chaque navigation, visible partout.

@@ -5,7 +5,45 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
-## v4.9.7 — Sprint 19.1 : Besoins & apports, tri, grades stagiaires, fix modales (2026-06-18)
+## v4.10.0 — Sprint 20 : Encart « Vérification du moteur de calcul » (2026-06-19)
+
+### Contexte
+Pour qu'un autre personnel de direction ose confier sa vraie DGH à l'outil, il
+faut une preuve visible que les calculs d'heures (HP/HSA, ORS, bascule, BMP,
+sous-service) tombent juste — et qu'ils le restent après chaque sprint. C'est le
+chantier « confiance » identifié comme prioritaire.
+
+### Ajouté
+- **`assets/js/verifs.js`** — batterie de contrôles métier (fonctions pures,
+  zéro DOM/localStorage) rejouée sur `calculs.js`. 7 cas, 30 vérifications :
+  chorale HP/HSA × prof 18h/16h, BMP, temps partiel, contractuel sans ORS.
+  Les cas sont définis **une seule fois** ici (pas de duplication).
+- **Encart « Vérification » sur le tableau de bord** (`dashboard.js` ›
+  `_renderVerifs`), modelé sur le bandeau scénario :
+  - tout OK → ligne verte sobre, repliée, dépliable au clic ;
+  - au moins un échec → bandeau **rouge bien visible**, détail des contrôles
+    fautifs déplié d'office. Se relance à chaque rendu du tableau de bord.
+- **`tests/test-service.js`** — même batterie, hors navigateur
+  (`node tests/test-service.js`), pour le filet de sécurité de développement.
+  Réutilise `verifs.js` : navigateur et CLI disent toujours la même chose.
+
+### Note métier (à trancher)
+Le cas 1 documente la règle ACTUELLE : une chorale typée HP dont le prof dépasse
+son ORS bascule **silencieusement** en HSA (les disciplines sont servies en HP en
+priorité). Si l'on préfère garder la chorale en HP et lever une **alerte de
+dépassement**, c'est une évolution de `serviceTotalEnseignant` — l'encart
+servira à la border.
+
+### Conformité
+- Aucune ligne ajoutée à `calculs.js` (lecture seule).
+- Aucun `onclick` inline ; toggle replier/déplier via délégation globale
+  (`data-action="toggle-verifs"` dans `app.js`).
+- Styles dans `style.css` (tokens existants `--c-green`/`--c-red`, compatibles
+  thème sombre).
+
+---
+
+
 
 ### Ajouté
 - **Nouvel onglet « Besoins & apports établissement »** (Cadre de l'année).

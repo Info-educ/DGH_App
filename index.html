@@ -95,6 +95,8 @@
         </div>
         <!-- Bandeau scénario actif (masqué si aucun) -->
         <div class="is-hidden dash-scen-banner" id="dashScenActif"></div>
+        <!-- Encart vérification du moteur de calcul (discret si OK, alarmant si problème) -->
+        <div class="is-hidden" id="dashVerifs"></div>
         <div class="kpi-grid">
           <div class="kpi-card kpi-tooltip-card" data-color="blue" data-kpi="dghtotal"><div class="kpi-label">Enveloppe DGH</div><div class="kpi-value" id="kpi-dghtotal">— h</div><div class="kpi-sub">HP + HSA total</div><div class="kpi-tooltip" id="kpi-tooltip-dghtotal"></div></div>
           <div class="kpi-card kpi-tooltip-card" data-color="green" data-kpi="hposte"><div class="kpi-label">Heures-poste</div><div class="kpi-value" id="kpi-hposte">— h</div><div class="kpi-sub" id="kpi-hposte-sub">dotation structurelle</div><div class="kpi-tooltip" id="kpi-tooltip-hposte"></div></div>
@@ -1042,8 +1044,9 @@
   </div>
 
   <script src="assets/js/data.js?v=4.9.7"></script>
-  <script src="assets/js/calculs.js?v=4.9.7"></script>
-  <script src="assets/js/modules/dashboard.js?v=4.9.7"></script>
+  <script src="assets/js/calculs.js?v=4.10.0"></script>
+  <script src="assets/js/verifs.js?v=4.10.0"></script>
+  <script src="assets/js/modules/dashboard.js?v=4.10.0"></script>
   <script src="assets/js/modules/structures.js?v=4.9.7"></script>
   <script src="assets/js/modules/dotation.js?v=4.9.7"></script>
   <script src="assets/js/modules/equipe.js?v=4.9.7"></script>
@@ -1057,7 +1060,7 @@
   <script src="assets/js/modules/historique.js?v=4.9.7"></script>
   <script src="assets/js/modules/missions.js?v=4.9.7"></script>
   <script src="assets/js/modules/instances.js?v=4.9.7"></script>
-  <script src="assets/js/app.js?v=4.9.7"></script>
+  <script src="assets/js/app.js?v=4.10.0"></script>
   <script src="assets/js/tutorial.js?v=4.9.7"></script>
 
   <!-- Modale génération groupée de barrettes (Sprint 18) -->
