@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **4.9.7** — Sprint 19.1 — onglet Besoins & apports établissement (besoin vs apport HP/HSA par discipline, écart BMP, HSA absorbées par discipline+enseignant), grades PSTG/FSTG, tri du tableau enseignants (nom/discipline/ORS/HP/HSA), correctif fermeture parasite des modales.
+> Version courante : **4.12.0** — Sprint 22 — alerte BMP : `calculs.alertesBMP()` (fonction pure) détecte les disciplines dont les HSA effectives dépassent la capacité HSA imposable (titulaires temps plein de la discipline × 2), seuil de déclenchement ≥ 3h, encart conseil de gestion distinct sur le tableau de bord (`#dashAlertesBMP`), suggestion de volume BMP chiffrée. +4 cas de vérification (51 au total).
 
 ---
 
@@ -743,6 +743,12 @@ Checklist de version (à synchroniser à chaque release) :
 5. `README.md` → titre + badge
 6. `CHANGELOG.md` → nouvelle entrée
 7. `assets/js/tutorial.js` → `CONTENT_VER` **uniquement si le contenu d'aide a changé** (sinon laisser tel quel — incrémenter inutilement reproposerait l'aide à tous les utilisateurs sans raison)
+
+**Garde-fou automatique** — après toute mise à jour de version, exécuter :
+```bash
+node tests/check-version.js   # exit 0 si tous les marqueurs concordent, exit 1 sinon
+```
+Ce script prend `const VERSION` de `data.js` comme source de vérité et vérifie le footer, tous les suffixes `?v=`, `exemple.json`, le titre + badge du README, la dernière entrée du CHANGELOG et la ligne « Version courante » du SKILL. **Aucune livraison ne doit sortir avec un exit 1.**
 
 ## Aide contextuelle embarquée — `tutorial.js` (v4.6.0)
 
