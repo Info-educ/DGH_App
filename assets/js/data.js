@@ -231,6 +231,21 @@ const DGHData = (() => {
     Object.values(_data.annees).forEach(ann => {
       if (!Array.isArray(ann.scenarios)) { ann.scenarios = []; delete ann.simulation; }
     });
+    // Migration v4.10 (Sprint 21) : modificateur.typeHeure → modificateur.forcage
+    // Avant : typeHeure ('hp'|'hsa') = choix ferme imposé à chaque modalité.
+    // Après : forcage ('hp'|'hsa'|absent). Absent = bascule auto sur l'enveloppe.
+    // Pour ne RIEN changer aux scénarios existants, on convertit l'ancien choix
+    // ferme en forçage explicite (comportement identique, pile dans STSWeb).
+    Object.values(_data.annees).forEach(ann => {
+      (ann.scenarios || []).forEach(scen => {
+        (scen.modificateurs || []).forEach(mod => {
+          if (mod.forcage === undefined && mod.typeHeure !== undefined && mod.type !== 'projet') {
+            mod.forcage = (mod.typeHeure === 'hp') ? 'hp' : 'hsa';
+          }
+          // On conserve typeHeure pour compat lecture, mais forcage fait foi.
+        });
+      });
+    });
     // Migration v3.6 : contraintesEDT (barrettes + coInterventions)
     Object.values(_data.annees).forEach(ann => {
       if (!ann.contraintesEDT || typeof ann.contraintesEDT !== 'object') ann.contraintesEDT = _contraintesVides();

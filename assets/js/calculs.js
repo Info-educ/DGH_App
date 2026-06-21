@@ -515,49 +515,86 @@ function bilanScenario(anneeData, modificateurs) {
   const bilanBase  = bilanDotation(anneeData);
   const disciplines = anneeData.disciplines || [];
 
+  // ── Ventilation HP/HSA par consommation d'enveloppe (Sprint 21) ──────────
+  // Principe (janvier, raisonnement en MASSE) : on remplit d'abord l'enveloppe
+  // HP encore disponible, puis tout déborde en HSA. L'ordre de consommation
+  // suit l'ordre de SAISIE des modalités (option retenue avec la direction).
+  //
+  // Une modalité peut être « à cheval » : s'il reste 2h d'HP dispo et qu'on
+  // pose 5h, on obtient 2h HP + 3h HSA.
+  //
+  // Forçage : si mod.forcage === 'hp' ou 'hsa', le choix de la direction prime
+  // et la modalité ne suit pas la bascule auto. (Compat : l'ancien mod.typeHeure
+  // est traité comme un forçage — voir migration data.js.)
+  //
+  // HP déjà engagé hors scénario = bilanBase.totalHP. Ce qui reste d'enveloppe
+  // HP à distribuer aux modalités :
+  let hpDispo = Math.round((bilanBase.hPosteEnv - bilanBase.totalHP) * 2) / 2;
+  if (hpDispo < 0) hpDispo = 0; // enveloppe HP déjà dépassée → tout en HSA
+
   let coutHP = 0, coutHSA = 0;
   const detailParMod  = [];
-  const deltaParDisc  = {}; // { disciplineId: deltaHP }
+  const deltaParDisc  = {}; // { disciplineId: deltaHP+HSA } (pour le récap discipline)
+
+  // Répartit `delta` heures entre HP (dans la limite de hpDispo) et HSA,
+  // selon le forçage éventuel. Met à jour hpDispo. Renvoie {hp, hsa}.
+  function _ventiler(delta, forcage) {
+    let hp = 0, hsa = 0;
+    if (forcage === 'hp') {
+      hp = delta;                       // choix direction : tout HP
+      hpDispo = Math.round((hpDispo - delta) * 2) / 2; // peut passer négatif : assumé
+    } else if (forcage === 'hsa') {
+      hsa = delta;                      // choix direction : tout HSA, n'entame pas l'enveloppe HP
+    } else {
+      // Auto : HP tant qu'il reste de l'enveloppe, débordement en HSA.
+      hp  = Math.max(0, Math.min(delta, hpDispo));
+      hsa = Math.round((delta - hp) * 2) / 2;
+      hpDispo = Math.round((hpDispo - hp) * 2) / 2;
+    }
+    return { hp: Math.round(hp * 2) / 2, hsa: Math.round(hsa * 2) / 2 };
+  }
 
   (modificateurs || []).forEach(mod => {
+    const forcage = mod.forcage || null; // 'hp' | 'hsa' | null(auto)
+
     // ── Modalités pédagogiques (dédoublement, co-ens, GER, GBI, autre) ──────
-    // Par défaut HSA — sauf si l'utilisateur choisit HP via mod.typeHeure
     const MODS_PEDAGOGIQUES = ['dedoublement','co-enseignement','groupe-effectif-reduit','groupes-besoins','autre'];
     if (MODS_PEDAGOGIQUES.includes(mod.type)) {
-      const isHP     = (mod.typeHeure === 'hp');
       const nbClasses = (mod.classeIds || []).length;
-
-      // Calcul du delta selon le type
       let delta;
       if (mod.type === 'groupes-besoins') {
-        // Groupes besoins : 1 groupe pour 2 classes
         const nbGroupes = Math.max(1, Math.ceil(nbClasses / 2));
         delta = Math.round((mod.heuresParGroupe || 0) * nbGroupes * 2) / 2;
       } else {
-        // Tous les autres : H × nb classes
         delta = Math.round((mod.heuresParGroupe || 0) * nbClasses * 2) / 2;
       }
 
-      if (isHP) {
-        coutHP += delta;
-        if (mod.disciplineId) deltaParDisc[mod.disciplineId] = (deltaParDisc[mod.disciplineId] || 0) + delta;
-        detailParMod.push({ mod, coutHP: delta, coutHSA: 0,
-          libelle: (mod.titre || mod.type) + ' → +' + delta + 'h HP' });
-      } else {
-        coutHSA += delta;
-        // HSA : aussi comptabilisé par discipline pour l'affichage dans le récap
-        if (mod.disciplineId) deltaParDisc[mod.disciplineId] = (deltaParDisc[mod.disciplineId] || 0) + delta;
-        detailParMod.push({ mod, coutHP: 0, coutHSA: delta,
-          libelle: (mod.titre || mod.type) + ' → +' + delta + 'h HSA' });
-      }
+      const v = _ventiler(delta, forcage);
+      coutHP += v.hp; coutHSA += v.hsa;
+      if (mod.disciplineId) deltaParDisc[mod.disciplineId] = (deltaParDisc[mod.disciplineId] || 0) + delta;
+
+      // Libellé lisible : montre la ventilation et si elle est forcée ou auto.
+      let lib = (mod.titre || mod.type) + ' → ';
+      if (v.hp > 0 && v.hsa > 0)      lib += '+' + v.hp + 'h HP + ' + v.hsa + 'h HSA';
+      else if (v.hp > 0)              lib += '+' + v.hp + 'h HP';
+      else                           lib += '+' + v.hsa + 'h HSA';
+      if (forcage) lib += ' (forcé ' + forcage.toUpperCase() + ')';
+      else if (v.hp > 0 && v.hsa > 0) lib += ' (enveloppe HP épuisée)';
+
+      detailParMod.push({ mod, coutHP: v.hp, coutHSA: v.hsa,
+        forcage, ventilAuto: !forcage, libelle: lib });
     }
     else if (mod.type === 'projet') {
+      // Projet : HP et HSA saisis explicitement par l'utilisateur → considérés
+      // comme un choix ferme, on n'applique pas la bascule auto, mais on
+      // décrémente l'enveloppe HP disponible du HP consommé.
       const dHP  = parseFloat(mod.heuresHP)  || 0;
       const dHSA = parseFloat(mod.heuresHSA) || 0;
       coutHP  += dHP;
       coutHSA += dHSA;
+      hpDispo  = Math.round((hpDispo - dHP) * 2) / 2;
       detailParMod.push({
-        mod, coutHP: dHP, coutHSA: dHSA,
+        mod, coutHP: dHP, coutHSA: dHSA, forcage: 'projet', ventilAuto: false,
         libelle: (mod.nom || 'Projet')
           + (dHP  > 0 ? ' +' + dHP  + 'h HP'  : '')
           + (dHSA > 0 ? ' +' + dHSA + 'h HSA' : '')
