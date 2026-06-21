@@ -38,6 +38,23 @@ const Verifs = (() => {
     return Calculs.serviceTotalEnseignant(ens, hpcs);
   }
 
+  // Construit une année minimale et renvoie bilanScenario(...).
+  // dot.hpDejaEngage simule le HP déjà posé en réel (via une ligne de répartition).
+  function _bilanScen(dot, modificateurs) {
+    const anneeData = {
+      dotation: { hPosteEnveloppe: dot.hPosteEnveloppe || 0, hsaEnveloppe: dot.hsaEnveloppe || 0 },
+      repartition: dot.hpDejaEngage
+        ? [{ disciplineId: 'd1', hPoste: dot.hpDejaEngage, hsa: 0 }]
+        : [],
+      disciplines: [{ id: 'd1', nom: 'Français' }],
+      enseignants: [],
+      heuresPedaComp: []
+    };
+    // ids requis par detailParMod
+    (modificateurs || []).forEach((m, i) => { if (!m.id) m.id = 'mod_' + i; });
+    return Calculs.bilanScenario(anneeData, modificateurs);
+  }
+
   // Définition déclarative des cas. Chaque "ligne" est un contrôle élémentaire.
   // attendu = ce que TOI, chef d'établissement, as validé comme correct.
   function _definir() {
@@ -112,6 +129,66 @@ const Verifs = (() => {
         lignes: s => [
           ['HP total (aucun seuil)', s.hpTotal,  21],
           ['Aucune HSA',            s.hsaTotal, 0]
+        ]
+      },
+
+      // ── Sprint 21 : bascule HP/HSA automatique dans les scénarios ────────
+      // L'enveloppe HP est consommée d'abord ; le débordement passe en HSA.
+      // Ordre = ordre de saisie des modalités.
+      {
+        titre: 'Scénario — enveloppe HP dispo 6h, modalité 4h (auto) → tout HP',
+        calc: () => _bilanScen(
+          { hPosteEnveloppe: 10, hsaEnveloppe: 50, hpDejaEngage: 4 },
+          [{ type: 'dedoublement', classeIds: ['c1'], heuresParGroupe: 4 }]
+        ),
+        lignes: r => [
+          ['Coût HP',  r.coutHP,  4],
+          ['Coût HSA', r.coutHSA, 0]
+        ]
+      },
+      {
+        titre: 'Scénario — enveloppe HP dispo 2h, modalité 5h (auto) → 2 HP + 3 HSA (à cheval)',
+        calc: () => _bilanScen(
+          { hPosteEnveloppe: 10, hsaEnveloppe: 50, hpDejaEngage: 8 },
+          [{ type: 'dedoublement', classeIds: ['c1'], heuresParGroupe: 5 }]
+        ),
+        lignes: r => [
+          ['Coût HP (le dispo restant)', r.coutHP,  2],
+          ['Coût HSA (le débordement)',  r.coutHSA, 3]
+        ]
+      },
+      {
+        titre: 'Scénario — 2 modalités, l’enveloppe HP s’épuise sur la 1re',
+        calc: () => _bilanScen(
+          { hPosteEnveloppe: 10, hsaEnveloppe: 50, hpDejaEngage: 7 }, // dispo = 3
+          [{ type: 'dedoublement', classeIds: ['c1'], heuresParGroupe: 3 },   // prend les 3 HP
+           { type: 'dedoublement', classeIds: ['c2'], heuresParGroupe: 2 }]   // tombe en HSA
+        ),
+        lignes: r => [
+          ['Coût HP total',  r.coutHP,  3],
+          ['Coût HSA total', r.coutHSA, 2]
+        ]
+      },
+      {
+        titre: 'Scénario — forçage HSA : la modalité n’entame pas l’enveloppe HP',
+        calc: () => _bilanScen(
+          { hPosteEnveloppe: 10, hsaEnveloppe: 50, hpDejaEngage: 0 }, // dispo = 10
+          [{ type: 'dedoublement', classeIds: ['c1'], heuresParGroupe: 4, forcage: 'hsa' }]
+        ),
+        lignes: r => [
+          ['Coût HP (forcé HSA → 0)', r.coutHP,  0],
+          ['Coût HSA',               r.coutHSA, 4]
+        ]
+      },
+      {
+        titre: 'Scénario — forçage HP : respecté même si enveloppe HP épuisée',
+        calc: () => _bilanScen(
+          { hPosteEnveloppe: 10, hsaEnveloppe: 50, hpDejaEngage: 10 }, // dispo = 0
+          [{ type: 'dedoublement', classeIds: ['c1'], heuresParGroupe: 3, forcage: 'hp' }]
+        ),
+        lignes: r => [
+          ['Coût HP (forcé, malgré dispo 0)', r.coutHP,  3],
+          ['Coût HSA',                        r.coutHSA, 0]
         ]
       }
     ];
