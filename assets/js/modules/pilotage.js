@@ -219,7 +219,9 @@ const DGHPilotage = (() => {
               + '<span class="mc-item-titre">' + _esc(tit) + '</span>'
               + '<span class="mc-item-cibles">' + _esc(_nomsCibles(m, structures)) + '</span>'
               + '<span class="mc-item-h font-mono">' + (m.heuresParGroupe||0) + ' h '
-                + '<span class="mod-th-badge mod-th-badge-' + (m.typeHeure||'hsa') + '">' + (m.typeHeure||'hsa').toUpperCase() + '</span></span>'
+                + (m.forcage
+                    ? '<span class="mod-th-badge mod-th-badge-' + m.forcage + '">' + m.forcage.toUpperCase() + ' forcé</span>'
+                    : '<span class="mod-th-badge mod-th-badge-auto">AUTO</span>') + '</span>'
               + '<button class="btn-icon btn-icon-danger" data-action="delete-mod" data-scen-id="' + sid + '" data-mod-id="' + m.id + '" title="Supprimer">✕</button>'
             + '</div>';
           }).join('')
@@ -236,7 +238,7 @@ const DGHPilotage = (() => {
           + '<label class="mc-field">Type<select class="mc-type" id="mcType_' + sid + '">' + typeOpts + '</select></label>'
           + '<label class="mc-field">Discipline<select class="mc-disc" id="mcDisc_' + sid + '"><option value="">— Toutes —</option>' + discOpts + '</select></label>'
           + '<label class="mc-field mc-field-sm">H/gr/sem<input type="number" class="mc-h" id="mcH_' + sid + '" min="0.5" max="20" step="0.5" value="2"></label>'
-          + '<label class="mc-field mc-field-sm">Imputation<select class="mc-th" id="mcTH_' + sid + '"><option value="hsa">HSA</option><option value="hp">HP</option></select></label>'
+          + '<label class="mc-field mc-field-sm">Imputation<select class="mc-th" id="mcTH_' + sid + '"><option value="auto">Auto</option><option value="hp">HP forcé</option><option value="hsa">HSA forcé</option></select></label>'
         + '</div>'
         + '<div class="mc-classes-block">'
           + '<div class="mc-classes-label">Classes concernées <span class="mc-quick">'
@@ -307,14 +309,15 @@ const DGHPilotage = (() => {
           + '</td>';
         }
         rowSum += parseFloat(mod.heuresParGroupe) || 0;
-        const isHSA = (mod.typeHeure || 'hsa') === 'hsa';
+        const forc = mod.forcage || (mod.typeHeure ? (mod.typeHeure==='hp'?'hp':'hsa') : null);
         return '<td class="grid-cell grid-cell-filled mod-' + (mod.type||'') + '">'
           + '<input class="grid-h" type="number" min="0" max="20" step="0.5" value="' + (mod.heuresParGroupe||0) + '" '
             + 'data-action="grid-cell-h" ' + dataAttrs + ' />'
           + '<select class="grid-type" data-action="grid-cell-type" ' + dataAttrs + '>' + typeOptsFor(mod.type) + '</select>'
           + '<select class="grid-th" data-action="grid-cell-th" ' + dataAttrs + '>'
-            + '<option value="hsa"' + (isHSA?' selected':'') + '>HSA</option>'
-            + '<option value="hp"'  + (!isHSA?' selected':'') + '>HP</option>'
+            + '<option value="auto"' + (!forc?' selected':'') + '>Auto</option>'
+            + '<option value="hp"'   + (forc==='hp'?' selected':'') + '>HP</option>'
+            + '<option value="hsa"'  + (forc==='hsa'?' selected':'') + '>HSA</option>'
           + '</select>'
         + '</td>';
       }).join('');
@@ -428,12 +431,14 @@ const DGHPilotage = (() => {
       thMods = mods.map(m => {
         const tInfo = TYPES_MOD[m.type] || { css: '', short: m.type };
         const tit   = m.titre || _titreModificateur(m.type, m.disciplineId, m.classeIds, structures, disciplines, m.nomAutre);
-        const isHSA = (m.typeHeure || 'hsa') === 'hsa';
+        const forc  = m.forcage || null;
+        const modeLbl = forc ? (forc.toUpperCase() + ' forcé') : 'Auto';
+        const modeCls = forc === 'hp' ? 'rc-th-hp' : (forc === 'hsa' ? 'rc-th-hsa' : 'rc-th-auto');
         return '<th class="rc-th rc-th-mod">'
           + '<span class="rc-mod-badge mod-badge ' + tInfo.css + '">' + tInfo.short + '</span>'
           + '<div class="rc-mod-tit">' + _esc(tit) + '</div>'
-          + '<div class="rc-mod-th ' + (isHSA ? 'rc-th-hsa' : 'rc-th-hp') + '">'
-            + (isHSA ? 'HSA' : 'HP') + ' · ' + m.heuresParGroupe + 'h/gr'
+          + '<div class="rc-mod-th ' + modeCls + '">'
+            + modeLbl + ' · ' + m.heuresParGroupe + 'h/gr'
           + '</div>'
         + '</th>';
       }).join('');
@@ -528,12 +533,18 @@ const DGHPilotage = (() => {
           const toucheDisc = detMod && (m.disciplineId === b.disciplineId || !m.disciplineId);
           if (!toucheDisc || coutMod === 0) return '<td class="rc-td rc-td-mod rc-zero">—</td>';
 
-          const isHSA = (m.typeHeure || 'hsa') === 'hsa';
-          const cls   = isHSA ? 'rc-mod-hsa' : 'rc-mod-hp';
+          // Ventilation réelle (peut être mixte HP+HSA depuis Sprint 21)
+          const cHP = detMod ? detMod.coutHP : 0, cHSA = detMod ? detMod.coutHSA : 0;
+          const mixte = cHP > 0 && cHSA > 0;
+          const cls   = mixte ? 'rc-mod-mixte' : (cHSA > 0 ? 'rc-mod-hsa' : 'rc-mod-hp');
           totalDeltaDisc += coutMod;
+          let chip;
+          if (mixte)       chip = '<span class="rc-mod-chip rc-chip-mixte">' + cHP + ' HP + ' + cHSA + ' HSA</span>';
+          else if (cHSA>0) chip = '<span class="rc-mod-chip rc-chip-hsa">HSA</span>';
+          else             chip = '<span class="rc-mod-chip rc-chip-hp">HP</span>';
           return '<td class="rc-td rc-td-mod ' + cls + '">'
             + '<span class="rc-mod-h">+' + coutMod + ' h</span>'
-            + '<span class="rc-mod-chip ' + (isHSA ? 'rc-chip-hsa' : 'rc-chip-hp') + '">' + (isHSA ? 'HSA' : 'HP') + '</span>'
+            + chip
           + '</td>';
         }).join('');
 
@@ -596,9 +607,10 @@ const DGHPilotage = (() => {
       tdTotMods = mods.map(m => {
         const det = bilanScen.detailParMod.find(d => d.mod.id === m.id);
         const cout = det ? (det.coutHP + det.coutHSA) : 0;
-        const isHSA = (m.typeHeure || 'hsa') === 'hsa';
+        const cHP = det ? det.coutHP : 0, cHSA = det ? det.coutHSA : 0;
+        const cls = (cHP > 0 && cHSA > 0) ? 'rc-mod-mixte' : (cHSA > 0 ? 'rc-mod-hsa' : 'rc-mod-hp');
         return cout > 0
-          ? '<td class="rc-td rc-td-mod ' + (isHSA ? 'rc-mod-hsa' : 'rc-mod-hp') + ' font-mono"><strong>+' + cout + ' h</strong></td>'
+          ? '<td class="rc-td rc-td-mod ' + cls + ' font-mono"><strong>+' + cout + ' h</strong></td>'
           : '<td class="rc-td rc-zero">—</td>';
       }).join('');
       // Colonne total scénario
@@ -777,7 +789,7 @@ const DGHPilotage = (() => {
       const affRows = modsAffiches.map(mod => {
         const tInfo     = TYPES_MOD[mod.type] || { label: mod.type, css: '', short: mod.type };
         const aff       = (mod.affectations || []).find(a => a.ensId === ens.id);
-        const th        = aff ? aff.typeHeure : (mod.typeHeure || 'hsa');
+        const th        = aff ? aff.typeHeure : (mod.forcage || mod.typeHeure || 'hsa');
         const autoAff   = reparti && autoByMod[mod.id] ? autoByMod[mod.id].has(ens.id) : false;
         const affecte   = aff ? aff.affecte !== false : autoAff;
         const hParSemaine = mod.heuresParGroupe || 0;
@@ -1119,7 +1131,7 @@ const DGHPilotage = (() => {
     } else if (h > 0) {
       DGHData.addModificateur(scenId, {
         type: 'dedoublement', disciplineId: discId, classeIds: [divId],
-        heuresParGroupe: h, typeHeure: 'hsa', titre: _titreCell('dedoublement', discId, divId)
+        heuresParGroupe: h, titre: _titreCell('dedoublement', discId, divId)
       });
     }
     _renderOngletScenarios();
@@ -1141,7 +1153,9 @@ const DGHPilotage = (() => {
   function gridCellTH(el) {
     const scenId = el.dataset.scenId, modId = el.dataset.modId;
     if (!modId) return;
-    DGHData.updateModificateur(scenId, modId, { typeHeure: el.value });
+    const v = el.value;
+    // 'auto' → on retire le forçage (bascule auto) ; sinon on mémorise le forçage.
+    DGHData.updateModificateur(scenId, modId, { forcage: (v === 'hp' || v === 'hsa') ? v : null });
     _renderOngletScenarios();
     renderBannerAndDashboard();
   }
@@ -1162,7 +1176,7 @@ const DGHPilotage = (() => {
     const type      = document.getElementById('mcType_'    + scenId)?.value || 'groupes-besoins';
     const discId    = document.getElementById('mcDisc_'    + scenId)?.value || '';
     const h         = parseFloat(document.getElementById('mcH_' + scenId)?.value) || 0;
-    const typeHeure = document.getElementById('mcTH_'      + scenId)?.value || 'hsa';
+    const imput     = document.getElementById('mcTH_'      + scenId)?.value || 'auto';
     const comment   = document.getElementById('mcComment_' + scenId)?.value.trim() || '';
     const ids = Array.from(document.querySelectorAll('#mcGrid_' + scenId + ' .mc-classe-check:checked')).map(c => c.value);
 
@@ -1177,10 +1191,14 @@ const DGHPilotage = (() => {
     const structures  = DGHData.getStructures();
     const disciplines = DGHData.getDisciplines();
     const titre = _titreModificateur(type, discId || null, ids, structures, disciplines, '');
-    DGHData.addModificateur(scenId, {
+    // imput = 'auto' → pas de forçage (bascule auto sur l'enveloppe HP) ;
+    // 'hp'/'hsa' → forçage explicite mémorisé.
+    const fields = {
       type, disciplineId: discId || null, classeIds: ids,
-      heuresParGroupe: h, typeHeure, commentaire: comment, titre
-    });
+      heuresParGroupe: h, commentaire: comment, titre
+    };
+    if (imput === 'hp' || imput === 'hsa') fields.forcage = imput;
+    DGHData.addModificateur(scenId, fields);
     _renderOngletScenarios();
     renderBannerAndDashboard();
     if (typeof app !== 'undefined' && app.toast) app.toast('Aménagement « ' + titre + ' » ajouté.', 'success');
