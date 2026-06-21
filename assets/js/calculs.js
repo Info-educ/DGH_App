@@ -1184,6 +1184,91 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
     };
   }
 
+  /**
+   * Détecte les disciplines où les HSA effectives (réel + scénario actif) dépassent
+   * la capacité HSA imposable (nb chaires titulaires × 2).
+   *
+   * Règles métier validées avec la direction :
+   *  - Chaire = enseignant statut 'titulaire' (temps plein implicite, hors BMP/TZR/contractuel)
+   *    dont disciplinePrincipale = la discipline. Temps partiels exclus (ORS réduite → 0 HSA imposable).
+   *  - Capacité imposable = nb chaires × 2 (la 2e HSA est imposable depuis 2019).
+   *  - Seuil de déclenchement : dépassement ≥ 3h (en dessous un BMP n'est pas réaliste).
+   *  - Volume BMP suggéré = le dépassement arrondi au 0,5h.
+   *  - Fraction de support = volume / ORS de référence (18h certifié par défaut).
+   *
+   * @param {Object} anneeData      - DGHData.getAnnee()
+   * @param {Array}  modificateurs  - modificateurs du scénario actif ([] si aucun)
+   * @param {number} [seuilDeclenchement=3] - dépassement minimum pour alerter (heures)
+   * @returns {Array} alertes triées par dépassement décroissant :
+   *   [{ disciplineId, nom, couleur, chaires, capaciteImposable,
+   *      hsaReelle, hsaScenario, hsaEffective, depassement, volumeBMP, fractionSupport }]
+   */
+  function alertesBMP(anneeData, modificateurs, seuilDeclenchement) {
+    const seuil      = (seuilDeclenchement !== undefined) ? seuilDeclenchement : 3;
+    const disciplines = anneeData.disciplines  || [];
+    const enseignants = anneeData.enseignants  || [];
+    const repartition = anneeData.repartition  || [];
+
+    // ── 1. HSA du scénario actif, par disciplineId ──────────────────
+    // On recalcule bilanScenario pour obtenir detailParMod avec coutHSA réel.
+    const bScen = bilanScenario(anneeData, modificateurs || []);
+    const hsaScenParDisc = {}; // { disciplineId: hsaScenario }
+    (bScen.detailParMod || []).forEach(d => {
+      if (!d.mod.disciplineId) return; // modalité sans discipline → pas imputée à une disc
+      const did = d.mod.disciplineId;
+      hsaScenParDisc[did] = Math.round(((hsaScenParDisc[did] || 0) + (d.coutHSA || 0)) * 2) / 2;
+    });
+
+    // ── 2. Analyse par discipline ────────────────────────────────────
+    const alertes = [];
+    disciplines.forEach(disc => {
+      // HSA réelle (dotation répartition)
+      const rep      = repartition.find(r => r.disciplineId === disc.id) || {};
+      const hsaReelle = Math.round((rep.hsa || 0) * 2) / 2;
+
+      // HSA scénario sur cette discipline
+      const hsaScen  = hsaScenParDisc[disc.id] || 0;
+
+      // HSA effective = photo complète
+      const hsaEff   = Math.round((hsaReelle + hsaScen) * 2) / 2;
+
+      // Chaires : titulaires temps plein rattachés à cette discipline
+      const chaires  = enseignants.filter(e =>
+        e.statut === 'titulaire' &&
+        (e.disciplinePrincipale || '') === disc.nom
+      ).length;
+
+      const capacite = chaires * 2;
+      const depasse  = Math.round((hsaEff - capacite) * 2) / 2;
+
+      if (depasse < seuil) return; // sous le seuil → pas d'alerte
+
+      // Volume BMP suggéré = le dépassement (arrondi 0,5h)
+      const volumeBMP = depasse;
+
+      // Fraction de support (ORS certifié = 18h par convention)
+      const ORS_REF   = 18;
+      const fraction  = Math.round((volumeBMP / ORS_REF) * 100) / 100;
+
+      alertes.push({
+        disciplineId: disc.id,
+        nom:          disc.nom,
+        couleur:      disc.couleur || '#6b6860',
+        chaires,
+        capaciteImposable: capacite,
+        hsaReelle,
+        hsaScenario:  hsaScen,
+        hsaEffective: hsaEff,
+        depassement:  depasse,
+        volumeBMP,
+        fractionSupport: fraction
+      });
+    });
+
+    // Triées par dépassement décroissant (le plus urgent en premier)
+    return alertes.sort((a, b) => b.depassement - a.depassement);
+  }
+
   return {
     GRILLES_MEN,
     getORS, plafondHP, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
@@ -1194,7 +1279,8 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
     syntheseCA, dialogueGestion, recapServices,
     heuresGrille, affectationsExistent, profsDeClasseDiscipline,
     grilleRepartition, controlesRepartition,
-    controlesEDT, creneauBleuOptimal
+    controlesEDT, creneauBleuOptimal,
+    alertesBMP
   };
 
 })();

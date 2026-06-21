@@ -52,7 +52,7 @@ const app = (() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('dgh-theme', theme);
     const btn = document.getElementById('themeToggle');
-    if (btn) btn.textContent = theme === 'dark' ? '☽' : '☀';
+    if (btn) btn.textContent = theme === 'dark' ? '☽' : '☀︎';
   }
 
   // ── NAVIGATION ───────────────────────────────────────────────────
@@ -161,6 +161,7 @@ const app = (() => {
     if (actionBtn) {
       const { action, id, discId, gcId } = actionBtn.dataset;
       if (action==='toggle-verifs')   { const box=actionBtn.closest('.dash-verifs'); const d=box&&box.querySelector('.dash-verifs-detail'); if(d){d.classList.toggle('is-hidden');box.classList.toggle('is-open');} return; }
+      if (action==='toggle-bmp')      { const box=actionBtn.closest('.dash-bmp-encart'); const d=box&&box.querySelector('.dash-bmp-detail'); if(d){d.classList.toggle('is-hidden');box.classList.toggle('is-open');} return; }
       if (action==='edit-div')        { DGHStructures.openModalDiv(id);                                                              return; }
       if (action==='delete-div')      { DGHStructures.confirmDeleteDiv(id);                                                         return; }
       if (action==='edit-disc')       { DGHDotation.openModalDisc(id);                                                              return; }
@@ -236,11 +237,6 @@ const app = (() => {
       if (action === 'open-ens-modal')  { DGHEnseignants.openModalEns(null);              return; }
       if (action === 'ens-sort')        { DGHEnseignants.setSort(actionBtn.dataset.key);  return; }
       if (action === 'inst-sort-serv')  { DGHInstances.sortServices(actionBtn.dataset.col); return; }
-      if (action === 'struct-sort')     { DGHStructures.setSort(actionBtn.dataset.key);    return; }
-      if (action === 'equipe-sort')     { DGHEquipe.setSort(actionBtn.dataset.key);        return; }
-      if (action === 'besoins-sort')    { DGHBesoins.setSort(actionBtn.dataset.key);       return; }
-      if (action === 'hpc-sort')        { DGHHPC.setSort(actionBtn.dataset.key);           return; }
-      if (action === 'missions-sort')   { DGHMissions.setSort(actionBtn.dataset.key);      return; }
       // ── Historique ──
       if (action === 'hist-select-gauche')    { DGHHistorique.selectGauche(actionBtn.value || actionBtn.dataset.annee); return; }
       if (action === 'hist-select-droite')    { DGHHistorique.selectDroite(actionBtn.value || actionBtn.dataset.annee); return; }

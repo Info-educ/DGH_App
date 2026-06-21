@@ -169,6 +169,9 @@ const DGHDashboard = (() => {
       // ── Encart Vérification du moteur de calcul (discret si OK, alarmant si problème) ──
       _renderVerifs();
 
+      // ── Encart Suggestions de pilotage — alertes BMP ──────────────────────────────────
+      _renderAlertesBMP(data, scenActif ? scenActif.modificateurs : []);
+
     } catch(e) { console.error('[DGH] renderDashboard:', e); }
     updateBtnEtab();
   }
@@ -312,6 +315,60 @@ const DGHDashboard = (() => {
       html += '</div>';
     });
     return html;
+  }
+
+  /**
+   * Encart « Suggestions de pilotage » — alertes BMP.
+   * Distinct de l'encart Vérification : c'est du conseil de gestion, pas une erreur.
+   *  - Aucune alerte  → encart masqué (invisible, ne prend pas de place).
+   *  - Alertes        → encart bleu discret, déplié, une ligne par discipline.
+   */
+  function _renderAlertesBMP(anneeData, modificateurs) {
+    const el = document.getElementById('dashAlertesBMP');
+    if (!el) return;
+
+    let alertes;
+    try { alertes = Calculs.alertesBMP(anneeData, modificateurs); }
+    catch(e) { console.error('[DGH] alertesBMP:', e); el.classList.add('is-hidden'); return; }
+
+    if (!alertes || alertes.length === 0) {
+      el.classList.add('is-hidden');
+      el.innerHTML = '';
+      return;
+    }
+
+    el.classList.remove('is-hidden');
+
+    const lignesHTML = alertes.map(a => {
+      const pct = Math.round(a.fractionSupport * 100);
+      return '<div class="dash-bmp-ligne">'
+        + '<span class="dash-bmp-dot" style="background:' + _esc(a.couleur) + '"></span>'
+        + '<span class="dash-bmp-disc">' + _esc(a.nom) + '</span>'
+        + '<span class="dash-bmp-info">'
+          + a.hsaEffective + ' h HSA effectives'
+          + ' · ' + a.chaires + ' chaire' + (a.chaires > 1 ? 's' : '')
+          + ' · capacité imposable ' + a.capaciteImposable + ' h'
+        + '</span>'
+        + '<span class="dash-bmp-suggestion">'
+          + '→ BMP de ' + a.volumeBMP + ' h suggéré'
+          + ' <span class="dash-bmp-fraction">(' + pct + '\u00a0% d\u2019un support)</span>'
+        + '</span>'
+      + '</div>';
+    }).join('');
+
+    el.innerHTML =
+      '<div class="dash-bmp-encart" id="dashBMPBox">'
+        + '<button class="dash-bmp-head" data-action="toggle-bmp">'
+          + '<span class="dash-bmp-icon">💡</span>'
+          + '<span class="dash-bmp-txt"><strong>'
+            + alertes.length + ' discipline' + (alertes.length > 1 ? 's' : '')
+            + ' avec HSA dépassant la capacité imposable</strong>'
+            + ' — un BMP serait envisageable'
+          + '</span>'
+          + '<span class="dash-bmp-chevron">\u203a</span>'
+        + '</button>'
+        + '<div class="dash-bmp-detail">' + lignesHTML + '</div>'
+      + '</div>';
   }
 
   // Barre supérieure — rendue sur chaque navigation, visible partout.

@@ -5645,9 +5645,6 @@ td.col-grille {
 /* Tri tableau enseignants — Sprint 19.1 */
 .ens-th-sort{cursor:pointer;user-select:none;white-space:nowrap;}
 .ens-th-sort:hover{color:var(--c-accent);background:var(--c-surface3);}
-/* En-têtes triables — tous tableaux (struct, equipe, besoins, hpc, missions) */
-.struct-th-sort,.eq-th-sort,.ba-th-sort,.hpc-th-sort,.missions-th-sort{cursor:pointer;user-select:none;white-space:nowrap;}
-.struct-th-sort:hover,.eq-th-sort:hover,.ba-th-sort:hover,.hpc-th-sort:hover,.missions-th-sort:hover{color:var(--c-accent);background:var(--c-surface3);}
 
 /* ═══════════════════════════════════════════════════════════════
    BESOINS & APPORTS ÉTABLISSEMENT — Sprint 19.1
@@ -5739,3 +5736,29 @@ td.col-grille {
 .rc-chip-mixte { background: var(--c-accent-light); color: var(--c-accent);
                  padding: .05rem .35rem; border-radius: 4px; font-size: .68rem;
                  font-weight: 700; white-space: nowrap; }
+
+/* ── Encart Suggestions de pilotage — alertes BMP (tableau de bord) ──── */
+/* Bleu discret : c'est un conseil de gestion, pas une erreur. */
+.dash-bmp-encart { border: 1px solid var(--c-blue); border-radius: 8px;
+                   background: var(--c-blue-bg); margin-bottom: 1rem; overflow: hidden; }
+.dash-bmp-head   { display: flex; align-items: center; gap: .6rem; width: 100%;
+                   padding: .55rem .9rem; background: none; border: none; cursor: pointer;
+                   font-size: .85rem; color: var(--c-text); text-align: left; }
+.dash-bmp-icon   { flex-shrink: 0; font-size: 1rem; }
+.dash-bmp-txt    { flex: 1; color: var(--c-blue); }
+.dash-bmp-chevron { flex-shrink: 0; transition: transform .15s ease;
+                    color: var(--c-text-muted); font-size: 1.1rem; }
+.dash-bmp-encart.is-open .dash-bmp-chevron { transform: rotate(90deg); }
+.dash-bmp-detail { padding: .25rem .9rem .7rem; }
+.dash-bmp-detail.is-hidden { display: none; }
+.dash-bmp-ligne  { display: grid;
+                   grid-template-columns: .75rem 8rem 1fr auto;
+                   align-items: baseline; gap: .5rem;
+                   padding: .3rem 0; border-top: 1px solid var(--c-border); font-size: .82rem; }
+.dash-bmp-ligne:first-child { border-top: none; }
+.dash-bmp-dot    { width: .75rem; height: .75rem; border-radius: 50%; flex-shrink: 0;
+                   margin-top: .15rem; }
+.dash-bmp-disc   { font-weight: 600; color: var(--c-text); }
+.dash-bmp-info { color: var(--c-text-muted); }
+.dash-bmp-suggestion { color: var(--c-blue); font-weight: 600; white-space: nowrap; }
+.dash-bmp-fraction   { font-weight: 400; color: var(--c-text-muted); }

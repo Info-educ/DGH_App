@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DGH App — Pilotage de la Dotation Globale Horaire</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=4.11.0" />
+  <link rel="stylesheet" href="assets/css/style.css?v=4.12.0" />
 </head>
 <body>
 
@@ -27,7 +27,7 @@
     <ul class="nav-list" aria-label="Navigation principale">
 
       <!-- TABLEAU DE BORD -->
-      <li class="nav-item active" data-view="dashboard"><span class="nav-icon">◆</span><span class="nav-label">Tableau de bord</span></li>
+      <li class="nav-item active" data-view="dashboard"><span class="nav-icon">⬡</span><span class="nav-label">Tableau de bord</span></li>
 
       <!-- CADRE DE L'ANNÉE -->
       <li class="nav-section-label">Cadre de l'année</li>
@@ -40,19 +40,19 @@
       <!-- PILOTER -->
       <li class="nav-section-label">Piloter</li>
       <li class="nav-item" data-view="scenarios"><span class="nav-icon">⊕</span><span class="nav-label">Scénarios</span><span class="nav-badge-scen is-hidden" id="badge-pilotage"></span></li>
-      <li class="nav-item" data-view="historique"><span class="nav-icon">⊙</span><span class="nav-label">Historique</span></li>
-      <li class="nav-item" data-view="alertes"><span class="nav-icon">▲</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
+      <li class="nav-item" data-view="historique"><span class="nav-icon">◷</span><span class="nav-label">Historique</span></li>
+      <li class="nav-item" data-view="alertes"><span class="nav-icon">◬</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
 
       <!-- PRÉPARER LES INSTANCES -->
       <li class="nav-section-label">Préparer les instances</li>
-      <li class="nav-item" data-view="instances" data-tab="synthese-ca"><span class="nav-icon">≡</span><span class="nav-label">Synthèse CA</span></li>
+      <li class="nav-item" data-view="instances" data-tab="synthese-ca"><span class="nav-icon">▤</span><span class="nav-label">Synthèse CA</span></li>
       <li class="nav-item" data-view="instances" data-tab="dialogue"><span class="nav-icon">◈</span><span class="nav-label">Dialogue de gestion</span></li>
       <li class="nav-item" data-view="instances" data-tab="services"><span class="nav-icon">◉</span><span class="nav-label">Services enseignants</span></li>
 
       <!-- ÉQUIPE -->
       <li class="nav-section-label">Équipe</li>
       <li class="nav-item" data-view="enseignants"><span class="nav-icon">◉</span><span class="nav-label">Équipe pédagogique</span></li>
-      <li class="nav-item" data-view="repartition"><span class="nav-icon">⊞</span><span class="nav-label">Répartition de service</span></li>
+      <li class="nav-item" data-view="repartition"><span class="nav-icon">▦</span><span class="nav-label">Répartition de service</span></li>
       <li class="nav-item" data-view="missions"><span class="nav-icon">◑</span><span class="nav-label">PACTE / IMP</span></li>
 
       <!-- OUTILS -->
@@ -80,7 +80,7 @@
       </div>
       <div class="topbar-right">
         <div class="topbar-stats" id="topbarStats"></div>
-        <button class="btn-theme" id="themeToggle" aria-label="Changer de thème">☀</button>
+        <button class="btn-theme" id="themeToggle" aria-label="Changer de thème">☀︎</button>
         <button class="btn-etab" id="btnEtab">Mon Collège ⚙</button>
       </div>
     </header>
@@ -97,6 +97,8 @@
         <div class="is-hidden dash-scen-banner" id="dashScenActif"></div>
         <!-- Encart vérification du moteur de calcul (discret si OK, alarmant si problème) -->
         <div class="is-hidden" id="dashVerifs"></div>
+        <!-- Encart suggestions de pilotage — alertes BMP (masqué si aucune alerte) -->
+        <div class="is-hidden" id="dashAlertesBMP"></div>
         <div class="kpi-grid">
           <div class="kpi-card kpi-tooltip-card" data-color="blue" data-kpi="dghtotal"><div class="kpi-label">Enveloppe DGH</div><div class="kpi-value" id="kpi-dghtotal">— h</div><div class="kpi-sub">HP + HSA total</div><div class="kpi-tooltip" id="kpi-tooltip-dghtotal"></div></div>
           <div class="kpi-card kpi-tooltip-card" data-color="green" data-kpi="hposte"><div class="kpi-label">Heures-poste</div><div class="kpi-value" id="kpi-hposte">— h</div><div class="kpi-sub" id="kpi-hposte-sub">dotation structurelle</div><div class="kpi-tooltip" id="kpi-tooltip-hposte"></div></div>
@@ -144,7 +146,7 @@
         <!-- Équipe : apport réel HP/HSA (source TRM) -->
         <div class="section-card dash-equipe-card is-hidden" id="dashEquipeCard">
           <div class="dash-resume-col-header">
-            <h2>Service de l'équipe — apport réel</h2>
+            <h2>Service de l\'équipe — apport réel</h2>
             <button class="btn-link" data-navigate="equipe">Voir le tableau →</button>
           </div>
           <div class="dash-equipe-row">
@@ -154,7 +156,7 @@
             <div class="dash-equipe-stat"><span class="dash-equipe-lbl">vs enveloppe</span><span class="dash-equipe-val" id="dash-eq-solde">— h</span></div>
           </div>
           <div class="dash-equipe-bar"><div class="dash-equipe-bar-hp" id="dash-eq-bar-hp" style="width:0%"></div><div class="dash-equipe-bar-hsa" id="dash-eq-bar-hsa" style="width:0%"></div></div>
-          <p class="dash-equipe-note">HP plafonnées par l'ORS (ou le volume du bloc pour les BMP) — le dépassement bascule en HSA.</p>
+          <p class="dash-equipe-note">HP plafonnées par l\'ORS (ou le volume du bloc pour les BMP) — le dépassement bascule en HSA.</p>
         </div>
 
         <div class="empty-state" id="emptyState">
@@ -211,7 +213,7 @@
         <!-- Onglets -->
         <div class="pil-tabs" id="pilTabs">
           <button class="pil-tab active" data-action="pil-tab" data-tab="scenarios">⊕ Scénarios</button>
-          <button class="pil-tab" data-action="pil-tab" data-tab="recap">⊞ Récapitulatif DGH</button>
+          <button class="pil-tab" data-action="pil-tab" data-tab="recap">▦ Récapitulatif DGH</button>
           <button class="pil-tab" data-action="pil-tab" data-tab="impact">◉ Impact enseignants</button>
           <button class="pil-tab" data-action="pil-tab" data-tab="synthese">◈ Synthèse</button>
         </div>
@@ -253,7 +255,7 @@
           <button class="pil-tab" data-action="edt-tab" data-tab="cointerv">◉ Co-interventions</button>
           <button class="pil-tab" data-action="edt-tab" data-tab="indispos">⚠ Indisponibilités</button>
           <button class="pil-tab" data-action="edt-tab" data-tab="etab">🏫 Contraintes étab.</button>
-          <button class="pil-tab" data-action="edt-tab" data-tab="notice">≡ Notice EDT</button>
+          <button class="pil-tab" data-action="edt-tab" data-tab="notice">▤ Notice EDT</button>
         </div>
         <div class="pil-panel active" id="edt-panel-barrettes"><div id="edtBarrettesWrap"></div></div>
         <div class="pil-panel" id="edt-panel-cointerv"><div id="edtCoIntervWrap"></div></div>
@@ -404,7 +406,7 @@
           <div class="view-header-row">
             <div>
               <h1 class="view-title">Équipe & répartition HP / HSA</h1>
-              <p class="view-subtitle">Tableau de l'équipe · apport de chacun dans l'établissement · bascule automatique HP → HSA · prêt pour la remontée TRM de février</p>
+              <p class="view-subtitle">Tableau de l\'équipe · apport de chacun dans l\'établissement · bascule automatique HP → HSA · prêt pour la remontée TRM de février</p>
             </div>
             <div class="view-header-actions">
               <button class="btn-secondary" data-action="equipe-export-csv" title="Exporter le tableau équipe (Excel)">⬇ Exporter Excel</button>
@@ -418,9 +420,9 @@
           <span class="eq-rule-icon">⚖</span>
           <div class="eq-rule-text">
             <strong>Règle appliquée automatiquement.</strong>
-            L'apport de chaque enseignant compte en <span class="eq-tag eq-tag-hp">heures-poste</span> jusqu'à son seuil
+            L\'apport de chaque enseignant compte en <span class="eq-tag eq-tag-hp">heures-poste</span> jusqu\'à son seuil
             (ORS du grade, ou volume du bloc pour un BMP). Tout dépassement bascule en <span class="eq-tag eq-tag-hsa">HSA</span>.
-            Aucune ressaisie : modifiez l'apport, les HP/HSA se recalculent partout.
+            Aucune ressaisie : modifiez l\'apport, les HP/HSA se recalculent partout.
           </div>
         </div>
 
@@ -435,10 +437,10 @@
         <!-- Répartition par statut -->
         <div class="eq-statut-strip" id="eq-statut-strip"></div>
 
-        <!-- Tableau de l'équipe -->
+        <!-- Tableau de l\'équipe -->
         <div class="eq-table-wrap" id="eq-table-wrap"></div>
 
-        <p class="dot-footnote">Seuils ORS de référence : Agrégé 15 h · Certifié / PLP (CPC) 18 h · PLP 17 h · Prof. EPS 20 h (+3 h AS). Pour un BMP, le seuil est le volume du bloc implanté. Toute ORS dérogatoire doit être motivée (mission, décharge, temps partiel) — le motif est repris dans l'export TRM.</p>
+        <p class="dot-footnote">Seuils ORS de référence : Agrégé 15 h · Certifié / PLP (CPC) 18 h · PLP 17 h · Prof. EPS 20 h (+3 h AS). Pour un BMP, le seuil est le volume du bloc implanté. Toute ORS dérogatoire doit être motivée (mission, décharge, temps partiel) — le motif est repris dans l\'export TRM.</p>
       </section>
 
       <!-- ══ BESOINS & APPORTS ÉTABLISSEMENT ════════════════════════ -->
@@ -447,7 +449,7 @@
           <div class="view-header-row">
             <div>
               <h1 class="view-title">Besoins & apports établissement</h1>
-              <p class="view-subtitle">Par discipline : besoin (répartition × divisions) vs apport de l'équipe — pour calibrer les BMP et tracer les HSA absorbées</p>
+              <p class="view-subtitle">Par discipline : besoin (répartition × divisions) vs apport de l\'équipe — pour calibrer les BMP et tracer les HSA absorbées</p>
             </div>
             <div class="view-header-actions">
               <button class="btn-secondary" data-action="besoins-export-csv" title="Exporter (Excel)">⬇ Exporter Excel</button>
@@ -466,7 +468,7 @@
 
         <div class="ba-table-wrap" id="ba-table-wrap"></div>
 
-        <p class="dot-footnote">L'écart positif indique un besoin non couvert par les heures-poste de l'équipe : à arbitrer en BMP, HSA ou compléments de service. Les HSA absorbées se saisissent par discipline (et se détaillent par enseignant en dépliant la ligne).</p>
+        <p class="dot-footnote">L\'écart positif indique un besoin non couvert par les heures-poste de l\'équipe : à arbitrer en BMP, HSA ou compléments de service. Les HSA absorbées se saisissent par discipline (et se détaillent par enseignant en dépliant la ligne).</p>
       </section>
 
       <!-- ══ HEURES PÉDAGOGIQUES COMPLÉMENTAIRES ═════════════════════ -->
@@ -542,7 +544,7 @@
       <!-- ══ SYNTHÈSE ══════════════════════════════════════════════════ -->
       <section class="view" id="view-synthese">
         <div class="view-header"><h1 class="view-title">Synthèses</h1><p class="view-subtitle">Documents pour le CA et les équipes pédagogiques</p></div>
-        <div class="placeholder-view"><div class="placeholder-icon">≡</div><p><strong>Module Synthèses</strong> — Sprint 7</p></div>
+        <div class="placeholder-view"><div class="placeholder-icon">▤</div><p><strong>Module Synthèses</strong> — Sprint 7</p></div>
       </section>
 
       <!-- ══ INSTANCES ══════════════════════════════════════════════ -->
@@ -1044,9 +1046,9 @@
   </div>
 
   <script src="assets/js/data.js?v=4.11.0"></script>
-  <script src="assets/js/calculs.js?v=4.11.0"></script>
-  <script src="assets/js/verifs.js?v=4.11.0"></script>
-  <script src="assets/js/modules/dashboard.js?v=4.10.0"></script>
+  <script src="assets/js/calculs.js?v=4.12.0"></script>
+  <script src="assets/js/verifs.js?v=4.12.0"></script>
+  <script src="assets/js/modules/dashboard.js?v=4.12.0"></script>
   <script src="assets/js/modules/structures.js?v=4.9.7"></script>
   <script src="assets/js/modules/dotation.js?v=4.9.7"></script>
   <script src="assets/js/modules/equipe.js?v=4.9.7"></script>
@@ -1060,7 +1062,7 @@
   <script src="assets/js/modules/historique.js?v=4.9.7"></script>
   <script src="assets/js/modules/missions.js?v=4.9.7"></script>
   <script src="assets/js/modules/instances.js?v=4.9.7"></script>
-  <script src="assets/js/app.js?v=4.10.0"></script>
+  <script src="assets/js/app.js?v=4.12.0"></script>
   <script src="assets/js/tutorial.js?v=4.9.7"></script>
 
   <!-- Modale génération groupée de barrettes (Sprint 18) -->

@@ -157,7 +157,7 @@ const DGHEnseignants = (() => {
       let hpcHpCell;
       if (sv.hpHPC > 0) {
         const hpcHpLines = sv.detailHPCHp.map(d => '• ' + d.nom + ' : ' + d.heures + 'h').join('\n');
-        hpcHpCell = '<span class="ens-service-hpc-hp" title="' + _esc(hpcHpLines) + '">' + sv.hpHPC + 'h ℹ</span>';
+        hpcHpCell = '<span class="ens-service-hpc-hp" title="' + _esc(hpcHpLines) + '">' + sv.hpHPC + 'h ⓘ</span>';
       } else {
         hpcHpCell = '<span class="ens-service-hsa-zero">—</span>';
       }
@@ -166,7 +166,7 @@ const DGHEnseignants = (() => {
       let hsaCell;
       if (sv.hsaTotal > 0) {
         const lines = sv.detailHSA.map(d => '• ' + d.nom + ' : ' + d.heures + 'h').join('\n');
-        hsaCell = '<span class="ens-service-hsa-nonzero" title="' + _esc(lines) + '">' + sv.hsaTotal + 'h ℹ</span>';
+        hsaCell = '<span class="ens-service-hsa-nonzero" title="' + _esc(lines) + '">' + sv.hsaTotal + 'h ⓘ</span>';
       } else {
         hsaCell = '<span class="ens-service-hsa-zero">—</span>';
       }
@@ -724,7 +724,7 @@ const DGHEnseignants = (() => {
     if (hpcHpEl) {
       if (sv.hpHPC > 0) {
         const hpcHpLines = sv.detailHPCHp.map(d => '• ' + d.nom + ' : ' + d.heures + 'h').join('\n');
-        hpcHpEl.innerHTML = '<span class="ens-service-hpc-hp" title="' + _esc(hpcHpLines) + '">' + sv.hpHPC + 'h ℹ</span>';
+        hpcHpEl.innerHTML = '<span class="ens-service-hpc-hp" title="' + _esc(hpcHpLines) + '">' + sv.hpHPC + 'h ⓘ</span>';
       } else { hpcHpEl.innerHTML = '<span class="ens-service-hsa-zero">—</span>'; }
     }
     // HSA
@@ -732,7 +732,7 @@ const DGHEnseignants = (() => {
     if (hsaEl) {
       if (sv.hsaTotal > 0) {
         const lines = sv.detailHSA.map(d => '• ' + d.nom + ' : ' + d.heures + 'h').join('\n');
-        hsaEl.innerHTML = '<span class="ens-service-hsa-nonzero" title="' + _esc(lines) + '">' + sv.hsaTotal + 'h ℹ</span>';
+        hsaEl.innerHTML = '<span class="ens-service-hsa-nonzero" title="' + _esc(lines) + '">' + sv.hsaTotal + 'h ⓘ</span>';
       } else { hsaEl.innerHTML = '<span class="ens-service-hsa-zero">—</span>'; }
     }
     // Dispo

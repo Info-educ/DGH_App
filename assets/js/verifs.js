@@ -55,6 +55,25 @@ const Verifs = (() => {
     return Calculs.bilanScenario(anneeData, modificateurs);
   }
 
+  // Construit une année minimale avec une discipline et des enseignants fictifs,
+  // et renvoie alertesBMP(...). Seuil par défaut = 3h.
+  function _alertesBMP(discCfg, enseignants) {
+    const discId = 'd_bmp';
+    const anneeData = {
+      dotation: { hPosteEnveloppe: 50, hsaEnveloppe: 50 },
+      disciplines: [{ id: discId, nom: discCfg.discNom, couleur: '#2563eb' }],
+      repartition: [{ disciplineId: discId, hPoste: 0, hsa: discCfg.hsaReelle || 0 }],
+      enseignants: (enseignants || []).map((e, i) => ({
+        id: 'e' + i, nom: 'Prof' + i, prenom: '', grade: 'certifie',
+        statut: e.statut || 'titulaire',
+        disciplinePrincipale: e.disciplinePrincipale || discCfg.discNom,
+        disciplines: [], heures: 18, orsManuel: null, volumeBMP: null
+      })),
+      heuresPedaComp: []
+    };
+    return Calculs.alertesBMP(anneeData, []);
+  }
+
   // Définition déclarative des cas. Chaque "ligne" est un contrôle élémentaire.
   // attendu = ce que TOI, chef d'établissement, as validé comme correct.
   function _definir() {
@@ -189,6 +208,61 @@ const Verifs = (() => {
         lignes: r => [
           ['Coût HP (forcé, malgré dispo 0)', r.coutHP,  3],
           ['Coût HSA',                        r.coutHSA, 0]
+        ]
+      },
+
+      // ── Brique 2 : alertes BMP ────────────────────────────────────────────
+      {
+        titre: 'Alerte BMP — 2 chaires, 9h HSA effectives → dépassement 5h ≥ 3h seuil',
+        calc: () => _alertesBMP(
+          { discNom: 'Maths', hsaReelle: 9 },
+          [{ statut: 'titulaire', disciplinePrincipale: 'Maths' },
+           { statut: 'titulaire', disciplinePrincipale: 'Maths' }]
+        ),
+        lignes: a => [
+          ['Nombre d`alertes', a.length,                    1],
+          ['Chaires comptées', a[0] && a[0].chaires,        2],
+          ['Capacité imposable', a[0] && a[0].capaciteImposable, 4],
+          ['HSA effective',   a[0] && a[0].hsaEffective,    9],
+          ['Dépassement',     a[0] && a[0].depassement,     5],
+          ['Volume BMP suggéré', a[0] && a[0].volumeBMP,    5]
+        ]
+      },
+      {
+        titre: 'Alerte BMP — 3 chaires, 6h HSA → dans la capacité (6 = 3×2) → pas d`alerte',
+        calc: () => _alertesBMP(
+          { discNom: 'Maths', hsaReelle: 6 },
+          [{ statut: 'titulaire', disciplinePrincipale: 'Maths' },
+           { statut: 'titulaire', disciplinePrincipale: 'Maths' },
+           { statut: 'titulaire', disciplinePrincipale: 'Maths' }]
+        ),
+        lignes: a => [
+          ['Aucune alerte (6h = capacité exacte)', a.length, 0]
+        ]
+      },
+      {
+        titre: 'Alerte BMP — dépassement < 3h (seuil) → pas d`alerte',
+        calc: () => _alertesBMP(
+          { discNom: 'Maths', hsaReelle: 5 },
+          [{ statut: 'titulaire', disciplinePrincipale: 'Maths' },
+           { statut: 'titulaire', disciplinePrincipale: 'Maths' }]
+        ),
+        lignes: a => [
+          ['Dépassement 1h < seuil 3h → pas d`alerte', a.length, 0]
+        ]
+      },
+      {
+        titre: 'Alerte BMP — BMP et contractuels exclus de la capacité',
+        calc: () => _alertesBMP(
+          { discNom: 'Maths', hsaReelle: 8 },
+          [{ statut: 'titulaire',    disciplinePrincipale: 'Maths' },
+           { statut: 'bmp',         disciplinePrincipale: 'Maths' },
+           { statut: 'contractuel', disciplinePrincipale: 'Maths' }]
+        ),
+        lignes: a => [
+          ['Seul le titulaire compte (1 chaire)', a[0] && a[0].chaires, 1],
+          ['Capacité = 1×2 = 2h', a[0] && a[0].capaciteImposable,      2],
+          ['Dépassement 8−2=6h ≥ 3 → alerte',   a.length,              1]
         ]
       }
     ];

@@ -13,8 +13,6 @@ const DGHMissions = (() => {
 
   let _editId     = null;   // null = création, string = édition
   let _confirmId  = null;   // id mission à supprimer
-  let _sortKey    = 'type'; // 'type' | 'intitule' | 'enseignant' | 'heures'
-  let _sortDir    = 1;      // 1 = asc, -1 = desc
 
   // ── Init / Render ─────────────────────────────────────────────────
   function init() {}
@@ -108,27 +106,7 @@ ${_htmlKpis(totalPacte, envPacte, totalImp, envImp)}
     const ensMap = {};
     enseignants.forEach(e => { ensMap[e.id] = e; });
 
-    const arrow = k => _sortKey === k ? (_sortDir === 1 ? ' ▲' : ' ▼') : '';
-    const thS   = 'missions-th-sort';
-
-    const sorted = missions.slice().sort((a, b) => {
-      let va, vb;
-      switch (_sortKey) {
-        case 'intitule':    va = (a.intitule||'').toLowerCase();  vb = (b.intitule||'').toLowerCase(); break;
-        case 'enseignant': {
-          const ea = ensMap[a.enseignantId]; const eb = ensMap[b.enseignantId];
-          va = ea ? (ea.nom + ' ' + (ea.prenom||'')).toLowerCase() : 'zzz';
-          vb = eb ? (eb.nom + ' ' + (eb.prenom||'')).toLowerCase() : 'zzz';
-          break;
-        }
-        case 'heures':  va = a.heures||0; vb = b.heures||0; break;
-        default:        va = a.type||''; vb = b.type||''; // 'type'
-      }
-      if (typeof va === 'string') return va.localeCompare(vb, 'fr') * _sortDir;
-      return (va - vb) * _sortDir;
-    });
-
-    const rows = sorted.map(m => {
+    const rows = missions.map(m => {
       const ens  = ensMap[m.enseignantId];
       const nom  = ens ? _esc(ens.nom + ' ' + (ens.prenom || '')) : '<span style="opacity:.5">Non affecté</span>';
       const hHebdo = m.heures > 0 ? (Math.round(m.heures / 36 * 10) / 10) + 'h/sem' : '\u2014';
@@ -151,10 +129,10 @@ ${_htmlKpis(totalPacte, envPacte, totalImp, envImp)}
     return `<table class="ens-table missions-table">
   <thead>
     <tr>
-      <th class="${thS}" data-action="missions-sort" data-key="type" title="Trier par type">Type${arrow('type')}</th>
-      <th class="${thS}" data-action="missions-sort" data-key="intitule" title="Trier par intitulé">Intitulé${arrow('intitule')}</th>
-      <th class="${thS}" data-action="missions-sort" data-key="enseignant" title="Trier par enseignant">Enseignant${arrow('enseignant')}</th>
-      <th class="${thS}" data-action="missions-sort" data-key="heures" title="Trier par heures">H/an${arrow('heures')}</th>
+      <th>Type</th>
+      <th>Intitulé</th>
+      <th>Enseignant</th>
+      <th>H/an</th>
       <th>H/sem</th>
       <th></th>
     </tr>
@@ -314,18 +292,11 @@ ${_htmlKpis(totalPacte, envPacte, totalImp, envImp)}
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function setSort(key) {
-    if (_sortKey === key) _sortDir = -_sortDir;
-    else { _sortKey = key; _sortDir = 1; }
-    renderMissions();
-  }
-
   return {
     init, renderMissions,
     openModal, closeModal, saveMission,
     updateHHebdo, updateEnsInfo, filtrer,
-    confirmDelete, closeConfirmMission, execDeleteMission,
-    setSort
+    confirmDelete, closeConfirmMission, execDeleteMission
   };
 
 })();

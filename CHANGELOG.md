@@ -5,7 +5,88 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
-## v4.10.0 — Sprint 20 : Encart « Vérification du moteur de calcul » (2026-06-19)
+## v4.12.0 — Sprint 22 : Alerte BMP — suggestions de pilotage (2026-06-21)
+
+### Besoin
+Quand les HSA d'une discipline dépassent ce que les chaires en place peuvent absorber
+de façon imposable, la direction repose sur du volontariat pour boucler sa structure.
+L'outil doit signaler ce risque et suggérer qu'un BMP serait plus sûr — avec un
+argument chiffré défendable en dialogue de gestion.
+
+### Règle métier validée
+- **Capacité HSA imposable** = nb enseignants `titulaire` (temps plein) dont
+  `disciplinePrincipale` = la discipline × 2. BMP, contractuels, TZR et
+  temps partiels exclus de la capacité.
+- **HSA effectives** = HSA réelles (dotation) + HSA du scénario actif = photo
+  complète, pas seulement le delta du scénario.
+- **Seuil de déclenchement** : dépassement ≥ 3h (en dessous, un BMP n'est pas
+  réaliste à instruire).
+- **Suggestion** : volume BMP = le dépassement exact, exprimé en heures et en
+  fraction de support (ORS de référence 18h certifié).
+
+### Ajouté
+- `calculs.js` › `alertesBMP(anneeData, modificateurs, seuil)` — fonction pure,
+  renvoie la liste des disciplines en dépassement triées par urgence décroissante.
+- `dashboard.js` › `_renderAlertesBMP` — encart **distinct** de l'encart
+  Vérification (bleu, conseil de gestion) : masqué si aucune alerte, déplié avec
+  une ligne par discipline si des alertes existent. Toggle replier/déplier.
+- `index.html` : conteneur `#dashAlertesBMP` sous `#dashVerifs`.
+- `app.js` : délégation `data-action="toggle-bmp"`.
+- `verifs.js` : +4 cas (51 vérifications) : dépassement ≥ seuil, dans capacité,
+  sous seuil, exclusion BMP/contractuels.
+
+### Conformité SKILL
+- Aucun `onclick` inline ; toggle via délégation globale.
+- `alertesBMP` est une fonction pure testée navigateur + Node.
+- Styles via tokens (`--c-blue`, `--c-blue-bg`), compatibles thème sombre.
+
+---
+
+
+
+### Besoin
+En janvier, la ventilation HP/HSA d'une modalité ne devrait pas être une question
+posée à chaque saisie : c'est une conséquence de l'enveloppe. On remplit d'abord
+les heures-poste disponibles (service dû), et le débordement part en HSA. La
+direction doit pouvoir forcer à la marge pour caler le solde.
+
+### Comportement (interprétation « enveloppe », raisonnement en masse)
+- Chaque modalité de scénario consomme d'abord l'**enveloppe HP disponible**
+  (`hPosteEnveloppe − HP déjà engagé`), puis bascule en **HSA** au-delà.
+- **Ordre = ordre de saisie** des modalités (option retenue : la plus lisible).
+- Une modalité peut être **à cheval** : 2h HP dispo + modalité 5h → 2 HP + 3 HSA,
+  avec la mention « enveloppe HP épuisée ».
+- **Forçage** par modalité (`Auto` / `HP forcé` / `HSA forcé`) : mémorisé, prime
+  sur l'auto, réversible. HSA forcé n'entame pas l'enveloppe HP ; HP forcé est
+  respecté même enveloppe épuisée.
+
+### Modifié
+- `calculs.js` › `bilanScenario` : ventilation par consommation d'enveloppe
+  (fonction `_ventiler`), au lieu d'un type figé par modalité. `detailParMod`
+  expose désormais `coutHP`/`coutHSA` réels (peuvent être mixtes) + `forcage`.
+- `data.js` : **migration v4.10** — `modificateur.typeHeure` → `modificateur.forcage`.
+  Les scénarios existants sont convertis en forçage explicite : **comportement
+  identique**, aucune valeur ne bouge.
+- `pilotage.js` : imputation par défaut = **Auto** ; sélecteurs et badges affichent
+  Auto / HP forcé / HSA forcé ; récap discipline affiche la ventilation réelle
+  (chip mixte « x HP + y HSA » le cas échéant). Panneau nominatif : fallback aligné
+  sur `forcage` (l'onglet nominatif détaillé reste pour plus tard).
+- `verifs.js` : +5 cas scénario (6 → 11 cas, 30 → 40 vérifications) : auto plein HP,
+  à cheval, épuisement sur 2 modalités, forçage HP, forçage HSA. Visibles dans
+  l'encart « Vérification » du tableau de bord.
+
+### Conformité SKILL
+- Aucun `onclick` inline ; toggles via délégation globale existante.
+- Styles via tokens (`--c-accent-light`), compatibles thème sombre.
+- `bilanScenario` reste une fonction pure (testée navigateur + Node).
+
+### Reste à faire (brique 2, sprint suivant)
+- Alerte « capacité HSA imposable dépassée → BMP » par discipline
+  (seuil = nb titulaires temps plein rattachés × 2), sur HSA effectives.
+
+---
+
+
 
 ### Contexte
 Pour qu'un autre personnel de direction ose confier sa vraie DGH à l'outil, il
@@ -767,40 +848,3 @@ non de gestion fine heure par heure — ce n'est pas un retour en arrière.
 
 - SKILL.md v3.2.1 : ajout de 4 nouveaux pièges (double attribut class, exception
   tooltips flottants, tooltip clignotant, suppression CSS partielle).
-
-## Sprint 21
-
-### Corrections caractères hors-coverage de police
-Les polices Outfit et JetBrains Mono (Google Fonts) ne couvrent pas tous les caractères unicode utilisés dans l'app. Les navigateurs affichaient des `\` ou carrés pour ces glyphes manquants. Tous les caractères hors-coverage ont été remplacés par des équivalents bien supportés :
-
-| Avant | Après | Contexte |
-|-------|-------|---------|
-| `⬡` U+2B21 | `◆` | Icône nav Tableau de bord |
-| `◷` U+25F7 | `⊙` | Icône nav Historique |
-| `◬` U+25EC | `▲` | Icône nav Alertes |
-| `▤` U+25A4 | `≡` | Icônes Instances/Notice EDT |
-| `▦` U+25A6 | `⊞` | Icônes Répartition/Récapitulatif |
-| `☀︎` + U+FE0E | `☀` | Bouton thème (variation selector supprimé) |
-| `⎙` U+2399 | `→` / `↓` | Boutons Projeter/Imprimer |
-| `⠿` U+283F | `⋮⋮` | Drag handle kanban EDT |
-| `⬜` U+2B1C | `☐` | Case à cocher Répartition |
-| `⚑` U+2691 | `◆` | Indicateur motif ORS (Équipe) |
-| `⎘` U+2398 | `+` | Bouton dupliquer scénario |
-| `＋` U+FF0B | `+` | Titre encart multi-classes |
-| `ⓘ` U+24D8 | `ℹ` | Indicateurs tooltip HPC-HP/HSA |
-| `↺` U+21BA | `↩` | Bouton réafficher aides |
-
-### Tri par en-tête sur tous les tableaux
-Tous les tableaux de l'application supportent désormais le tri par clic sur les en-têtes (▲/▼). Nouveaux modules concernés :
-
-- **Structures** : tri par Division, Niveau (ordre pédagogique 6e→3e), Effectif
-- **Équipe & HP/HSA** : tri par Nom, Statut, Discipline, Apport, HP, HSA
-- **Besoins & apports** : tri par Discipline, Besoin, Apport HP, HSA équipe, Écart
-- **H. péda. complémentaires** : tri par Intitulé, Catégorie, Discipline, H/sem, Type, Effectif
-- **PACTE / IMP** : tri par Type, Intitulé, Enseignant, H/an
-
-Modules avec tri déjà existant conservé sans modification : Équipe pédagogique (ens-sort), Services enseignants/Instances (inst-sort-serv), Historique (hist-sort).
-
-Tableaux non triables par conception : Dotation DGH (grille MEN intégrée), Répartition de service (matrice discipline × classe), notices EDT.
-
-Implémentation : même pattern que `DGHEnseignants.setSort` — variable de module `_sortKey`/`_sortDir`, copie triée du tableau source, aucun `addEventListener` direct.

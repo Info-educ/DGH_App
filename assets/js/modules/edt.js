@@ -69,7 +69,7 @@ const DGHEdt = (() => {
       el.innerHTML = '<button class="btn-primary" id="btnAddIndispo">+ Indisponibilité</button>'
         + '<button class="btn-secondary" id="btnAddClibre">+ Contrainte libre</button>';
     } else if (_tab === 'notice') {
-      el.innerHTML = '<button class="btn-secondary" id="btnPrintEdt">↓ Imprimer</button>';
+      el.innerHTML = '<button class="btn-secondary" id="btnPrintEdt">⎙ Imprimer</button>';
     } else {
       el.innerHTML = '';
     }
@@ -1029,7 +1029,7 @@ const DGHEdt = (() => {
           '<tr class="hb-row-' + r.recommandation + '">'
             + '<td>' + _esc(r.jourLabel) + ' ' + _esc(r.debut) + '–' + _esc(r.fin) + '</td>'
             + '<td>' + r.nbDisponibles + '/' + r.nbTotal + '</td>'
-            + '<td>' + r.indisponiblesDurs.length + (r.indisponiblesDurs.length ? ' <span class="hb-detail" title="' + _esc(r.indisponiblesDurs.map(x=>x.nom).join(', ')) + '">ℹ</span>' : '') + '</td>'
+            + '<td>' + r.indisponiblesDurs.length + (r.indisponiblesDurs.length ? ' <span class="hb-detail" title="' + _esc(r.indisponiblesDurs.map(x=>x.nom).join(', ')) + '">ⓘ</span>' : '') + '</td>'
             + '<td>' + r.voeuxSouples.length + '</td>'
             + '<td class="hb-reco-cell">' + ICONES[r.recommandation] + '</td>'
           + '</tr>'
@@ -1385,7 +1385,7 @@ const DGHEdt = (() => {
               + '<div class="kanban-slot-cls">' + _esc(clsLabel) + '</div>'
               + (discLabel ? '<div class="kanban-slot-disc">' + _esc(discLabel) + '</div>' : '')
               + (ensLabel  ? '<div class="kanban-slot-ens">' + _esc(ensLabel) + '</div>' : '')
-              + '<span class="kanban-drag-handle">⋮⋮</span>'
+              + '<span class="kanban-drag-handle">⠿</span>'
             + '</div>';
           }).join('')
         + '<div class="kanban-drop-zone" data-action="kanban-drop" data-barrette-id="' + b.id + '" data-slot-idx="' + slots.length + '">+ Déposer ici</div>';

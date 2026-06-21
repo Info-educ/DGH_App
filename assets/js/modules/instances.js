@@ -41,7 +41,7 @@ const DGHInstances = (() => {
       ⬇ Exporter Excel
     </button>
     <button class="btn-secondary btn-sm inst-print-btn" data-action="inst-projeter" title="Vue projection / impression">
-      → Projeter
+      ⎙ Projeter
     </button>
   </div>
 </div>
@@ -345,7 +345,7 @@ const DGHInstances = (() => {
     existing.innerHTML = `
 <div class="proj-bar">
   <button class="proj-close-btn" data-action="inst-projeter">✕ Quitter la projection</button>
-  <button class="proj-print-btn" data-action="inst-imprimer">↓ Imprimer</button>
+  <button class="proj-print-btn" data-action="inst-imprimer">⎙ Imprimer</button>
 </div>
 <div class="proj-page" id="projPage">
   <div class="proj-header">
