@@ -5726,3 +5726,13 @@ td.col-grille {
 .dash-verifs-ligne-lbl { flex: 1; }
 .dash-verifs-ligne-val { flex-shrink: 0; color: var(--c-text-muted); }
 .dash-verifs-ligne.is-ko .dash-verifs-ligne-val { color: var(--c-red); }
+
+/* ── Sprint 21 : imputation Auto (bascule HP/HSA) & ventilation mixte ──── */
+/* AUTO = la modalité suit l'enveloppe (HP d'abord, débordement HSA). */
+.mod-th-badge-auto { background: var(--c-accent-light); color: var(--c-accent); }
+.rc-th-auto        { background: var(--c-accent-light); color: var(--c-accent); }
+/* Ventilation mixte : une même modalité à cheval HP + HSA. */
+.rc-mod-mixte  { background: var(--c-accent-light); border-left-color: var(--c-accent); }
+.rc-chip-mixte { background: var(--c-accent-light); color: var(--c-accent);
+                 padding: .05rem .35rem; border-radius: 4px; font-size: .68rem;
+                 font-weight: 700; white-space: nowrap; }
