@@ -5,6 +5,10 @@
 
 const DGHStructures = (() => {
 
+  // ── Tri tableau ─────────────────────────────────────────────────────
+  let _sortKey = 'nom';   // 'nom' | 'niveau' | 'effectif'
+  let _sortDir = 1;       // 1 = asc, -1 = desc
+
   // ── RENDU PRINCIPAL ───────────────────────────────────────────────
   function renderStructures() {
     try {
@@ -79,8 +83,35 @@ const DGHStructures = (() => {
         });
       });
 
-      let html = '<table class="struct-table"><thead><tr><th>Division</th><th>Niveau</th><th>Effectif</th><th>Dispositif / Groupes</th><th class="col-actions">Actions</th></tr></thead><tbody>';
-      structures.forEach(div => {
+      const NIVEAUX_ORDER = ['6e','5e','4e','3e','autre'];
+      const arrow = k => _sortKey === k ? (_sortDir === 1 ? ' ▲' : ' ▼') : '';
+      const thCls = 'struct-th-sort';
+      let html = '<table class="struct-table"><thead><tr>'
+        + '<th class="' + thCls + '" data-action="struct-sort" data-key="nom" title="Trier par division">Division' + arrow('nom') + '</th>'
+        + '<th class="' + thCls + '" data-action="struct-sort" data-key="niveau" title="Trier par niveau">Niveau' + arrow('niveau') + '</th>'
+        + '<th class="' + thCls + ' col-num" data-action="struct-sort" data-key="effectif" title="Trier par effectif">Effectif' + arrow('effectif') + '</th>'
+        + '<th>Dispositif / Groupes</th>'
+        + '<th class="col-actions">Actions</th>'
+        + '</tr></thead><tbody>';
+
+      const sorted = structures.slice().sort((a, b) => {
+        let va, vb;
+        switch (_sortKey) {
+          case 'niveau':
+            va = NIVEAUX_ORDER.indexOf(a.niveau) >= 0 ? NIVEAUX_ORDER.indexOf(a.niveau) : 99;
+            vb = NIVEAUX_ORDER.indexOf(b.niveau) >= 0 ? NIVEAUX_ORDER.indexOf(b.niveau) : 99;
+            if (va !== vb) return (va - vb) * _sortDir;
+            return (a.nom||'').localeCompare(b.nom||'', 'fr');
+          case 'effectif':
+            va = a.effectif || 0; vb = b.effectif || 0; break;
+          default: // nom
+            va = (a.nom||'').toLowerCase(); vb = (b.nom||'').toLowerCase();
+        }
+        if (typeof va === 'string') return va.localeCompare(vb, 'fr') * _sortDir;
+        return (va - vb) * _sortDir;
+      });
+
+      sorted.forEach(div => {
         const tags = [];
         if (div.dispositif) tags.push('<span class="div-tag div-tag-disp">' + _esc(div.dispositif) + '</span>');
         (classeNomsMap[div.id]||[]).forEach(nom => {
@@ -468,6 +499,12 @@ const DGHStructures = (() => {
     app.toast('Groupe supprimé.', 'info');
   }
 
+  function setSort(key) {
+    if (_sortKey === key) _sortDir = -_sortDir;
+    else { _sortKey = key; _sortDir = 1; }
+    renderStructures();
+  }
+
   return {
     renderStructures,
     openModalMatrice, closeModalMatrice, saveModalMatrice,
@@ -475,7 +512,8 @@ const DGHStructures = (() => {
     confirmDeleteDiv, closeConfirmDiv, execDeleteDiv,
     updateDupPreview,
     renderGroupes, startAddGroupe, editGroupe, cancelGroupe, saveGroupe, deleteGroupe,
-    genererGroupesRapides
+    genererGroupesRapides,
+    setSort
   };
 
 })();

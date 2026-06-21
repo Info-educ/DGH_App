@@ -301,7 +301,7 @@ const DGHTutorial = (() => {
             '<button class="dgh-help-menu" data-help-action="help-current"><span>Aide de cette page</span><span class="dgh-help-menu-ic">›</span></button>' +
             '<button class="dgh-help-menu" data-help-action="tour"><span>Relancer la visite guidée</span><span class="dgh-help-menu-ic">›</span></button>' +
             '<button class="dgh-help-menu" data-help-action="welcome"><span>Revoir l\'écran de bienvenue</span><span class="dgh-help-menu-ic">›</span></button>' +
-            '<button class="dgh-help-menu" data-help-action="reset-seen"><span>Réafficher toutes les aides</span><span class="dgh-help-menu-ic">↺</span></button>' +
+            '<button class="dgh-help-menu" data-help-action="reset-seen"><span>Réafficher toutes les aides</span><span class="dgh-help-menu-ic">↩</span></button>' +
             '<div class="dgh-help-toggle-row">' +
               '<span>Aides automatiques</span>' +
               '<button class="dgh-help-switch' + (on ? ' is-on' : '') + '" data-help-action="toggle-enabled" role="switch" aria-checked="' + on + '"><span class="dgh-help-knob"></span></button>' +

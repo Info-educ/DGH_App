@@ -143,7 +143,7 @@ const DGHPilotage = (() => {
               + '</button>') + '</td>'
         + '<td class="scen-th-r">'
           + '<button class="btn-icon" data-action="edit-scenario" data-id="' + scen.id + '" title="' + (editing?'Fermer':'Éditer') + '">' + (editing?'▲':'▼') + '</button>'
-          + '<button class="btn-icon" data-action="duplicate-scenario" data-id="' + scen.id + '" title="Dupliquer">⎘</button>'
+          + '<button class="btn-icon" data-action="duplicate-scenario" data-id="' + scen.id + '" title="Dupliquer">+</button>'
           + '<button class="btn-icon btn-icon-danger" data-action="delete-scenario" data-id="' + scen.id + '" title="Supprimer">✕</button>'
         + '</td>'
       + '</tr>';
@@ -230,7 +230,7 @@ const DGHPilotage = (() => {
 
     return '<div class="mc-encart">'
       + '<div class="mc-encart-head">'
-        + '<span class="mc-encart-titre">＋ Aménagement multi-classes</span>'
+        + '<span class="mc-encart-titre">+ Aménagement multi-classes</span>'
         + '<span class="mc-encart-hint">groupe de besoins inter-classes, dédoublement sur plusieurs classes, barrette…</span>'
       + '</div>'
       + '<div class="mc-form" data-scen-id="' + sid + '">'
@@ -963,7 +963,7 @@ const DGHPilotage = (() => {
 
     const kpis = [
       { label: 'Enveloppe DGH',    val: bilanRef.enveloppe  + ' h',            sub: bilanRef.hPosteEnv + ' HP + ' + bilanRef.hsaEnv + ' HSA', icon: '◎', cls: '' },
-      { label: 'Heures allouées',  val: bilanRef.totalAlloue + ' h',            sub: pctCons + ' % consommé',                                  icon: '▦', cls: '' },
+      { label: 'Heures allouées',  val: bilanRef.totalAlloue + ' h',            sub: pctCons + ' % consommé',                                  icon: '⊞', cls: '' },
       { label: 'Solde',            val: soldeSign + bilanRef.solde + ' h',      sub: bilanRef.depassement ? 'dépassement !' : 'disponibles',   icon: '⊕', cls: soldeCls },
       { label: 'Enseignants',      val: bilanEns.nbEnseignants || '0',          sub: (bilanEns.nbHSA||0) + ' en HSA · ' + (bilanEns.nbSousService||0) + ' sous-service', icon: '◉', cls: '' },
       { label: 'Divisions',        val: resume.nbDivisions || '0',              sub: resume.effectifTotal ? resume.effectifTotal + ' élèves' : '—', icon: '⊞', cls: '' },

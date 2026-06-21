@@ -4,6 +4,10 @@
 
 const DGHHPC = (() => {
 
+  // ── Tri tableau ─────────────────────────────────────────────────────
+  let _sortKey = 'nom';   // 'nom' | 'categorie' | 'discipline' | 'heures' | 'type' | 'effectif'
+  let _sortDir = 1;       // 1 = asc, -1 = desc
+
   // ── RENDU PRINCIPAL ───────────────────────────────────────────────
   function renderHPC() {
     try {
@@ -26,15 +30,46 @@ const DGHHPC = (() => {
       const discMap   = {}; disciplines.forEach(d => { discMap[d.id]=d; });
       const structMap = {}; structures.forEach(d => { structMap[d.id]=d; });
 
-      let totalHPCHp = 0, totalHPCHsa = 0;
-      let html = '<table class="dot-table"><thead><tr><th>Intitulé</th><th>Catégorie</th><th>Discipline</th><th>Classes</th><th class="col-num">H/sem</th><th class="col-num dot-col-hp">Type</th><th class="col-num">Effectif</th><th class="col-actions">Actions</th></tr></thead><tbody>';
-      hpcs.forEach(h => {
+      // Enrichir les HPC avec les valeurs calculées pour le tri
+      const hpcsEnriched = hpcs.map(h => {
         const catLabel   = (LABELS[h.categorie]||h.categorie).split('(')[0].trim();
-        const discNom    = h.disciplineId && discMap[h.disciplineId] ? discMap[h.disciplineId].nom : '—';
+        const discNom    = h.disciplineId && discMap[h.disciplineId] ? discMap[h.disciplineId].nom : '';
         const classesIds = h.classesIds||[];
-        const classesNoms  = classesIds.map(id => structMap[id] ? structMap[id].nom : '?').join(', ') || '—';
         const effectifCalc = classesIds.reduce((s,id) => s+(structMap[id]?structMap[id].effectif||0:0), 0);
-        const effectif     = effectifCalc > 0 ? effectifCalc : (h.effectif||0);
+        return { ...h, _catLabel: catLabel, _discNom: discNom,
+          _effectif: effectifCalc > 0 ? effectifCalc : (h.effectif||0) };
+      });
+
+      const sorted = hpcsEnriched.slice().sort((a, b) => {
+        let va, vb;
+        switch (_sortKey) {
+          case 'categorie':   va = a._catLabel;       vb = b._catLabel;       break;
+          case 'discipline':  va = a._discNom;        vb = b._discNom;        break;
+          case 'heures':      va = a.heures||0;       vb = b.heures||0;       break;
+          case 'type':        va = a.typeHeure||'hp'; vb = b.typeHeure||'hp'; break;
+          case 'effectif':    va = a._effectif;       vb = b._effectif;       break;
+          default:            va = (a.nom||'').toLowerCase(); vb = (b.nom||'').toLowerCase();
+        }
+        if (typeof va === 'string') return va.localeCompare(vb, 'fr') * _sortDir;
+        return (va - vb) * _sortDir;
+      });
+
+      const arrow = k => _sortKey === k ? (_sortDir === 1 ? ' ▲' : ' ▼') : '';
+      const thS   = 'hpc-th-sort';
+      let totalHPCHp = 0, totalHPCHsa = 0;
+      let html = '<table class="dot-table"><thead><tr>'
+        + '<th class="' + thS + '" data-action="hpc-sort" data-key="nom" title="Trier par intitulé">Intitulé' + arrow('nom') + '</th>'
+        + '<th class="' + thS + '" data-action="hpc-sort" data-key="categorie" title="Trier par catégorie">Catégorie' + arrow('categorie') + '</th>'
+        + '<th class="' + thS + '" data-action="hpc-sort" data-key="discipline" title="Trier par discipline">Discipline' + arrow('discipline') + '</th>'
+        + '<th>Classes</th>'
+        + '<th class="col-num ' + thS + '" data-action="hpc-sort" data-key="heures" title="Trier par heures">H/sem' + arrow('heures') + '</th>'
+        + '<th class="col-num ' + thS + '" data-action="hpc-sort" data-key="type" title="Trier par type">Type' + arrow('type') + '</th>'
+        + '<th class="col-num ' + thS + '" data-action="hpc-sort" data-key="effectif" title="Trier par effectif">Effectif' + arrow('effectif') + '</th>'
+        + '<th class="col-actions">Actions</th>'
+        + '</tr></thead><tbody>';
+      sorted.forEach(h => {
+        const classesIds  = h.classesIds||[];
+        const classesNoms = classesIds.map(id => structMap[id] ? structMap[id].nom : '?').join(', ') || '—';
         const isHSA = (h.typeHeure||'hp') === 'hsa';
         if (isHSA) totalHPCHsa += h.heures||0; else totalHPCHp += h.heures||0;
         const typeBadge = isHSA
@@ -42,12 +77,12 @@ const DGHHPC = (() => {
           : '<button class="dot-col-badge dot-col-hp hpc-type-toggle" data-action="toggle-hpc-type" data-id="' + h.id + '" title="Cliquer pour passer en HSA">\u21c4 HP</button>';
         html += '<tr>'
           + '<td><strong class="div-nom">' + _esc(h.nom||'—') + '</strong>' + (h.commentaire?'<br><span class="grp-comment">'+_esc(h.commentaire)+'</span>':'') + '</td>'
-          + '<td><span class="grp-type-badge">' + _esc(catLabel) + '</span></td>'
-          + '<td>' + _esc(discNom) + '</td>'
+          + '<td><span class="grp-type-badge">' + _esc(h._catLabel) + '</span></td>'
+          + '<td>' + _esc(h._discNom||'—') + '</td>'
           + '<td><span class="grp-niveaux">' + _esc(classesNoms) + '</span></td>'
           + '<td class="col-num"><strong class="font-mono">' + (h.heures||0) + ' h</strong></td>'
           + '<td class="col-num">' + typeBadge + '</td>'
-          + '<td class="col-num">' + effectif + '</td>'
+          + '<td class="col-num">' + h._effectif + '</td>'
           + '<td class="col-actions"><button class="btn-icon-sm" data-action="edit-hpc" data-id="' + h.id + '" title="Modifier">✎</button><button class="btn-icon-sm btn-icon-danger" data-action="delete-hpc" data-id="' + h.id + '" title="Supprimer">✕</button></td>'
           + '</tr>';
       });
@@ -175,11 +210,18 @@ const DGHHPC = (() => {
   function _setVal(id,val){const el=document.getElementById(id);if(el)el.value=val;}
   function _esc(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
+  function setSort(key) {
+    if (_sortKey === key) _sortDir = -_sortDir;
+    else { _sortKey = key; _sortDir = 1; }
+    renderHPC();
+  }
+
   return {
     renderHPC,
     openModalHPC, closeModalHPC, saveModalHPC,
     updateHPCEffectif, hpcSelectAllClasses, toggleHPCType,
-    confirmDeleteHPC, closeConfirmHPC, execDeleteHPC
+    confirmDeleteHPC, closeConfirmHPC, execDeleteHPC,
+    setSort
   };
 
 })();

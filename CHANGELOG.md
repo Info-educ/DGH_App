@@ -767,3 +767,40 @@ non de gestion fine heure par heure — ce n'est pas un retour en arrière.
 
 - SKILL.md v3.2.1 : ajout de 4 nouveaux pièges (double attribut class, exception
   tooltips flottants, tooltip clignotant, suppression CSS partielle).
+
+## Sprint 21
+
+### Corrections caractères hors-coverage de police
+Les polices Outfit et JetBrains Mono (Google Fonts) ne couvrent pas tous les caractères unicode utilisés dans l'app. Les navigateurs affichaient des `\` ou carrés pour ces glyphes manquants. Tous les caractères hors-coverage ont été remplacés par des équivalents bien supportés :
+
+| Avant | Après | Contexte |
+|-------|-------|---------|
+| `⬡` U+2B21 | `◆` | Icône nav Tableau de bord |
+| `◷` U+25F7 | `⊙` | Icône nav Historique |
+| `◬` U+25EC | `▲` | Icône nav Alertes |
+| `▤` U+25A4 | `≡` | Icônes Instances/Notice EDT |
+| `▦` U+25A6 | `⊞` | Icônes Répartition/Récapitulatif |
+| `☀︎` + U+FE0E | `☀` | Bouton thème (variation selector supprimé) |
+| `⎙` U+2399 | `→` / `↓` | Boutons Projeter/Imprimer |
+| `⠿` U+283F | `⋮⋮` | Drag handle kanban EDT |
+| `⬜` U+2B1C | `☐` | Case à cocher Répartition |
+| `⚑` U+2691 | `◆` | Indicateur motif ORS (Équipe) |
+| `⎘` U+2398 | `+` | Bouton dupliquer scénario |
+| `＋` U+FF0B | `+` | Titre encart multi-classes |
+| `ⓘ` U+24D8 | `ℹ` | Indicateurs tooltip HPC-HP/HSA |
+| `↺` U+21BA | `↩` | Bouton réafficher aides |
+
+### Tri par en-tête sur tous les tableaux
+Tous les tableaux de l'application supportent désormais le tri par clic sur les en-têtes (▲/▼). Nouveaux modules concernés :
+
+- **Structures** : tri par Division, Niveau (ordre pédagogique 6e→3e), Effectif
+- **Équipe & HP/HSA** : tri par Nom, Statut, Discipline, Apport, HP, HSA
+- **Besoins & apports** : tri par Discipline, Besoin, Apport HP, HSA équipe, Écart
+- **H. péda. complémentaires** : tri par Intitulé, Catégorie, Discipline, H/sem, Type, Effectif
+- **PACTE / IMP** : tri par Type, Intitulé, Enseignant, H/an
+
+Modules avec tri déjà existant conservé sans modification : Équipe pédagogique (ens-sort), Services enseignants/Instances (inst-sort-serv), Historique (hist-sort).
+
+Tableaux non triables par conception : Dotation DGH (grille MEN intégrée), Répartition de service (matrice discipline × classe), notices EDT.
+
+Implémentation : même pattern que `DGHEnseignants.setSort` — variable de module `_sortKey`/`_sortDir`, copie triée du tableau source, aucun `addEventListener` direct.

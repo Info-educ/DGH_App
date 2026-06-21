@@ -5645,6 +5645,9 @@ td.col-grille {
 /* Tri tableau enseignants — Sprint 19.1 */
 .ens-th-sort{cursor:pointer;user-select:none;white-space:nowrap;}
 .ens-th-sort:hover{color:var(--c-accent);background:var(--c-surface3);}
+/* En-têtes triables — tous tableaux (struct, equipe, besoins, hpc, missions) */
+.struct-th-sort,.eq-th-sort,.ba-th-sort,.hpc-th-sort,.missions-th-sort{cursor:pointer;user-select:none;white-space:nowrap;}
+.struct-th-sort:hover,.eq-th-sort:hover,.ba-th-sort:hover,.hpc-th-sort:hover,.missions-th-sort:hover{color:var(--c-accent);background:var(--c-surface3);}
 
 /* ═══════════════════════════════════════════════════════════════
    BESOINS & APPORTS ÉTABLISSEMENT — Sprint 19.1

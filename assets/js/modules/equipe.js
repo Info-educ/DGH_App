@@ -12,6 +12,10 @@
  */
 const DGHEquipe = (() => {
 
+  // ── Tri tableau ─────────────────────────────────────────────────────
+  let _sortKey = 'nom';   // 'nom' | 'statut' | 'discipline' | 'apport' | 'hp' | 'hsa'
+  let _sortDir = 1;       // 1 = asc, -1 = desc
+
   const STATUT_LABELS = {
     titulaire:      'Titulaire',
     bmp:            'BMP',
@@ -108,19 +112,36 @@ const DGHEquipe = (() => {
       return;
     }
 
+    const arrow = k => _sortKey === k ? (_sortDir === 1 ? ' ▲' : ' ▼') : '';
+    const thS   = 'eq-th-sort';
+
+    const sorted = bilan.rows.slice().sort((a, b) => {
+      let va, vb;
+      switch (_sortKey) {
+        case 'statut':     va = a.statut||''; vb = b.statut||''; break;
+        case 'discipline': va = a.disciplinePrincipale||''; vb = b.disciplinePrincipale||''; break;
+        case 'apport':     va = a.apportPoste||0; vb = b.apportPoste||0; break;
+        case 'hp':         va = a.hpTotal||0; vb = b.hpTotal||0; break;
+        case 'hsa':        va = a.hsaTotal||0; vb = b.hsaTotal||0; break;
+        default:           va = (a.nom||'').toLowerCase(); vb = (b.nom||'').toLowerCase();
+      }
+      if (typeof va === 'string') return va.localeCompare(vb, 'fr') * _sortDir;
+      return (va - vb) * _sortDir;
+    });
+
     let html = '<table class="eq-table"><thead><tr>'
-      + '<th>Nom</th>'
-      + '<th>Statut</th>'
-      + '<th class="eq-hide-sm">Discipline</th>'
-      + '<th class="eq-num">Apport</th>'
+      + '<th class="' + thS + '" data-action="equipe-sort" data-key="nom" title="Trier par nom">Nom' + arrow('nom') + '</th>'
+      + '<th class="' + thS + '" data-action="equipe-sort" data-key="statut" title="Trier par statut">Statut' + arrow('statut') + '</th>'
+      + '<th class="eq-hide-sm ' + thS + '" data-action="equipe-sort" data-key="discipline" title="Trier par discipline">Discipline' + arrow('discipline') + '</th>'
+      + '<th class="eq-num ' + thS + '" data-action="equipe-sort" data-key="apport" title="Trier par apport">Apport' + arrow('apport') + '</th>'
       + '<th class="eq-num">Seuil HP</th>'
-      + '<th class="eq-num">HP</th>'
-      + '<th class="eq-num">HSA</th>'
+      + '<th class="eq-num ' + thS + '" data-action="equipe-sort" data-key="hp" title="Trier par HP">HP' + arrow('hp') + '</th>'
+      + '<th class="eq-num ' + thS + '" data-action="equipe-sort" data-key="hsa" title="Trier par HSA">HSA' + arrow('hsa') + '</th>'
       + '<th class="eq-hide-sm">Répartition</th>'
       + '<th></th>'
       + '</tr></thead><tbody>';
 
-    bilan.rows.forEach(r => {
+    sorted.forEach(r => {
       const stCls = 'eq-badge-' + (r.statut || 'titulaire');
       const stLbl = STATUT_LABELS[r.statut] || r.statut || '—';
 
@@ -130,7 +151,7 @@ const DGHEquipe = (() => {
         seuilCell = '<span class="eq-seuil">' + _h(r.ors) + ' h</span>'
           + '<span class="eq-seuil-src">' + (SRC_LABELS[r.plafondSource]||'') + '</span>';
         if (r.motifORS) {
-          seuilCell += '<span class="eq-motif" title="' + _esc(r.motifORS) + '">⚑ '
+          seuilCell += '<span class="eq-motif" title="' + _esc(r.motifORS) + '">◆ '
             + _esc(r.motifORS.length > 22 ? r.motifORS.slice(0,22)+'…' : r.motifORS) + '</span>';
         }
       } else {
@@ -199,5 +220,11 @@ const DGHEquipe = (() => {
     app.toast('Tableau équipe exporté.', 'success');
   }
 
-  return { renderEquipe, exporterCSV };
+  function setSort(key) {
+    if (_sortKey === key) _sortDir = -_sortDir;
+    else { _sortKey = key; _sortDir = 1; }
+    renderEquipe();
+  }
+
+  return { renderEquipe, exporterCSV, setSort };
 })();

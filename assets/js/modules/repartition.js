@@ -309,7 +309,7 @@ const DGHRepartition = (() => {
       '<th class="rep-rapid-th-tout">'
         + '<button class="rep-rapid-tout-btn" data-action="rep-rapid-tout-col"'
           + ' data-division-id="' + div.id + '" data-discipline-id="' + disc.id
-          + '" title="Cocher/décocher tous les profs de cette discipline pour ' + _esc(div.nom) + '">⬜ tous</button>'
+          + '" title="Cocher/décocher tous les profs de cette discipline pour ' + _esc(div.nom) + '">☐ tous</button>'
       + '</th>'
     ).join('');
 

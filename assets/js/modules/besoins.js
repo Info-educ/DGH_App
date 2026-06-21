@@ -16,6 +16,8 @@ const DGHBesoins = (() => {
   };
 
   let _open = new Set(); // disciplineId dépliés
+  let _sortKey = 'nom';  // 'nom' | 'besoin' | 'apportHP' | 'apportHSA' | 'ecart'
+  let _sortDir = 1;      // 1 = asc, -1 = desc
 
   function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
   function _h(n){return Math.round((n||0)*2)/2;}
@@ -64,16 +66,32 @@ const DGHBesoins = (() => {
       return;
     }
 
+    const arrow = k => _sortKey === k ? (_sortDir === 1 ? ' ▲' : ' ▼') : '';
+    const thS   = 'ba-th-sort';
+
+    const sorted = bilan.rows.slice().sort((a, b) => {
+      let va, vb;
+      switch (_sortKey) {
+        case 'besoin':    va = a.besoin||0;    vb = b.besoin||0;    break;
+        case 'apportHP':  va = a.apportHP||0;  vb = b.apportHP||0;  break;
+        case 'apportHSA': va = a.apportHSA||0; vb = b.apportHSA||0; break;
+        case 'ecart':     va = a.ecart||0;     vb = b.ecart||0;     break;
+        default: va = (a.nom||'').toLowerCase(); vb = (b.nom||'').toLowerCase();
+      }
+      if (typeof va === 'string') return va.localeCompare(vb, 'fr') * _sortDir;
+      return (va - vb) * _sortDir;
+    });
+
     let html = '<table class="ba-table"><thead><tr>'
-      + '<th>Discipline</th>'
-      + '<th class="ba-num">Besoin</th>'
-      + '<th class="ba-num">Apport HP</th>'
-      + '<th class="ba-num">HSA équipe</th>'
-      + '<th class="ba-num">Écart</th>'
+      + '<th class="' + thS + '" data-action="besoins-sort" data-key="nom" title="Trier par discipline">Discipline' + arrow('nom') + '</th>'
+      + '<th class="ba-num ' + thS + '" data-action="besoins-sort" data-key="besoin" title="Trier par besoin">Besoin' + arrow('besoin') + '</th>'
+      + '<th class="ba-num ' + thS + '" data-action="besoins-sort" data-key="apportHP" title="Trier par apport HP">Apport HP' + arrow('apportHP') + '</th>'
+      + '<th class="ba-num ' + thS + '" data-action="besoins-sort" data-key="apportHSA" title="Trier par HSA équipe">HSA équipe' + arrow('apportHSA') + '</th>'
+      + '<th class="ba-num ' + thS + '" data-action="besoins-sort" data-key="ecart" title="Trier par écart">Écart' + arrow('ecart') + '</th>'
       + '<th class="ba-num">HSA absorbées</th>'
       + '</tr></thead><tbody>';
 
-    bilan.rows.forEach(r => {
+    sorted.forEach(r => {
       const isOpen = _open.has(r.disciplineId);
       const abs    = hsaAbs[r.disciplineId] || { total: 0, profs: {} };
       const dot    = '<span class="ba-disc-dot" style="background:' + (r.couleur || '#6b6860') + '"></span>';
@@ -182,5 +200,11 @@ const DGHBesoins = (() => {
     app.toast('Besoins & apports exportés.', 'success');
   }
 
-  return { renderBesoins, toggle, saveHsa, exporterCSV };
+  function setSort(key) {
+    if (_sortKey === key) _sortDir = -_sortDir;
+    else { _sortKey = key; _sortDir = 1; }
+    renderBesoins();
+  }
+
+  return { renderBesoins, toggle, saveHsa, exporterCSV, setSort };
 })();

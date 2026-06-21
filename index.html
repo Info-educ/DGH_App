@@ -27,7 +27,7 @@
     <ul class="nav-list" aria-label="Navigation principale">
 
       <!-- TABLEAU DE BORD -->
-      <li class="nav-item active" data-view="dashboard"><span class="nav-icon">⬡</span><span class="nav-label">Tableau de bord</span></li>
+      <li class="nav-item active" data-view="dashboard"><span class="nav-icon">◆</span><span class="nav-label">Tableau de bord</span></li>
 
       <!-- CADRE DE L'ANNÉE -->
       <li class="nav-section-label">Cadre de l'année</li>
@@ -40,19 +40,19 @@
       <!-- PILOTER -->
       <li class="nav-section-label">Piloter</li>
       <li class="nav-item" data-view="scenarios"><span class="nav-icon">⊕</span><span class="nav-label">Scénarios</span><span class="nav-badge-scen is-hidden" id="badge-pilotage"></span></li>
-      <li class="nav-item" data-view="historique"><span class="nav-icon">◷</span><span class="nav-label">Historique</span></li>
-      <li class="nav-item" data-view="alertes"><span class="nav-icon">◬</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
+      <li class="nav-item" data-view="historique"><span class="nav-icon">⊙</span><span class="nav-label">Historique</span></li>
+      <li class="nav-item" data-view="alertes"><span class="nav-icon">▲</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
 
       <!-- PRÉPARER LES INSTANCES -->
       <li class="nav-section-label">Préparer les instances</li>
-      <li class="nav-item" data-view="instances" data-tab="synthese-ca"><span class="nav-icon">▤</span><span class="nav-label">Synthèse CA</span></li>
+      <li class="nav-item" data-view="instances" data-tab="synthese-ca"><span class="nav-icon">≡</span><span class="nav-label">Synthèse CA</span></li>
       <li class="nav-item" data-view="instances" data-tab="dialogue"><span class="nav-icon">◈</span><span class="nav-label">Dialogue de gestion</span></li>
       <li class="nav-item" data-view="instances" data-tab="services"><span class="nav-icon">◉</span><span class="nav-label">Services enseignants</span></li>
 
       <!-- ÉQUIPE -->
       <li class="nav-section-label">Équipe</li>
       <li class="nav-item" data-view="enseignants"><span class="nav-icon">◉</span><span class="nav-label">Équipe pédagogique</span></li>
-      <li class="nav-item" data-view="repartition"><span class="nav-icon">▦</span><span class="nav-label">Répartition de service</span></li>
+      <li class="nav-item" data-view="repartition"><span class="nav-icon">⊞</span><span class="nav-label">Répartition de service</span></li>
       <li class="nav-item" data-view="missions"><span class="nav-icon">◑</span><span class="nav-label">PACTE / IMP</span></li>
 
       <!-- OUTILS -->
@@ -80,7 +80,7 @@
       </div>
       <div class="topbar-right">
         <div class="topbar-stats" id="topbarStats"></div>
-        <button class="btn-theme" id="themeToggle" aria-label="Changer de thème">☀︎</button>
+        <button class="btn-theme" id="themeToggle" aria-label="Changer de thème">☀</button>
         <button class="btn-etab" id="btnEtab">Mon Collège ⚙</button>
       </div>
     </header>
@@ -211,7 +211,7 @@
         <!-- Onglets -->
         <div class="pil-tabs" id="pilTabs">
           <button class="pil-tab active" data-action="pil-tab" data-tab="scenarios">⊕ Scénarios</button>
-          <button class="pil-tab" data-action="pil-tab" data-tab="recap">▦ Récapitulatif DGH</button>
+          <button class="pil-tab" data-action="pil-tab" data-tab="recap">⊞ Récapitulatif DGH</button>
           <button class="pil-tab" data-action="pil-tab" data-tab="impact">◉ Impact enseignants</button>
           <button class="pil-tab" data-action="pil-tab" data-tab="synthese">◈ Synthèse</button>
         </div>
@@ -253,7 +253,7 @@
           <button class="pil-tab" data-action="edt-tab" data-tab="cointerv">◉ Co-interventions</button>
           <button class="pil-tab" data-action="edt-tab" data-tab="indispos">⚠ Indisponibilités</button>
           <button class="pil-tab" data-action="edt-tab" data-tab="etab">🏫 Contraintes étab.</button>
-          <button class="pil-tab" data-action="edt-tab" data-tab="notice">▤ Notice EDT</button>
+          <button class="pil-tab" data-action="edt-tab" data-tab="notice">≡ Notice EDT</button>
         </div>
         <div class="pil-panel active" id="edt-panel-barrettes"><div id="edtBarrettesWrap"></div></div>
         <div class="pil-panel" id="edt-panel-cointerv"><div id="edtCoIntervWrap"></div></div>
@@ -542,7 +542,7 @@
       <!-- ══ SYNTHÈSE ══════════════════════════════════════════════════ -->
       <section class="view" id="view-synthese">
         <div class="view-header"><h1 class="view-title">Synthèses</h1><p class="view-subtitle">Documents pour le CA et les équipes pédagogiques</p></div>
-        <div class="placeholder-view"><div class="placeholder-icon">▤</div><p><strong>Module Synthèses</strong> — Sprint 7</p></div>
+        <div class="placeholder-view"><div class="placeholder-icon">≡</div><p><strong>Module Synthèses</strong> — Sprint 7</p></div>
       </section>
 
       <!-- ══ INSTANCES ══════════════════════════════════════════════ -->
