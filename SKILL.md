@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **4.12.0** — Sprint 22 — alerte BMP : `calculs.alertesBMP()` (fonction pure) détecte les disciplines dont les HSA effectives dépassent la capacité HSA imposable (titulaires temps plein de la discipline × 2), seuil de déclenchement ≥ 3h, encart conseil de gestion distinct sur le tableau de bord (`#dashAlertesBMP`), suggestion de volume BMP chiffrée. +4 cas de vérification (51 au total).
+> Version courante : **4.12.2** — robustesse : filet de test de l'import / migration (`tests/test-import.js` + fixture `legacy-4.8.0.json`) garantissant la relecture des anciens fichiers. (Précédent : resynchronisation des marqueurs de version + garde-fou `tests/check-version.js`, v4.12.1.)
 
 ---
 
@@ -566,6 +566,18 @@ Calculs.creneauBleuOptimal(enseignants, indispos, contraintesLibres, creneaux)
       avec un DOM minimal simulé en Node (`getElementById`/`innerHTML` factices) avant
       livraison — `node --check` ne détecte pas les erreurs d'exécution comme un nom de
       fonction interne incorrect (ex. router d'onglet appelant une fonction renommée)
+
+### Tests automatisés à lancer avant livraison
+```bash
+node tests/check-version.js   # cohérence des marqueurs de version
+node tests/test-service.js    # moteur de calcul (cas de verifs.js)
+node tests/test-import.js     # compatibilité ascendante de l'import / migration
+```
+Les trois doivent renvoyer exit 0. `test-import.js` rejoue l'import d'un vrai fichier
+ancien (`tests/fixtures/legacy-4.8.0.json`) dans le schéma courant : c'est le filet qui
+garantit qu'aucun sprint futur ne casse la relecture des données déjà enregistrées par
+les utilisateurs. **Ne jamais supprimer la fixture** ; en ajouter une nouvelle à chaque
+changement de schéma majeur (`legacy-<version>.json`).
 
 ---
 

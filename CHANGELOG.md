@@ -5,6 +5,57 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.12.2 — Robustesse : filet de test de l'import / migration (2026-06-21)
+
+### Besoin
+La promesse centrale de l'outil est « je retrouve mes données », y compris des
+années plus tard à partir d'un fichier exporté par une ancienne version. Rien ne
+garantissait jusqu'ici qu'un sprint futur ne casse pas silencieusement la
+relecture des anciens fichiers.
+
+### Ajouté
+- `tests/fixtures/legacy-4.8.0.json` — un vrai fichier de données 4.8.0 conservé
+  comme témoin de compatibilité ascendante.
+- `tests/test-import.js` — rejoue le vrai chemin `DGHData.importJSON` (avec
+  `localStorage` / `FileReader` simulés) et vérifie : import 4.8.0 sans rejet,
+  migration exécutée (version réestampillée), structure conforme au schéma
+  courant, calcul métier réel exécuté sans erreur sur les données migrées,
+  rejet propre des fichiers invalides, présence d'une sauvegarde de secours.
+- `SKILL.md` : bloc « tests automatisés à lancer avant livraison » (3 commandes).
+
+### Conformité SKILL
+- Aucune modification de logique applicative, de schéma ni d'UI.
+- Test pur (Node), même mécanique que `tests/test-service.js`.
+
+---
+
+## v4.12.1 — Maintenance : resynchronisation des versions + garde-fou (2026-06-21)
+
+### Besoin
+Le numéro de version était écrit à une dizaine d'endroits qui ne concordaient
+plus : le footer affichait `4.9.7`, le README annonçait `4.8.0`, alors que la
+version réellement livrée (CHANGELOG) était `4.12.0`. Sur un projet destiné à
+durer plusieurs années, cette dérive doit être impossible.
+
+### Corrigé
+- Tous les marqueurs de version réalignés sur la version courante : footer
+  `index.html`, suffixes de cache `?v=` (redevenus homogènes), `data.js`
+  `VERSION`, `data/exemple.json` `_meta.version`, titre + badge `README.md`,
+  ligne « Version courante » du `SKILL.md`.
+
+### Ajouté
+- `tests/check-version.js` — garde-fou Node sans dépendance. Prend `data.js`
+  `VERSION` comme source de vérité et échoue (exit 1) si un marqueur diverge.
+  À exécuter avant chaque livraison.
+- `SKILL.md` : commande `node tests/check-version.js` ajoutée à la checklist
+  de version.
+
+### Conformité SKILL
+- Aucune modification de logique applicative, de schéma ni d'UI.
+- Script de test pur (Node), cohérent avec `tests/test-service.js`.
+
+---
+
 ## v4.12.0 — Sprint 22 : Alerte BMP — suggestions de pilotage (2026-06-21)
 
 ### Besoin
