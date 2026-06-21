@@ -123,6 +123,7 @@ const DGHEtab = (() => {
     updateModalDotTotal(); app.renderYearSelect(); renderYearListAdmin();
   }
 
+
   // ── CONFIRMER RESET ANNÉE ─────────────────────────────────────────
   function openConfirmReset() {
     const m=document.getElementById('confirmReset'); if(!m) return;
@@ -195,7 +196,8 @@ const DGHEtab = (() => {
     renderModalYearSelect, renderYearListAdmin, addModalYear, onModalYearChange,
     openConfirmReset, closeConfirmReset, execResetAnnee,
     openConfirmDeleteAnnee, closeConfirmDeleteAnnee, execDeleteAnnee,
-    renderAlertes, initDisciplinesMEN
+    renderAlertes, initDisciplinesMEN,
+    // Salles & Heure bleue déplacées vers DGHEdt (Sprint 15)
   };
 
 })();

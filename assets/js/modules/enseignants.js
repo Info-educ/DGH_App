@@ -17,6 +17,8 @@ const DGHEnseignants = (() => {
   let _pendingDeleteId = null;
   let _csvLignes       = [];
   let _vueMode         = 'liste'; // 'liste' | 'discipline' | 'hpc'
+  let _sortKey         = 'nom';   // 'nom' | 'discipline' | 'ors' | 'hsa' | 'hpdisc'
+  let _sortDir         = 1;       // 1 = asc, -1 = desc
   let _discOpen        = new Set(); // disciplines dépliées dans vue disc
   let _hpcOpen         = new Set(); // catégories HPC dépliées
 
@@ -25,6 +27,8 @@ const DGHEnseignants = (() => {
     { value: 'agrege',      label: 'Agrégé',     ors: 15 },
     { value: 'plp',         label: 'PLP',         ors: 17 },
     { value: 'eps',         label: 'Prof. EPS',   ors: 20 },
+    { value: 'pstg',        label: 'PSTG',        ors: 18 },
+    { value: 'fstg',        label: 'FSTG',        ors: 18 },
     { value: 'contractuel', label: 'Contractuel', ors: 0 }
   ];
   const STATUTS = [
@@ -98,16 +102,37 @@ const DGHEnseignants = (() => {
       return '<option value="' + g.value + '">' + g.label + labelORS + '</option>';
     }).join('');
     const statutOpts = STATUTS.map(s => '<option value="' + s.value + '">' + s.label + '</option>').join('');
+
+    // Tri : copie triée selon _sortKey / _sortDir (le service est recalculé pour les clés HP/HSA/ORS)
+    const sorted = enseignants.slice().sort((a, b) => {
+      const sa = Calculs.serviceTotalEnseignant(a, hpcs);
+      const sb = Calculs.serviceTotalEnseignant(b, hpcs);
+      let va, vb;
+      switch (_sortKey) {
+        case 'discipline': va = (a.disciplinePrincipale||'').toLowerCase(); vb = (b.disciplinePrincipale||'').toLowerCase(); break;
+        case 'ors':        va = sa.ors||0;     vb = sb.ors||0;     break;
+        case 'hsa':        va = sa.hsaTotal||0; vb = sb.hsaTotal||0; break;
+        case 'hpdisc':     va = sa.hpDisc||0;  vb = sb.hpDisc||0;  break;
+        default:           va = (a.nom||'').toLowerCase(); vb = (b.nom||'').toLowerCase();
+      }
+      if (typeof va === 'string') { const c = va.localeCompare(vb, 'fr'); return c !== 0 ? c * _sortDir : 0; }
+      return (va - vb) * _sortDir;
+    });
+
+    const arrow = k => _sortKey === k ? (_sortDir === 1 ? ' ▲' : ' ▼') : '';
+    const sortCls = 'ens-th-sort';
     let html = '<table class="ens-table ens-table-service"><thead><tr>'
-      + '<th>Nom</th><th>Prénom</th><th>Grade</th><th>Statut</th><th>Discipline(s)</th>'
-      + '<th class="ens-col-num" title="ORS réglementaire — éditable">ORS</th>'
-      + '<th class="ens-col-num ens-th-hp" title="HP disciplines uniquement">HP disc.</th>'
+      + '<th class="' + sortCls + '" data-action="ens-sort" data-key="nom" title="Trier par nom">Nom' + arrow('nom') + '</th>'
+      + '<th>Prénom</th><th>Grade</th><th>Statut</th>'
+      + '<th class="' + sortCls + '" data-action="ens-sort" data-key="discipline" title="Trier par discipline">Discipline(s)' + arrow('discipline') + '</th>'
+      + '<th class="ens-col-num ' + sortCls + '" data-action="ens-sort" data-key="ors" title="Trier par ORS">ORS' + arrow('ors') + '</th>'
+      + '<th class="ens-col-num ens-th-hp ' + sortCls + '" data-action="ens-sort" data-key="hpdisc" title="Trier par HP disc.">HP disc.' + arrow('hpdisc') + '</th>'
       + '<th class="ens-col-num ens-th-hpc" title="HPC typées HP — déduites de l’ORS">HPC-HP</th>'
-      + '<th class="ens-col-num ens-th-hsa" title="HSA : survoler pour le détail">HSA</th>'
+      + '<th class="ens-col-num ens-th-hsa ' + sortCls + '" data-action="ens-sort" data-key="hsa" title="Trier par HSA">HSA' + arrow('hsa') + '</th>'
       + '<th class="ens-col-num ens-th-dispo" title="Heures disponibles pour disciplines = ORS − HPC-HP">Dispo.</th>'
       + '<th class="ens-col-actions">Actions</th>'
       + '</tr></thead><tbody>';
-    enseignants.forEach(ens => {
+    sorted.forEach(ens => {
       const sv    = Calculs.serviceTotalEnseignant(ens, hpcs);
       const gOpts = gradeOpts.replace('value="' + ens.grade + '"', 'value="' + ens.grade + '" selected');
       const sOpts = statutOpts.replace('value="' + ens.statut + '"', 'value="' + ens.statut + '" selected');
@@ -186,13 +211,6 @@ const DGHEnseignants = (() => {
       '</span>'
     ).join(' ');
     return '<div class="ens-disc-multi">' + badges + '</div>';
-  }
-
-  function _heuresHint(statut) {
-    if (statut === 'tzr') return 'ici seulement';
-    if (statut === 'bmp') return 'partiel';
-    if (statut === 'contractuel') return 'selon contrat';
-    return '';
   }
 
   // _affORS/_affEcart : compat descendante (vue discipline)
@@ -732,6 +750,15 @@ const DGHEnseignants = (() => {
   function setVueDisc()  { _vueMode = 'discipline'; renderEnseignants(); }
   function setVueHPC()   { _vueMode = 'hpc';         renderEnseignants(); }
 
+  // Tri du tableau : re-clic sur la même colonne inverse le sens
+  function setSort(key) {
+    const valid = ['nom','discipline','ors','hsa','hpdisc'];
+    if (!valid.includes(key)) return;
+    if (_sortKey === key) _sortDir = -_sortDir;
+    else { _sortKey = key; _sortDir = 1; }
+    renderEnseignants();
+  }
+
   function toggleDiscBloc(discNom) {
     if (_discOpen.has(discNom)) _discOpen.delete(discNom);
     else                        _discOpen.add(discNom);
@@ -765,10 +792,14 @@ const DGHEnseignants = (() => {
     document.getElementById('inputEnsDisc').value       = discVal;
     document.getElementById('inputEnsHeures').value     = ens ? (ens.heures||'') : '';
     document.getElementById('inputEnsOrsManuel').value  = (ens && ens.orsManuel !== null && ens.orsManuel !== undefined) ? ens.orsManuel : '';
+    document.getElementById('inputEnsVolumeBMP').value   = (ens && ens.volumeBMP !== null && ens.volumeBMP !== undefined) ? ens.volumeBMP : '';
+    document.getElementById('inputEnsMotifORS').value    = ens ? (ens.motifORS||'') : '';
     document.getElementById('inputEnsComment').value    = ens ? (ens.commentaire||'') : '';
     _updateOrsPreview();
     modal.classList.add('modal-open');
-    document.getElementById('inputEnsNom').focus();
+    // Différer le focus hors du cycle d'événement courant pour éviter
+    // que le navigateur génère un clic fantôme sur l'overlay (bug fermeture immédiate).
+    setTimeout(() => { document.getElementById('inputEnsNom')?.focus(); }, 0);
   }
 
   function closeModalEns() { document.getElementById('modalEns')?.classList.remove('modal-open'); }
@@ -780,11 +811,30 @@ const DGHEnseignants = (() => {
     if (!nom) { app.toast('Le nom est obligatoire.', 'error'); return; }
     const disc   = document.getElementById('inputEnsDisc').value.trim();
     const heures = parseFloat(document.getElementById('inputEnsHeures').value) || 0;
+    const statut    = document.getElementById('inputEnsStatut').value;
+    const grade     = document.getElementById('inputEnsGrade').value;
+    const orsManRaw = document.getElementById('inputEnsOrsManuel').value.trim();
+    const orsManuel = orsManRaw || null;
+    const volBMPRaw = document.getElementById('inputEnsVolumeBMP').value.trim();
+    const motifORS  = document.getElementById('inputEnsMotifORS').value.trim();
+
+    // Validation BMP : volume obligatoire
+    if (statut === 'bmp' && !volBMPRaw) {
+      app.toast('Indiquez le volume du BMP (plafond HP du bloc).', 'error'); return;
+    }
+    // Validation motif : obligatoire si ORS manuelle ≠ ORS du grade
+    const orsGrade = Calculs.getORS(grade, null);
+    if (orsManuel !== null && parseFloat(orsManuel) !== orsGrade && !motifORS) {
+      app.toast('Précisez le motif de l\u2019ORS modifiée (mission, décharge, temps partiel…).', 'error'); return;
+    }
+
     const fields = {
       nom, prenom,
-      grade:   document.getElementById('inputEnsGrade').value,
-      statut:  document.getElementById('inputEnsStatut').value,
-      orsManuel:   document.getElementById('inputEnsOrsManuel').value.trim() || null,
+      grade,
+      statut,
+      orsManuel,
+      volumeBMP:   volBMPRaw || null,
+      motifORS,
       commentaire: document.getElementById('inputEnsComment').value.trim(),
       // Initialiser ou mettre a jour la discipline principale
       disciplinePrincipale: disc,
@@ -805,21 +855,46 @@ const DGHEnseignants = (() => {
       app.toast('Enseignant ajouté.', 'success');
     }
     closeModalEns(); renderEnseignants();
+    // Rafraîchir la vue Équipe si elle est affichée (HP/HSA recalculés)
+    if (typeof DGHEquipe !== 'undefined' && document.getElementById('view-equipe')?.classList.contains('active')) {
+      DGHEquipe.renderEquipe();
+    }
   }
 
   function updateOrsPreview() { _updateOrsPreview(); }
   function _updateOrsPreview() {
     const gEl = document.getElementById('inputEnsGrade');
     const mEl = document.getElementById('inputEnsOrsManuel');
+    const sEl = document.getElementById('inputEnsStatut');
     const pEl = document.getElementById('ensOrsPreview');
     if (!gEl || !pEl) return;
-    const ors    = Calculs.getORS(gEl.value, mEl && mEl.value.trim() !== '' ? parseFloat(mEl.value) : null);
+
+    // Affichage conditionnel : volume BMP (si statut BMP), motif ORS (si ORS modifiée)
+    const statut   = sEl ? sEl.value : 'titulaire';
+    const orsGrade = Calculs.getORS(gEl.value, null);
+    const orsManVal = mEl && mEl.value.trim() !== '' ? parseFloat(mEl.value) : null;
+    const grpBMP   = document.getElementById('grpVolumeBMP');
+    const grpMotif = document.getElementById('grpMotifORS');
+    if (grpBMP)   grpBMP.classList.toggle('is-hidden', statut !== 'bmp');
+    // Motif requis dès que l'ORS manuelle est saisie ET diffère de l'ORS du grade
+    const orsModifie = orsManVal !== null && orsManVal !== orsGrade;
+    if (grpMotif) grpMotif.classList.toggle('is-hidden', !orsModifie);
+
+    // Aperçu HP/HSA en direct, selon la même logique que serviceTotalEnseignant
     const heures = parseFloat(document.getElementById('inputEnsHeures')?.value) || 0;
-    if (ors === 0) { pEl.textContent = 'ORS : — (hors champ DGH)'; pEl.className = 'ens-ors-preview'; return; }
-    const ecart = Math.round((heures - ors) * 2) / 2;
-    const signe = ecart > 0 ? '+' : '';
-    pEl.textContent = 'ORS : ' + ors + 'h — Écart : ' + signe + ecart + 'h';
-    pEl.className   = 'ens-ors-preview' + (ecart > 0 ? ' solde-hsa' : ecart < 0 ? ' solde-danger' : ' solde-neutre');
+    const volBMP = parseFloat(document.getElementById('inputEnsVolumeBMP')?.value);
+    let seuil = 0, src = '';
+    if (statut === 'bmp' && !isNaN(volBMP) && volBMP > 0) { seuil = volBMP; src = 'volume BMP'; }
+    else if (orsManVal !== null)                          { seuil = orsManVal; src = 'ORS saisie'; }
+    else                                                  { seuil = orsGrade; src = 'ORS grade'; }
+
+    if (seuil === 0) { pEl.textContent = 'Hors champ DGH — tout en HP (aucun seuil HSA).'; pEl.className = 'ens-ors-preview'; return; }
+    const hp  = Math.min(heures, seuil);
+    const hsa = Math.max(0, Math.round((heures - seuil) * 2) / 2);
+    pEl.innerHTML = 'Seuil HP : <strong>' + seuil + 'h</strong> (' + src + ') → '
+      + '<strong>' + (Math.round(hp*2)/2) + 'h HP</strong>'
+      + (hsa > 0 ? ' + <strong>' + hsa + 'h HSA</strong>' : ' · pas d\u2019HSA');
+    pEl.className = 'ens-ors-preview' + (hsa > 0 ? ' solde-hsa' : ' solde-neutre');
   }
 
   // ── SUPPRESSION INDIVIDUELLE ────────────────────────────────────────────
@@ -1103,7 +1178,7 @@ const DGHEnseignants = (() => {
   // ── API PUBLIQUE ────────────────────────────────────────────────────────
   return {
     renderEnseignants,
-    setVueListe, setVueDisc, setVueHPC,
+    setVueListe, setVueDisc, setVueHPC, setSort,
     toggleDiscBloc, toggleAllDiscs,
     toggleHPCCat, toggleAllHPC,
     openModalAffecterHPC, affecterEnsHPCDirect, retirerEnsHPC,

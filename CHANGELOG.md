@@ -5,6 +5,259 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.10.0 — Sprint 20 : Encart « Vérification du moteur de calcul » (2026-06-19)
+
+### Contexte
+Pour qu'un autre personnel de direction ose confier sa vraie DGH à l'outil, il
+faut une preuve visible que les calculs d'heures (HP/HSA, ORS, bascule, BMP,
+sous-service) tombent juste — et qu'ils le restent après chaque sprint. C'est le
+chantier « confiance » identifié comme prioritaire.
+
+### Ajouté
+- **`assets/js/verifs.js`** — batterie de contrôles métier (fonctions pures,
+  zéro DOM/localStorage) rejouée sur `calculs.js`. 7 cas, 30 vérifications :
+  chorale HP/HSA × prof 18h/16h, BMP, temps partiel, contractuel sans ORS.
+  Les cas sont définis **une seule fois** ici (pas de duplication).
+- **Encart « Vérification » sur le tableau de bord** (`dashboard.js` ›
+  `_renderVerifs`), modelé sur le bandeau scénario :
+  - tout OK → ligne verte sobre, repliée, dépliable au clic ;
+  - au moins un échec → bandeau **rouge bien visible**, détail des contrôles
+    fautifs déplié d'office. Se relance à chaque rendu du tableau de bord.
+- **`tests/test-service.js`** — même batterie, hors navigateur
+  (`node tests/test-service.js`), pour le filet de sécurité de développement.
+  Réutilise `verifs.js` : navigateur et CLI disent toujours la même chose.
+
+### Note métier (à trancher)
+Le cas 1 documente la règle ACTUELLE : une chorale typée HP dont le prof dépasse
+son ORS bascule **silencieusement** en HSA (les disciplines sont servies en HP en
+priorité). Si l'on préfère garder la chorale en HP et lever une **alerte de
+dépassement**, c'est une évolution de `serviceTotalEnseignant` — l'encart
+servira à la border.
+
+### Conformité
+- Aucune ligne ajoutée à `calculs.js` (lecture seule).
+- Aucun `onclick` inline ; toggle replier/déplier via délégation globale
+  (`data-action="toggle-verifs"` dans `app.js`).
+- Styles dans `style.css` (tokens existants `--c-green`/`--c-red`, compatibles
+  thème sombre).
+
+---
+
+
+
+### Ajouté
+- **Nouvel onglet « Besoins & apports établissement »** (Cadre de l'année).
+  Par discipline : besoin (répartition × divisions, + scénario actif si présent)
+  vs apport HP de l'équipe, HSA dans une colonne séparée, écart chiffré pour
+  calibrer les BMP. **HSA absorbées** saisissables par discipline, avec détail
+  dépliable par enseignant de la discipline. Export Excel.
+  Calcul : `Calculs.bilanBesoinsApports`. Persistance : `ann.hsaAbsorbees`.
+- **Grades PSTG et FSTG** (professeur / fonctionnaire stagiaire), ORS 18 h par
+  défaut, éditable. Ajoutés dans `calculs.js`, `enseignants.js` et la fiche.
+- **Tri du tableau Équipe pédagogique** (vue par enseignant) : colonnes Nom,
+  Discipline, ORS, HP disc. et HSA cliquables — re-clic = sens inverse.
+
+### Corrigé
+- **Boîtes de dialogue qui se fermaient au clic.** Sélectionner une valeur dans
+  un menu déroulant pouvait fermer la modale si la souris était relâchée sur le
+  fond. La fermeture par fond ne se déclenche désormais que si le geste a
+  *débuté* sur le fond (suivi du `mousedown`).
+
+### Schéma
+- Année : ajout de `hsaAbsorbees` ({ [disciplineId]: { total, profs } }).
+  Migration automatique (v4.9.7).
+
+### À venir (noté)
+- Vue Équipe : afficher réel + simulé côte à côte quand un scénario est actif.
+
+---
+
+## v4.9.6 — Sprint 19 : bascule automatique HP / HSA et vue Équipe (2026-06-18)
+
+### Contexte
+Clarification de la répartition Heures-Poste (HP) / HSA, qui conditionne le
+calcul de la dotation et la remontée TRM de février. Les enseignants en poste
+et les BMP sont comptabilisés en heures-poste sur leur apport dans
+l'établissement ; tout dépassement bascule automatiquement en HSA.
+
+### Ajouté
+- **Bascule automatique HP → HSA** (`calculs.js` › `serviceTotalEnseignant`).
+  L'apport de chaque enseignant compte en HP jusqu'à son seuil, le dépassement
+  devient HSA. Aucune ressaisie : un seul chiffre d'apport pilote tout.
+- **Seuil HP par statut** (`calculs.js` › `plafondHP`) : ORS du grade pour les
+  titulaires/TZR ; volume du bloc pour les BMP ; ORS manuelle motivée sinon.
+- **Champ « Volume du BMP »** dans la fiche enseignant — visible uniquement
+  pour le statut BMP, sert de plafond HP.
+- **Champ « Motif de l'ORS modifiée »** — obligatoire dès que l'ORS diffère de
+  l'ORS réglementaire du grade (mission, décharge, temps partiel). Repris dans
+  l'export TRM.
+- **Aperçu HP/HSA en direct** dans la fiche enseignant pendant la saisie.
+- **Nouvelle vue « Équipe & HP/HSA »** (Cadre de l'année) : tableau de
+  constitution de l'équipe, apport de chacun, seuil, HP, HSA, barre de
+  répartition, totaux par statut et synthèse vs enveloppe. Export CSV « TRM ».
+- **Carte « Service de l'équipe — apport réel »** sur le tableau de bord :
+  HP/HSA consommées par l'équipe, solde vs enveloppe.
+- **`bilanEquipe`** (`calculs.js`) : agrégat HP/HSA établissement, source de
+  vérité pour la TRM. Intégré à `bilanDotation` (`equipeHP`, `equipeHSA`…).
+
+### Schéma
+- Enseignant : ajout de `volumeBMP` et `motifORS`. Migration automatique
+  (v4.9.6) — les enseignants existants reçoivent ces champs vides.
+
+---
+
+## v4.9.5 — Audit métier : indisponibilités effectives, cascades de suppression, validations (2026-06-18)
+
+### Contexte
+Seconde revue approfondie, orientée attentes métier (DGH, structure, préparation
+EDT et compatibilité Index Éducation). Objectif : que chaque fonctionnalité
+produise réellement l'effet attendu par un chef d'établissement, et que les
+données restent cohérentes après toute opération.
+
+### Corrigé — fonctionnel métier
+- **Indisponibilités enseignants : saisie sans effet sur les calculs.** La saisie
+  se fait via la grille visuelle (`grillesIndispo`), mais le calcul de l'heure
+  bleue (`creneauBleuOptimal`) et les contrôles EDT (`controlesEDT`) lisaient
+  l'ancien tableau `indisponibilites[]`, désormais non alimenté par l'interface.
+  Conséquence : les indisponibilités saisies étaient **ignorées** par les deux
+  fonctionnalités phares du module EDT. Ajout d'un adaptateur unique
+  `DGHData.getIndisponibilitesPourCalcul()` qui convertit la grille
+  (`'lun-08':'dure'` → créneau horaire typé) et fusionne avec l'ancien format ;
+  branché sur l'heure bleue et la notice EDT. La recommandation d'heure bleue et
+  les alertes tiennent maintenant compte des indisponibilités réelles.
+- **Détection « indisponible toute la semaine »** : le seuil fixe de 5 jours en
+  « journée entière » ne se déclenchait jamais avec la grille (créneaux horaires)
+  ni pour les établissements à 4 jours. Remplacé par une comparaison aux jours
+  réellement ouvrés de l'établissement.
+
+### Corrigé — intégrité des données (cascades de suppression)
+- **Suppression d'une division** : nettoie désormais aussi les groupes EDT
+  rattachés (et supprime ceux devenus vides), ainsi que les slots de barrettes
+  pointant sur la division ou sur un groupe supprimé. Plus de groupes ni de slots
+  orphelins.
+- **Suppression d'un enseignant** : nettoie désormais sa grille d'indisponibilités
+  (`grillesIndispo[ensId]`), qui restait auparavant en base.
+- **Suppression d'une discipline** : nettoie désormais les `disciplineIds` des
+  barrettes et des groupes EDT, et les `discId` de slots concernés (plus de « ? »
+  résiduels).
+
+### Ajouté — validations de saisie (compatibilité Index Éducation)
+- **Divisions** : refus des libellés en doublon (Index Éducation impose des
+  libellés de division uniques) et des effectifs négatifs.
+
+### Nettoyé — qualité de code (règle « zéro code zombie » du SKILL.md)
+- Suppression de trois fonctions mortes : `_htmlListeBarrettes` (ancienne vue
+  liste remplacée par le kanban, ~40 lignes), `_heuresHint` (enseignants),
+  `_set` (répartition).
+
+### Vérifications
+Banc d'essai d'exécution étendu : chargement des 16 fichiers, rendu des 10 vues,
+parcours des 5 onglets EDT, cycles écriture/relecture, cascades de suppression et
+validations — tous au vert sur les données d'exemple. Audit RGPD : zéro appel
+réseau, stockage strictement local. Audit XSS : échappement systématique au point
+d'insertion HTML confirmé.
+
+## v4.9.4 — Correctifs de robustesse : audit complet et réparation des chemins EDT/Structures (2026-06-17)
+
+### Contexte
+Audit développement approfondi de l'ensemble du code (≈11 000 lignes JS). Plusieurs
+régressions silencieuses introduites lors des sprints EDT (v4.8/v4.9) ne se
+manifestaient qu'à l'exécution, sur des onglets précis — non détectables par une
+simple vérification de syntaxe. Toutes ont été reproduites puis corrigées, et un
+banc d'essai d'exécution (chargement des modules + rendu de toutes les vues +
+parcours des onglets EDT + cycles écriture/relecture sur données d'exemple) valide
+désormais l'ensemble.
+
+### Corrigé
+- **EDT — module entièrement cassé au chargement.** Les fonctions
+  `startAddClibre / editClibre / cancelClibre / saveClibre / deleteClibre` étaient
+  listées dans l'API publique de `DGHEdt` mais jamais définies ; l'évaluation du
+  bloc `return` levait une `ReferenceError`, laissant `DGHEdt` indéfini et faisant
+  planter toute l'application (app.js appelle `DGHEdt.renderEdt()`). Les cinq
+  fonctions et le formulaire `_htmlFormClibre` (intitulé, jour, plage horaire,
+  enseignants et classes concernés) ont été implémentés dans le style des
+  formulaires existants (co-interventions).
+- **EDT — onglets « Indisponibilités » et « Heure bleue » non fonctionnels.** Les
+  méthodes `getGrilleIndispo / setGrilleIndispo / getGrilleHeureBleue /
+  setGrilleHeureBleue` existaient dans `data.js` mais étaient absentes de l'export
+  de `DGHData` (« is not a function » au rendu). Exportées.
+- **Dotation — modale « Ajouter un groupe de cours » plantait.** Lecture de
+  `Calculs.GRILLES_MEN`, constante non exportée par `Calculs` → `Object.entries(undefined)`.
+  Constante exportée + garde défensive côté appelant.
+- **Structures — onglet « Groupes » plantait au rendu** (`genBannerHtml is not
+  defined`) : la bannière de génération rapide n'était jamais construite. Appel au
+  constructeur existant `_htmlGenGroupesRapides()` rétabli.
+- **Structures — bouton « Génération rapide — demi-classes » inactif** : aucun
+  handler ne reliait `data-action="sg-generer-groupes-rapides"` à
+  `genererGroupesRapides()`. Délégation ajoutée dans `app.js`.
+
+### Modifié
+- Nettoyage d'une écriture morte `DGHMissions._editId = _editId` (jamais relue).
+- Harmonisation des numéros de version : l'archive annonçait v4.9.4 alors que tout
+  le code restait figé en v4.8.0 (badge, cache-busters `?v=`, en-têtes de modules).
+
+## v4.8.0 — Préparation EDT : salles, heure bleue, indisponibilités, notice consolidée (2026-06-17)
+
+### Contexte
+Sprint conçu pour que l'application devienne un atout concret au moment de la saisie
+dans Index Éducation : centraliser, avant d'ouvrir EDT, toutes les contraintes
+aujourd'hui dispersées entre fiches papier, mémoire et tableurs.
+
+### Ajouté
+- **Salles spécialisées** (modale Établissement → onglet « Salles & Heure bleue ») :
+  référentiel des salles critiques (labo SVT, Physique-Chimie, Musique, Arts
+  plastiques, Technologie…) avec nombre d'exemplaires disponibles. Sert de base à la
+  détection de saturation dans la notice EDT.
+- **Heure bleue avec recommandation de créneau optimal.** L'utilisateur saisit 1 à 4
+  créneaux candidats ; l'application calcule pour chacun le nombre d'enseignants
+  réellement disponibles (hors indisponibilités dures et contraintes libres qui les
+  concernent, pénalité partielle pour les vœux souples) et recommande le meilleur.
+  Limite assumée et affichée : ignore les cours déjà posés dans Index Éducation
+  (donnée non disponible côté DGH App).
+- **Indisponibilités enseignants** (nouvel onglet « Indisponibilités » du module EDT) :
+  distinction explicite entre indisponibilité **dure** (réelle — BMP sur un autre
+  établissement, temps partiel non travaillé) et **vœu souple** (à éviter, non
+  bloquant). Saisie par jour + plage (matin/après-midi/journée/créneau précis).
+- **Contraintes libres** : contraintes ad hoc à titre libre (ex. « Orchestre —
+  Conservatoire », jeudi 8h–11h), pouvant concerner des classes ET/OU des enseignants.
+- **Fréquence semaine A/B sur les barrettes.** Chaque slot d'une barrette porte
+  désormais une fréquence (`hebdo` / `semaine-A` / `semaine-B`), réglable
+  indépendamment par slot — permet par exemple un même groupe en SVT semaine A et en
+  Physique-Chimie semaine B.
+- **Notice EDT** (remplace la Fiche synthèse) : document consolidé et imprimable en
+  7 sections dans l'ordre du flux réel de préparation — alertes détectées, cadre
+  général (dont heure bleue retenue), salles spécialisées, contraintes enseignants,
+  contraintes libres, barrettes (avec tag de fréquence), co-interventions.
+- **Détection de conflits** (`Calculs.controlesEDT`) : enseignant dans deux barrettes à
+  fréquence incompatible, salle spécialisée saturée (plus de cours simultanés que
+  d'exemplaires disponibles), indisponibilité dure suspecte (journée entière sur les
+  5 jours).
+
+### Modifié
+- Module EDT : 3 → 4 onglets (Barrettes, Co-interventions, Indisponibilités, Notice EDT).
+- `data.js` : migration v4.8.0 — `etablissement.salles[]`, `etablissement.heuresBleues`,
+  `contraintesEDT.indisponibilites[]`, `contraintesEDT.contraintesLibres[]`,
+  `barrette.slots[].frequence`. Cascades de suppression étendues (`deleteEnseignant`,
+  `deleteDivision`) pour couvrir les nouvelles références croisées.
+- `data/exemple.json` enrichi avec des données représentatives du nouveau schéma.
+
+### Précision historique
+Un champ `contraintesEDT.indisponibilites` avait été retiré en v3.8 avec la mention
+« gérées directement dans Index Éducation ». Ce sprint le réintroduit avec un schéma
+distinct (dure/souple + créneaux + motif) répondant à un besoin de préparation amont,
+non de gestion fine heure par heure — ce n'est pas un retour en arrière.
+
+### Détails techniques
+- `calculs.js` : `controlesEDT(anneeData, etab)`, `creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, creneaux)` — fonctions pures.
+- `data.js` : `getSalles/addSalle/updateSalle/deleteSalle`, `getHeuresBleues/setHeuresBleues`, `getIndisponibilites/...Enseignant/add/update/delete`, `getContraintesLibres/add/update/delete`.
+- `etab.js` : `renderSalles`, `renderHeuresBleues`, `hbAddCreneau/hbRemoveCreneau/hbToggleActif/hbCalculer`.
+- `edt.js` : onglet `indispos` (formulaires indisponibilité + contrainte libre), notice refondue, sélecteur de fréquence sur chaque slot de barrette.
+- `index.html` : modale Établissement +1 onglet ; vue EDT 3→4 onglets ; cache-busting `?v=4.8.0`.
+- `style.css` : classes `.salle-*`, `.hb-*`, `.edt-indispo-*`, `.edt-clibre-*`, `.edt-freq-tag`, `.edt-notice-*`.
+- `tutorial.js` : contenu d'aide de l'onglet EDT mis à jour, `CONTENT_VER` 1→2.
+
+---
+
 ## v4.7.1 — Consommation du scénario actif visible sur le tableau de bord (2026-06-15)
 
 ### Corrigé

@@ -167,10 +167,16 @@ const DGHStructures = (() => {
     const id  = document.getElementById('modalDivId')?.value||'';
     const nom = (document.getElementById('inputDivNom')?.value||'').trim();
     if (!nom) { app.toast('Le nom est requis','warning'); return; }
+    const effectifSaisi = parseInt(document.getElementById('inputDivEffectif')?.value, 10);
+    if (!isNaN(effectifSaisi) && effectifSaisi < 0) { app.toast('L\u2019effectif ne peut pas être négatif.','warning'); return; }
+    // Unicité du libellé de division (exigence Index Éducation)
+    const nomNorm = nom.toLowerCase();
+    const doublon = DGHData.getStructures().some(d => d.id !== id && (d.nom||'').trim().toLowerCase() === nomNorm);
+    if (doublon) { app.toast('Une division « ' + nom + ' » existe déjà.','warning'); return; }
     const fields = {
       niveau:      document.getElementById('inputDivNiveau')?.value||'6e',
       nom,
-      effectif:    parseInt(document.getElementById('inputDivEffectif')?.value,10)||0,
+      effectif:    Math.max(0, parseInt(document.getElementById('inputDivEffectif')?.value,10)||0),
       options:     [],
       dispositif:  document.getElementById('inputDivDispositif')?.value||null
     };
@@ -296,7 +302,8 @@ const DGHStructures = (() => {
       listHtml += '</div>';
     }
 
-    el.innerHTML = formHtml + listHtml;
+    const genBannerHtml = _htmlGenGroupesRapides(structures, groupes);
+    el.innerHTML = genBannerHtml + formHtml + listHtml;
   }
 
   function _htmlGroupeCard(g, structures, disciplines) {
@@ -376,6 +383,65 @@ const DGHStructures = (() => {
     + '</div>';
   }
 
+  // ── Génération rapide Gp.1/Gp.2 pour toutes les classes ───────────
+  function _htmlGenGroupesRapides(structures, groupes) {
+    // Trouver quelles classes ont déjà des groupes Gp.1 / Gp.2
+    const dejaGp = new Set();
+    groupes.forEach(g => {
+      if ((g.classeIds||[]).length === 1 && (g.nom||'').match(/Gp\.\s*[12]/i)) {
+        dejaGp.add(g.classeIds[0]);
+      }
+    });
+    const total       = structures.length;
+    const manquantes  = structures.filter(s => !dejaGp.has(s.id));
+    const deja        = structures.filter(s => dejaGp.has(s.id));
+
+    const btnDisabled = manquantes.length === 0 ? ' disabled' : '';
+    const btnLabel    = manquantes.length === 0
+      ? '\u2714 Tous les groupes Gp.1/Gp.2 sont d\u00e9j\u00e0 cr\u00e9\u00e9s'
+      : '\u26a1 G\u00e9n\u00e9rer Gp.1 / Gp.2 pour toutes les classes (' + manquantes.length + ' classe' + (manquantes.length > 1 ? 's' : '') + ')';
+
+    const detail = deja.length > 0
+      ? '<span class="sg-rapide-detail">D\u00e9j\u00e0 cr\u00e9\u00e9s\u00a0: ' + deja.map(s => _esc(s.nom)).join(', ') + '</span>'
+      : '';
+
+    return '<div class="sg-rapide-banner">'
+      + '<div class="sg-rapide-left">'
+        + '<span class="sg-rapide-icon">\u{1F4A1}</span>'
+        + '<div class="sg-rapide-info">'
+          + '<span class="sg-rapide-titre">G\u00e9n\u00e9ration rapide — demi-classes</span>'
+          + '<span class="sg-rapide-hint">Cr\u00e9e Gp.1 et Gp.2 pour chaque division en un clic</span>'
+          + detail
+        + '</div>'
+      + '</div>'
+      + '<button class="btn-primary btn-sm sg-rapide-btn" data-action="sg-generer-groupes-rapides"' + btnDisabled + '>'
+        + btnLabel
+      + '</button>'
+    + '</div>';
+  }
+
+  function genererGroupesRapides() {
+    const structures  = DGHData.getStructures();
+    const groupes     = DGHData.getGroupes();
+    const dejaGp      = new Set();
+    groupes.forEach(g => {
+      if ((g.classeIds||[]).length === 1 && (g.nom||'').match(/Gp\.\s*[12]/i)) {
+        dejaGp.add(g.classeIds[0]);
+      }
+    });
+    const manquantes = structures.filter(s => !dejaGp.has(s.id));
+    if (manquantes.length === 0) { app.toast('Tous les groupes Gp.1/Gp.2 existent d\u00e9j\u00e0.', 'info'); return; }
+
+    let nb = 0;
+    manquantes.forEach(s => {
+      DGHData.addGroupe({ nom: s.nom + ' Gp.1', classeIds: [s.id], effectif: 0, disciplineIds: [] });
+      DGHData.addGroupe({ nom: s.nom + ' Gp.2', classeIds: [s.id], effectif: 0, disciplineIds: [] });
+      nb++;
+    });
+    renderGroupes();
+    app.toast(nb * 2 + ' groupes cr\u00e9\u00e9s (Gp.1/Gp.2 pour ' + nb + ' classe' + (nb > 1 ? 's' : '') + ').', 'success');
+  }
+
   function startAddGroupe()  { _editGroupeId = '__new__'; renderGroupes(); document.getElementById('sgNom')?.focus(); }
   function editGroupe(id)    { _editGroupeId = id;        renderGroupes(); document.getElementById('sgNom')?.focus(); }
   function cancelGroupe()    { _editGroupeId = null;      renderGroupes(); }
@@ -408,7 +474,8 @@ const DGHStructures = (() => {
     openModalDiv, closeModalDiv, saveModalDiv,
     confirmDeleteDiv, closeConfirmDiv, execDeleteDiv,
     updateDupPreview,
-    renderGroupes, startAddGroupe, editGroupe, cancelGroupe, saveGroupe, deleteGroupe
+    renderGroupes, startAddGroupe, editGroupe, cancelGroupe, saveGroupe, deleteGroupe,
+    genererGroupesRapides
   };
 
 })();

@@ -1,9 +1,9 @@
-# ◈ DGH App — v4.7.1
+# ◈ DGH App — v4.8.0
 
 > Outil de pilotage de la Dotation Globale Horaire pour collège  
 > Développé par et pour les personnels de direction d'EPLE
 
-[![Version](https://img.shields.io/badge/version-4.7.1-green)](#)
+[![Version](https://img.shields.io/badge/version-4.8.0-green)](#)
 [![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)](#)
 [![RGPD](https://img.shields.io/badge/RGPD-100%25%20local-blue)](#)
 [![Stack](https://img.shields.io/badge/stack-HTML5%20%2B%20CSS3%20%2B%20JS%20Vanilla-orange)](#)
@@ -12,7 +12,7 @@
 
 ## 🎯 Objectif
 
-DGH App permet à une équipe de direction de collège de **piloter, ventiler et documenter la répartition de la DGH** — de l'enveloppe globale reçue de la DSDEN jusqu'aux services individuels des enseignants, en passant par les structures de classes, les groupes de cours et toutes les heures pédagogiques complémentaires.
+DGH App permet à une équipe de direction de collège de **piloter, ventiler et documenter la répartition de la DGH** — de l'enveloppe globale reçue de la DSDEN jusqu'aux services individuels des enseignants, en passant par les structures de classes, les groupes de cours, les heures pédagogiques complémentaires, le pilotage par scénarios, et la **préparation de l'emploi du temps** dans Index Éducation.
 
 ---
 
@@ -32,6 +32,9 @@ DGH App permet à une équipe de direction de collège de **piloter, ventiler et
 ### Sans installation
 Télécharger le ZIP → extraire → ouvrir `index.html` dans Chrome ou Firefox.
 
+### Sauvegarder vos données
+Le fichier exporté (bouton **↓ Exporter** ou `Ctrl+S`) est votre sauvegarde complète. Conservez-le précieusement (poste local, clé USB ou Drive privé d'équipe) : c'est le seul moyen de retrouver vos données d'une session à l'autre ou de les transférer sur un autre poste. Le bouton **↑ Importer** recharge ce fichier dans l'application.
+
 ### Raccourcis clavier
 | Raccourci | Action |
 |-----------|--------|
@@ -44,15 +47,19 @@ Télécharger le ZIP → extraire → ouvrir `index.html` dans Chrome ou Firefox
 
 | Module | Description | Statut |
 |--------|-------------|--------|
-| ⬡ **Dashboard** | KPIs, barre HP/HSA, tooltips, résumé disciplines | ✅ v3.1 |
-| ⊞ **Structures** | Saisie matricielle, récap par niveau | ✅ v3.1 |
+| ⬡ **Dashboard** | KPIs, barre HP/HSA, gauges scénario-aware, tooltips, résumé disciplines | ✅ v4.3 |
+| ⊞ **Structures** | Saisie matricielle, récap par niveau, référentiel Groupes (mono/inter-classes) | ✅ v3.8 |
 | ◎ **Dotation DGH** | Enveloppe HP/HSA, grilles éditables, groupes de cours | ✅ v3.1 |
 | ◈ **H. Péda. Complémentaires** | Options, labo, arts, sport — HP/HSA cliquable, multi-enseignants | ✅ v3.3 |
 | ◉ **Équipe pédagogique** | 3 vues (Liste · Par discipline · HPC). Service calculé. ORS inline éditable. | ✅ v3.4 |
 | ▦ **Répartition de service** | Affectation classe × discipline → enseignant (2 modes), professeurs principaux, grille récap, propagation auto vers services & pilotage | ✅ v4.2 |
+| ⊕ **Scénarios / Pilotage** | Simulation de modificateurs (dédoublement, co-enseignement, projets), saisie en grille, comparaison, impact par enseignant | ✅ v4.5 |
+| ◷ **Historique** | Comparaisons pluriannuelles N / N-1, snapshots figés | ✅ Sprint 10 |
+| ◑ **PACTE / IMP** | Missions hors enveloppe DGH | ✅ Sprint 11 |
+| ⊟ **Contraintes EDT** | Barrettes (avec fréquence semaine A/B), co-interventions, indisponibilités enseignants, contraintes libres, notice EDT consolidée avec détection d'alertes | ✅ v4.8 |
+| 🏫 **Salles & Heure bleue** | Référentiel salles spécialisées, recommandation de créneau optimal pour les réunions | ✅ v4.8 |
 | ◬ **Alertes** | Dépassements, sous-services, anomalies | ✅ actif |
-| ▤ **Synthèses** | Tableau de synthèse DGH pour le CA, rapports par discipline et par enseignant | 🔜 Sprint 8 |
-| ◷ **Historique** | Comparaisons pluriannuelles N / N-1 | 🔜 Sprint 9 |
+| ▤ **Synthèses** | Tableau de synthèse DGH pour le CA, dialogue de gestion, services enseignants | ✅ Sprint 8 |
 
 ---
 
@@ -100,19 +107,31 @@ Chaque HPC est typée **HP** ou **HSA** (bascule au clic). Ce typage se répercu
 - **Besoin réel** = si groupes de cours → coût réel (h × classes) prévaut
 - **Écart** = heures allouées − besoin réel
 
+### Préparation EDT (Index Éducation)
+
+L'application ne remplace pas Index Éducation : elle centralise, **avant** la saisie, tout ce qu'un personnel de direction doit avoir sous les yeux pour ne rien oublier.
+
+- **Salles spécialisées** (labo SVT, Physique-Chimie, Musique, Arts, Technologie…) avec leur nombre d'exemplaires disponibles, pour repérer une saturation avant de la découvrir dans EDT.
+- **Heure bleue** : créneau commun pour les réunions. L'application **recommande le meilleur créneau** parmi ceux que vous proposez, en comptant les enseignants réellement disponibles compte tenu des indisponibilités et contraintes saisies. *Limite assumée : elle ne connaît pas les cours déjà posés dans EDT.*
+- **Indisponibilités enseignants** : distinction entre indisponibilité **dure** (réelle, ex. BMP sur un autre établissement) et **vœu souple** (à éviter si possible).
+- **Contraintes libres** : tout ce qui ne rentre dans aucune case (ex. « Orchestre — Conservatoire », jeudi 8h–11h), pour une classe et/ou un enseignant.
+- **Barrettes en semaine A/B** : chaque cours en parallèle peut être réglé sur une fréquence hebdomadaire ou alternée, slot par slot — utile pour condenser l'emploi du temps sur les demi-groupes.
+- **Notice EDT** : document imprimable consolidant tout ce qui précède dans l'ordre où vous en avez besoin (contraintes élèves → enseignants → barrettes), avec les conflits potentiels détectés automatiquement.
+
 ---
 
-## 💾 Format JSON (v3.4)
+## 💾 Format JSON (v4.8.0)
 
 ```json
 {
-  "_meta": { "version": "3.4.0" },
+  "_meta": { "version": "4.8.0" },
   "etablissement": {
     "nom": "Collège Exemple",
     "uai": "0000000A",
     "academie": "Académie Exemple",
-    "commune": "Exemple",
-    "typeEtab": "college"
+    "typeEtab": "college",
+    "salles": [{ "id": "salle_svt1", "nom": "Labo SVT 1", "type": "svt", "nb": 2 }],
+    "heuresBleues": { "actif": true, "creneaux": [{ "jour": "jeu", "debut": "13:00", "fin": "14:00" }] }
   },
   "heuresPedaComp": [{
     "id": "hpc_...", "nom": "Latin 4e", "typeHeure": "hp", "heures": 3,
@@ -122,13 +141,20 @@ Chaque HPC est typée **HP** ou **HSA** (bascule au clic). Ce typage se répercu
     "id": "ens_...", "nom": "DUPONT", "grade": "certifie", "statut": "titulaire",
     "disciplines": [{ "discNom": "Français", "heures": 16 }],
     "orsManuel": null, "commentaire": "Décharge syndicale 2h"
-  }]
+  }],
+  "contraintesEDT": {
+    "barrettes": [{ "slots": [{ "type": "classe", "ref": "div_...", "ensIds": ["ens_..."], "frequence": "semaine-A" }] }],
+    "indisponibilites": [{ "ensId": "ens_...", "type": "dure", "jour": "mer", "plage": "journee", "motif": "Temps partiel" }],
+    "contraintesLibres": [{ "titre": "Orchestre — Conservatoire", "jour": "jeu", "heureDebut": "08:00", "heureFin": "11:00" }]
+  }
 }
 ```
 
-### Migrations automatiques
+### Migrations automatiques (historique condensé)
 - v3.2 → v3.3 : `hpc.enseignantId` → `hpc.enseignants: [{ensId, heures}]`
 - v3.3 → v3.4 : `etablissement.typeEtab: 'college'` ajouté si absent
+- v4.2 : `affectations[]` (répartition de service), `ppEnsId` sur les divisions
+- v4.8 : `etablissement.salles[]` / `heuresBleues`, `contraintesEDT.indisponibilites[]` / `contraintesLibres[]`, `barrette.slots[].frequence`
 
 ---
 
@@ -137,18 +163,28 @@ Chaque HPC est typée **HP** ou **HSA** (bascule au clic). Ce typage se répercu
 ```
 dgh-app/
 ├── index.html
+├── SKILL.md             # Règles de dév., schéma, API — à fournir à Claude
+├── CHANGELOG.md
+├── data/exemple.json    # Données fictives anonymisées
 ├── assets/css/style.css
 └── assets/js/
     ├── data.js          # localStorage, migrations, CRUD
-    ├── calculs.js       # Fonctions pures : serviceTotalEnseignant, ORS, DGH…
+    ├── calculs.js       # Fonctions pures : serviceTotalEnseignant, ORS, DGH, controlesEDT…
     ├── app.js           # Navigation, délégation globale
+    ├── tutorial.js       # Aide contextuelle embarquée (autonome)
     └── modules/
         ├── dashboard.js
-        ├── structures.js
+        ├── structures.js     # Divisions + référentiel Groupes
         ├── dotation.js
         ├── hpc.js
-        ├── etab.js
-        └── enseignants.js   # 3 vues : liste / par discipline / HPC
+        ├── etab.js            # Établissement, salles, heure bleue, alertes
+        ├── enseignants.js     # 3 vues : liste / par discipline / HPC
+        ├── repartition.js     # Affectations classe × discipline → enseignant
+        ├── pilotage.js        # Scénarios, récap, impact
+        ├── edt.js             # Barrettes, co-interventions, indisponibilités, notice EDT
+        ├── historique.js      # Comparaison N/N-1, snapshots
+        ├── missions.js        # PACTE / IMP
+        └── instances.js       # Synthèse CA, Dialogue de gestion, Services
 ```
 
 **Stack : HTML5 + CSS3 + JS Vanilla** — zéro dépendance, zéro build, zéro framework.
@@ -160,9 +196,15 @@ dgh-app/
 | Sprint | Intitulé | Statut |
 |--------|----------|--------|
 | S1–S6 | Modules de base (Dashboard, Structures, Dotation, HPC, Enseignants) | ✅ Livré |
-| **S7** | **Stabilisation & Fondations** (bugs, nettoyage, typeEtab) | ✅ **Livré — v3.4.0** |
-| S8 | Synthèses & exports (bilan DGH pour CA, rapports PDF) | 🔜 Planifié |
-| S9 | Historique pluriannuel (comparaison N / N-1, graphiques SVG) | 🔜 Planifié |
+| S7 | Stabilisation & Fondations (bugs, nettoyage, typeEtab) | ✅ Livré |
+| S8 | Synthèses & exports (Synthèse CA, Dialogue de gestion, Services) | ✅ Livré |
+| S9 | Historique pluriannuel — fondations | ✅ Livré |
+| S10 | Comparaison N/N-1 figée, KPI delta | ✅ Livré |
+| S11 | PACTE/IMP, référentiel Groupes | ✅ Livré |
+| S12 | Répartition de service (affectations, PP) | ✅ Livré |
+| S13 | Dashboard scénario-aware, saisie en grille | ✅ Livré |
+| **S14** | **Préparation EDT** (salles, heure bleue, indisponibilités, notice) | ✅ **Livré — v4.8.0** |
+| S15+ | Dispositifs SEGPA/ULIS/UPE2A, scénario → contraintes EDT, tests automatisés | 🔜 Planifié |
 
 ---
 

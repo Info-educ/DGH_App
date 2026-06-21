@@ -22,7 +22,7 @@ const DGHTutorial = (() => {
   'use strict';
 
   const LSKEY        = 'dgh-tutorial';
-  const CONTENT_VER  = 1; // incrémenter pour reproposer l'aide après refonte du contenu
+  const CONTENT_VER  = 2; // incrémenter pour reproposer l'aide après refonte du contenu
 
   // ════════════════════════════════════════════════════════════════
   // CONTENU — déclaratif. Pour ajouter l'aide d'un futur onglet :
@@ -109,10 +109,10 @@ const DGHTutorial = (() => {
     },
     edt: {
       titre: 'Contraintes EDT',
-      quoi: "Notez barrettes et co-interventions à transmettre pour l'emploi du temps.",
-      pourquoi: "Pour préparer le travail dans Index Éducation.",
-      neFaitPas: "Ne fabrique pas l'emploi du temps : c'est un mémo de contraintes.",
-      siBloque: "Optionnel : remplissez seulement si vous en avez besoin."
+      quoi: "Préparez barrettes, co-interventions, indisponibilités et la notice EDT consolidée.",
+      pourquoi: "Pour gagner du temps et ne rien oublier au moment de saisir dans Index Éducation.",
+      neFaitPas: "Ne fabrique pas l'emploi du temps : c'est un mémo de contraintes, pas un solveur.",
+      siBloque: "Optionnel : remplissez seulement les onglets dont vous avez besoin."
     }
   };
 

@@ -2941,7 +2941,7 @@ td.col-grille {
 /* ══ TABLEAU RÉCAPITULATIF DGH (rc-*) ═══════════════════════════════════════ */
 
 /* Wrapper global */
-.rc-table-wrap { overflow-x: auto; margin-top: 1rem; }
+.rc-table-wrap { overflow-x: auto; margin-top: 1rem; border: 1.5px solid var(--c-border); border-radius: 12px; }
 /* Badge Δ d'un scénario actif intégré au bloc Dotation allouée */
 .rc-delta {
   margin-left: .25rem; font-size: .66rem; font-weight: 700;
@@ -2958,9 +2958,6 @@ td.col-grille {
   border-spacing: 0;
   font-size: .82rem;
   background: var(--c-surface);
-  border: 1.5px solid var(--c-border);
-  border-radius: 12px;
-  overflow: hidden;
 }
 
 /* ── EN-TÊTES ── */
@@ -2978,9 +2975,12 @@ td.col-grille {
 }
 .rc-th-disc-group {
   background: var(--c-surface2);
-  border-right: 1px solid var(--c-border);
+  border-right: 2px solid var(--c-border2);
   min-width: 160px;
   text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 3;
 }
 .rc-group {
   text-align: center;
@@ -3056,10 +3056,13 @@ td.col-grille {
 .rc-td-disc {
   padding: .5rem .75rem;
   border-bottom: 1px solid var(--c-border);
-  border-right: 1px solid var(--c-border);
+  border-right: 2px solid var(--c-border2);
   min-width: 160px;
   max-width: 210px;
   background: var(--c-surface);
+  position: sticky;
+  left: 0;
+  z-index: 1;
 }
 .rc-disc-inner {
   display: flex;
@@ -3112,6 +3115,9 @@ td.col-grille {
 }
 .rc-table tbody tr:last-child td { border-bottom: none; }
 .rc-tr:hover td, .rc-tr:hover .rc-td-disc { background: var(--c-surface2) !important; }
+/* Total & env rows : sticky cell must match row background */
+.rc-tr-total .rc-td-disc { background: var(--c-surface2) !important; }
+.rc-tr-env .rc-td-disc   { background: var(--c-surface3) !important; }
 
 /* Colonnes spécifiques */
 .rc-td-niv  { text-align: center; background: #f5fbf7; color: var(--c-text-muted); font-size: .8rem; border-right: none; }
@@ -3898,11 +3904,91 @@ td.col-grille {
 .struct-groupe-meta-item { display: flex; gap: .25rem; }
 .struct-groupe-meta-lbl { color: var(--c-text-muted); font-size: .75rem; }
 
+/* ══ SALLES & HEURE BLEUE — Modale établissement (v4.8.0) ════════════ */
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .75rem; }
+@media (max-width: 600px) { .form-row-3 { grid-template-columns: 1fr; } }
+
+.salle-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: .5rem; }
+.salle-form { margin-bottom: .75rem; }
+.salle-list { display: flex; flex-direction: column; gap: .4rem; margin-bottom: .5rem; }
+.salle-row {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .4rem .6rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 6px;
+}
+.salle-row-nom  { font-weight: 600; font-size: .85rem; color: var(--c-text); flex: 1; }
+.salle-row-type { font-size: .76rem; color: var(--c-text-muted); }
+.salle-row-nb   { font-size: .78rem; font-weight: 700; color: var(--c-accent); font-family: 'JetBrains Mono', monospace; }
+
+.hb-actif-label { display: flex; align-items: center; gap: .4rem; font-size: .85rem; color: var(--c-text); margin: .5rem 0; cursor: pointer; }
+.hb-creneaux-add { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; margin-bottom: .6rem; }
+.hb-creneaux-add select, .hb-creneaux-add input[type="time"] {
+  padding: .4rem .5rem; border: 1px solid var(--c-border); border-radius: 6px; background: var(--c-surface); color: var(--c-text); font-size: .82rem;
+}
+.hb-creneaux-list { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .6rem; }
+.hb-creneau-row {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  padding: .3rem .6rem; background: var(--c-surface2); border-radius: 6px; font-size: .82rem;
+}
+.hb-creneau-label { color: var(--c-text); }
+
+.hb-result-table { width: 100%; border-collapse: collapse; margin-top: .75rem; font-size: .82rem; }
+.hb-result-table th {
+  font-size: .7rem; font-weight: 700; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: .04em;
+  padding: .4rem .5rem; border-bottom: 1.5px solid var(--c-border); text-align: left;
+}
+.hb-result-table td { padding: .4rem .5rem; border-bottom: 1px solid var(--c-border); }
+.hb-row-optimal     td.hb-reco-cell { color: var(--c-accent); font-weight: 700; }
+.hb-row-correct      td.hb-reco-cell { color: var(--c-amber); font-weight: 600; }
+.hb-row-deconseille  td.hb-reco-cell { color: var(--c-text-muted); }
+.hb-detail { cursor: help; opacity: .7; }
+.hb-limite-hint { margin-top: .6rem; font-style: italic; }
+
+/* ══ INDISPONIBILITÉS & CONTRAINTES LIBRES — Module EDT (v4.8.0) ═════ */
+.edt-indispo-list { display: flex; flex-direction: column; gap: .5rem; }
+.edt-indispo-card {
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  padding: .5rem .75rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 8px;
+}
+.edt-indispo-dure   { border-left: 3px solid var(--c-red); }
+.edt-indispo-souple { border-left: 3px solid var(--c-amber); }
+.edt-indispo-ens   { font-weight: 600; font-size: .85rem; color: var(--c-text); }
+.edt-indispo-badge {
+  font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  padding: 1px 7px; border-radius: 4px;
+}
+.edt-indispo-badge.dure   { background: var(--c-red-bg);   color: var(--c-red); }
+.edt-indispo-badge.souple { background: var(--c-amber-bg); color: var(--c-amber); }
+.edt-indispo-creneau { font-size: .8rem; color: var(--c-text-muted); }
+.edt-indispo-motif   { font-size: .78rem; color: var(--c-text-dim); font-style: italic; flex-basis: 100%; }
+
+.edt-clibre-card {
+  display: flex; flex-direction: column; gap: .25rem;
+  padding: .5rem .75rem; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 8px; margin-bottom: .5rem;
+}
+.edt-clibre-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.edt-clibre-titre { font-weight: 600; font-size: .87rem; color: var(--c-text); }
+.edt-clibre-meta  { font-size: .78rem; color: var(--c-text-muted); }
+
+.edt-freq-select { font-size: .76rem; padding: .2rem .4rem; border-radius: 5px; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text); }
+.edt-freq-tag { font-size: .68rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: .03em; }
+.edt-freq-tag.hebdo     { background: var(--c-surface3); color: var(--c-text-muted); }
+.edt-freq-tag.semaine-A { background: var(--c-blue-bg);  color: var(--c-blue); }
+.edt-freq-tag.semaine-B { background: var(--c-indigo-bg);color: var(--c-indigo); }
+
+.edt-notice-section { margin-bottom: 1.5rem; }
+.edt-notice-alerte-list { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+.edt-notice-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-bottom: .75rem; }
+.edt-notice-table th {
+  font-size: .7rem; font-weight: 700; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: .04em;
+  padding: .4rem .6rem; border-bottom: 1.5px solid var(--c-border); text-align: left; background: var(--c-surface2);
+}
+.edt-notice-table td { padding: .4rem .6rem; border-bottom: 1px solid var(--c-border); vertical-align: top; }
+
 /* ── Impression (Contraintes EDT) ───────────────────────────────────── */
 @media print {
   .sidebar, .topbar, .view-header, #edtTabs, .edt-card-actions, .btn-secondary, .btn-primary { display: none !important; }
-  #edt-panel-barrettes, #edt-panel-cointerv { display: none !important; }
-  #edt-panel-synthese { display: block !important; }
+  #edt-panel-barrettes, #edt-panel-cointerv, #edt-panel-indispos, #edt-panel-salles { display: none !important; }
+  #edt-panel-notice { display: block !important; }
   .edt-synth-fiche { page-break-inside: avoid; margin-bottom: 1.5rem; }
   body { background: white !important; }
 }
@@ -4207,6 +4293,114 @@ td.col-grille {
   font-size: 13.5px; font-weight: 600; padding: 7px 18px; border-radius: 6px; cursor: pointer; transition: all .15s; }
 .rep-mode-btn:hover { color: var(--c-text); }
 .rep-mode-btn.active { background: var(--c-surface); color: var(--c-accent); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.rep-mode-btn-rapide { color: var(--c-amber); }
+.rep-mode-btn-rapide:hover { color: var(--c-amber); background: var(--c-amber-bg); }
+.rep-mode-btn-rapide.active { background: var(--c-amber-bg); color: var(--c-amber); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+/* ── SAISIE RAPIDE : matrice discipline × classe × enseignant ── */
+.rep-rapid-wrap { overflow-x: auto; border: 1.5px solid var(--c-border); border-radius: 10px; margin-bottom: 14px; }
+.rep-rapid-hint { margin-top: 0; margin-bottom: 8px; }
+.rep-rapid-legend { margin-top: 6px; }
+.rep-rapid-table { border-collapse: separate; border-spacing: 0; font-size: .82rem; width: 100%; min-width: 400px; }
+/* Ligne enseignant : 1ère colonne sticky */
+.rep-rapid-td-ens {
+  position: sticky; left: 0; z-index: 2;
+  background: var(--c-surface2);
+  padding: .4rem .75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border-right: 2px solid var(--c-border2);
+  min-width: 180px;
+}
+.rep-rapid-th-corner {
+  background: var(--c-surface3);
+  vertical-align: middle;
+  text-align: left;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  border-bottom: 2px solid var(--c-border2);
+  z-index: 3;
+}
+.rep-rapid-tr-niv .rep-rapid-td-ens { background: var(--c-surface3); z-index: 3; }
+.rep-rapid-tr-cls .rep-rapid-td-ens { background: var(--c-surface2); z-index: 2; border-bottom: 2px solid var(--c-border); }
+/* En-têtes niveaux */
+.rep-rapid-th-niv {
+  text-align: center;
+  padding: .4rem .5rem .25rem;
+  background: var(--c-surface3);
+  border-bottom: 1px solid var(--c-border);
+  border-right: 1px solid var(--c-border2);
+}
+/* En-têtes classes */
+.rep-rapid-th-cls {
+  text-align: center;
+  padding: .3rem .4rem .4rem;
+  font-size: .73rem;
+  font-weight: 700;
+  color: var(--c-text-muted);
+  background: var(--c-surface2);
+  border-bottom: 2px solid var(--c-border);
+  white-space: nowrap;
+  min-width: 64px;
+}
+/* Cellules données */
+.rep-rapid-tr { border-bottom: 1px solid var(--c-border); }
+.rep-rapid-tr:last-child { border-bottom: none; }
+.rep-rapid-tr:hover .rep-rapid-td-ens { background: var(--c-surface3) !important; }
+.rep-rapid-tr:hover td { background: var(--c-surface2); }
+.rep-rapid-tr-autre .rep-rapid-td-ens { opacity: .75; }
+.rep-rapid-cell {
+  text-align: center;
+  vertical-align: middle;
+  padding: .3rem .2rem;
+  border-bottom: 1px solid var(--c-border);
+}
+.rep-rapid-cell.rep-rapid-partage { background: #fff9f0; }
+.rep-rapid-chk-lbl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.rep-rapid-chk { width: 15px; height: 15px; cursor: pointer; accent-color: var(--c-accent); }
+.rep-rapid-h { font-size: .68rem; color: var(--c-accent); display: block; }
+/* Bouton info enseignant */
+.rep-rapid-ens-nom { font-size: .83rem; }
+.rep-rapid-nbcls {
+  margin-left: .5rem;
+  font-size: .7rem;
+  background: var(--c-accent);
+  color: #fff;
+  padding: 0 5px;
+  border-radius: 99px;
+  opacity: .85;
+}
+.rep-rapid-dot {
+  display: inline-block;
+  width: 9px; height: 9px;
+  border-radius: 3px;
+  margin-right: .3rem;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.rep-rapid-dot-autre {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  border-radius: 3px;
+  background: var(--c-surface3);
+  color: var(--c-text-dim);
+  font-size: .65rem;
+  font-weight: 700;
+  margin-right: .3rem;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
 
 .rep-saisie { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r); padding: 16px; margin-bottom: 22px; }
 .rep-saisie-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -4588,3 +4782,947 @@ td.col-grille {
   .dgh-help-panel { max-width: 100%; border-radius: var(--r-lg) var(--r-lg) 0 0; }
   .dgh-help-tag { min-width: 70px; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   v3.8.0 — Bandeau scénario actif (dashboard) + boutons activation
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Bandeau scénario actif — dashboard ─────────────────────────────── */
+.dash-scen-actif-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, var(--c-accent-light) 0%, color-mix(in srgb, var(--c-accent-light) 60%, transparent) 100%);
+  border: 2px solid var(--c-accent);
+  border-radius: 10px;
+  padding: .75rem 1.1rem;
+  margin-bottom: 1.1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,.07);
+}
+
+.dash-scen-actif-left {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  flex-shrink: 0;
+}
+
+.dash-scen-actif-icon {
+  font-size: 1.35rem;
+  color: var(--c-accent);
+  line-height: 1;
+}
+
+.dash-scen-actif-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dash-scen-actif-label {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--c-accent);
+  opacity: .85;
+}
+
+.dash-scen-actif-nom {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.dash-scen-actif-kpis {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.dash-scen-actif-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dash-scen-actif-kpi-lbl {
+  font-size: .67rem;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-weight: 600;
+}
+
+.dash-scen-actif-kpi-val {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.dash-scen-actif-actions {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.dash-scen-actif-detail {
+  font-size: .82rem;
+  white-space: nowrap;
+}
+
+/* ── Bouton "Activer" / "Activer à la place" — liste des scénarios ── */
+.btn-scen-activer {
+  display: inline-flex;
+  align-items: center;
+  gap: .3em;
+  font-size: .78rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: var(--c-accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+  white-space: nowrap;
+}
+
+.btn-scen-activer:hover {
+  background: var(--c-accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-scen-activer:active {
+  transform: translateY(0);
+}
+
+/* Variante "à la place" — amber pour signaler le remplacement */
+.btn-scen-activer[data-action="set-actif-scenario"]:not([data-active-present]) {
+  background: var(--c-accent);
+}
+
+/* Bouton désactiver inline dans la liste */
+.scen-btn-desactiver {
+  display: inline-flex;
+  align-items: center;
+  font-size: .72rem;
+  padding: 2px 8px;
+  margin-left: .5rem;
+  opacity: .8;
+}
+.scen-btn-desactiver:hover { opacity: 1; }
+
+/* Colonne statut dans le tableau des scénarios */
+.scen-td-statut {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.scen-badge-actif {
+  display: inline-flex;
+  align-items: center;
+  gap: .3em;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--c-accent);
+  background: var(--c-accent-light);
+  border: 1px solid var(--c-accent);
+  border-radius: 99px;
+  padding: 2px 9px;
+  margin-right: .4rem;
+}
+
+/* Ligne active dans le tableau des scénarios — mise en valeur renforcée */
+.scen-row-actif {
+  background: var(--c-accent-light) !important;
+  box-shadow: inset 3px 0 0 var(--c-accent);
+}
+
+/* btn-sm utilitaire */
+.btn-sm {
+  font-size: .78rem;
+  padding: 3px 10px;
+  border-radius: 5px;
+}
+
+/* ── Mode sombre — ajustements ──────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .dash-scen-actif-banner {
+    box-shadow: 0 2px 10px rgba(0,0,0,.3);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Sprint 15 — Onglet Contraintes établissement (EDT)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Sections de l'onglet ────────────────────────────────────────────── */
+.edt-etab-section {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Jours de la semaine — boutons toggle ────────────────────────────── */
+.edt-etab-jours {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin: .75rem 0 .5rem;
+}
+
+.edt-jour-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: .35em;
+  padding: .35rem .8rem;
+  border-radius: 6px;
+  border: 1.5px solid var(--c-border);
+  background: var(--c-surface2);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  font-size: .82rem;
+  font-weight: 600;
+  user-select: none;
+  transition: background .13s, border-color .13s, color .13s;
+}
+
+.edt-jour-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.edt-jour-toggle.active,
+.edt-jour-toggle:has(input:checked) {
+  background: var(--c-accent-light);
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+
+.edt-jour-toggle:hover {
+  border-color: var(--c-accent);
+}
+
+/* ── Options (mercredi matin) ────────────────────────────────────────── */
+.edt-etab-options {
+  margin: .5rem 0 .9rem;
+  font-size: .85rem;
+}
+
+/* ── Horaires ────────────────────────────────────────────────────────── */
+.edt-etab-horaires {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: .5rem;
+}
+
+.edt-etab-horaire-group {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.edt-etab-horaire-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--c-text-muted);
+  min-width: 70px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.edt-etab-horaire-sep {
+  color: var(--c-text-dim);
+  font-size: .8rem;
+}
+
+.edt-etab-horaire-group input[type="time"] {
+  padding: .3rem .5rem;
+  border: 1px solid var(--c-border);
+  border-radius: 5px;
+  background: var(--c-surface2);
+  color: var(--c-text);
+  font-size: .85rem;
+  width: 98px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Sprint 17 — Bandeau scénario actif dans l'onglet Barrettes (EDT)
+   ══════════════════════════════════════════════════════════════════════ */
+
+.edt-scen-ded-banner {
+  background: linear-gradient(135deg, var(--c-accent-light) 0%, color-mix(in srgb, var(--c-accent-light) 50%, transparent) 100%);
+  border: 2px solid var(--c-accent);
+  border-radius: 10px;
+  padding: .9rem 1.1rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.edt-scen-ded-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .75rem;
+}
+
+.edt-scen-ded-tag {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--c-accent);
+  background: var(--c-surface);
+  border: 1px solid var(--c-accent);
+  border-radius: 99px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.edt-scen-ded-nom {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.edt-scen-ded-hint {
+  font-size: .78rem;
+  color: var(--c-text-muted);
+  margin-left: auto;
+}
+
+.edt-scen-ded-list {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.edt-scen-ded-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  padding: .5rem .85rem;
+  flex-wrap: wrap;
+}
+
+.edt-scen-ded-info {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.edt-scen-ded-disc {
+  font-weight: 700;
+  font-size: .85rem;
+  color: var(--c-text);
+  white-space: nowrap;
+}
+
+.edt-scen-ded-cls {
+  font-size: .82rem;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+.edt-scen-ded-h {
+  font-size: .8rem;
+  color: var(--c-amber);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.edt-scen-ded-ens {
+  font-size: .78rem;
+  color: var(--c-text-dim);
+  font-style: italic;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Sprint 18 fixes — Groupes rapides + section-header salle + select slot
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Bandeau génération rapide groupes ───────────────────────────────── */
+.sg-rapide-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: var(--c-surface);
+  border: 1.5px dashed var(--c-accent);
+  border-radius: 10px;
+  padding: .8rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.sg-rapide-left {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.sg-rapide-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.sg-rapide-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sg-rapide-titre {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.sg-rapide-hint {
+  font-size: .75rem;
+  color: var(--c-text-muted);
+}
+
+.sg-rapide-detail {
+  font-size: .72rem;
+  color: var(--c-text-dim);
+  margin-top: 1px;
+}
+
+.sg-rapide-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ── En-tête section avec bouton inline (salles) ─────────────────────── */
+.edt-etab-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .6rem;
+}
+
+.edt-etab-section-header .edt-synth-h3 {
+  margin-bottom: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Sprint 16bis — Grilles hebdomadaires visuelles (indispos + heure bleue)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Sélecteur + légende ─────────────────────────────────────────────── */
+.grid-ens-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.grid-ens-selector { display: flex; align-items: center; gap: .5rem; }
+.grid-ens-label { font-size: .82rem; font-weight: 600; color: var(--c-text-muted); white-space: nowrap; }
+.grid-ens-selector select { font-size: .9rem; padding: .3rem .6rem; border-radius: 6px; border: 1px solid var(--c-border); background: var(--c-surface2); color: var(--c-text); }
+
+.grid-legende {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  font-size: .78rem;
+  color: var(--c-text-muted);
+  margin-bottom: .6rem;
+}
+.grid-leg-item { display: flex; align-items: center; gap: .3rem; }
+.grid-leg-hint { margin-left: auto; font-style: italic; font-size: .72rem; }
+.grid-cell-sample {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  border: 1.5px solid var(--c-border);
+}
+.grid-cell-sample.etat-dure    { background: #fca5a5; border-color: #ef4444; }
+.grid-cell-sample.etat-voeu    { background: #fde68a; border-color: #f59e0b; }
+.grid-cell-sample.etat-libre   { background: var(--c-surface2); }
+.grid-cell-sample.etat-hb-candidat { background: #93c5fd; border-color: #3b82f6; }
+.grid-cell-sample.etat-hb-libre    { background: var(--c-surface2); }
+
+/* ── Grille hebdomadaire ─────────────────────────────────────────────── */
+.grille-hebdo {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1.5px solid var(--c-border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: .75rem;
+  user-select: none;
+}
+
+.grille-header, .grille-row {
+  display: grid;
+  grid-template-columns: 40px repeat(5, 1fr);
+}
+
+.grille-header {
+  background: var(--c-surface2);
+  border-bottom: 1.5px solid var(--c-border);
+}
+
+.grille-jour-col, .grille-heure-col {
+  padding: .3rem .25rem;
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.grille-row {
+  border-bottom: 1px solid var(--c-border);
+}
+.grille-row:last-child { border-bottom: none; }
+
+.grille-heure-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .68rem;
+  color: var(--c-text-dim);
+  font-weight: 600;
+  border-right: 1.5px solid var(--c-border);
+  background: var(--c-surface2);
+}
+
+.grille-cell {
+  height: 38px;
+  border-right: 1px solid var(--c-border);
+  cursor: pointer;
+  transition: background .1s, transform .05s;
+  position: relative;
+}
+.grille-cell:last-child { border-right: none; }
+
+.grille-cell:hover { filter: brightness(.92); }
+.grille-cell:active { transform: scale(.94); }
+
+/* États indispo */
+.etat-libre  { background: var(--c-surface); }
+.etat-dure   { background: #fca5a5; }
+.etat-voeu   { background: #fde68a; }
+
+/* États heure bleue */
+.etat-hb-libre    { background: var(--c-surface); }
+.etat-hb-candidat { background: #93c5fd; }
+
+/* ── Récap ───────────────────────────────────────────────────────────── */
+.grid-recap {
+  font-size: .8rem;
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin-bottom: .5rem;
+}
+.grid-recap-dure { color: #dc2626; font-weight: 600; }
+.grid-recap-voeu { color: #d97706; font-weight: 600; }
+.grid-recap-hb   { color: #2563eb; font-weight: 600; }
+
+/* ── Séparateur contraintes libres ───────────────────────────────────── */
+.grid-section-sep {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 1.25rem 0 .75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--c-border);
+}
+.grid-section-sep .edt-synth-h3 { margin: 0; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Sprint 18 — Kanban barrettes + modale génération groupée
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Vue Kanban ──────────────────────────────────────────────────────── */
+.kanban-board {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  padding: .25rem 0 1rem;
+}
+
+.kanban-card {
+  background: var(--c-surface);
+  border: 1.5px solid var(--c-border);
+  border-radius: 10px;
+  min-width: 200px;
+  max-width: 260px;
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  transition: box-shadow .15s;
+}
+.kanban-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,.1); }
+
+.kanban-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .6rem .75rem .5rem;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.kanban-card-nom {
+  font-weight: 700;
+  font-size: .83rem;
+  color: var(--c-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kanban-slots {
+  padding: .5rem .6rem;
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  min-height: 60px;
+}
+
+.kanban-slot {
+  background: var(--c-surface2);
+  border: 1.5px solid var(--c-border);
+  border-radius: 6px;
+  padding: .4rem .6rem;
+  cursor: grab;
+  position: relative;
+  transition: background .1s, box-shadow .1s, opacity .15s;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kanban-slot:active  { cursor: grabbing; opacity: .7; }
+.kanban-slot.dragging { opacity: .4; box-shadow: 0 4px 12px rgba(0,0,0,.18); }
+
+.kanban-slot-cls  { font-size: .8rem; font-weight: 700; color: var(--c-text); }
+.kanban-slot-disc { font-size: .72rem; color: var(--c-accent); font-weight: 600; }
+.kanban-slot-ens  { font-size: .71rem; color: var(--c-text-muted); }
+
+.kanban-drag-handle {
+  position: absolute;
+  top: .3rem; right: .4rem;
+  font-size: .9rem;
+  color: var(--c-text-dim);
+  cursor: grab;
+  opacity: .5;
+}
+.kanban-slot:hover .kanban-drag-handle { opacity: 1; }
+
+.kanban-drop-zone {
+  border: 2px dashed var(--c-border);
+  border-radius: 6px;
+  padding: .5rem;
+  text-align: center;
+  font-size: .72rem;
+  color: var(--c-text-dim);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  display: none;
+}
+.kanban-drop-zone.drop-active  { display: block; }
+.kanban-drop-zone.drop-over    { background: var(--c-accent-light); border-color: var(--c-accent); color: var(--c-accent); }
+
+.kanban-empty-slot {
+  font-size: .78rem;
+  color: var(--c-text-dim);
+  text-align: center;
+  padding: .4rem;
+}
+
+.kanban-comment {
+  font-size: .72rem;
+  color: var(--c-text-dim);
+  font-style: italic;
+  padding: .3rem .75rem .5rem;
+  border-top: 1px solid var(--c-border);
+}
+
+/* Discipline par slot dans le formulaire */
+.edt-slot-disc-field { margin-bottom: .25rem; }
+.edt-slot-disc-chip {
+  display: inline-block;
+  font-size: .68rem;
+  background: var(--c-accent-light);
+  color: var(--c-accent);
+  border-radius: 99px;
+  padding: 1px 7px;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+/* ── Modale génération groupée ───────────────────────────────────────── */
+.gen-intro {
+  font-size: .83rem;
+  color: var(--c-text-muted);
+  margin-bottom: .9rem;
+}
+
+.gen-warn {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 7px;
+  padding: .5rem .85rem;
+  font-size: .8rem;
+  color: #92400e;
+  margin-bottom: .9rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.gen-warn-inline {
+  color: #d97706;
+  font-size: .85rem;
+  cursor: help;
+}
+
+.gen-rows {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+}
+
+.gen-row {
+  background: var(--c-surface2);
+  border: 1.5px solid var(--c-border);
+  border-radius: 8px;
+  padding: .65rem .9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.gen-check-label {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .85rem;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+.gen-cls  { color: var(--c-text-muted); font-size: .8rem; }
+.gen-ens  { color: var(--c-text-dim);   font-size: .78rem; font-style: italic; }
+.gen-h    { color: var(--c-amber);      font-size: .78rem; font-weight: 600; }
+
+.gen-granularite {
+  display: flex;
+  gap: .75rem;
+  font-size: .8rem;
+  color: var(--c-text-muted);
+  flex-shrink: 0;
+}
+.gen-granularite label { display: flex; align-items: center; gap: .3rem; cursor: pointer; }
+
+/* ═══════════════════════════════════════════════════════════════
+   ÉQUIPE & HP/HSA — Sprint 19
+   ═══════════════════════════════════════════════════════════════ */
+.eq-rule-banner{display:flex;gap:14px;align-items:flex-start;background:var(--c-surface);
+  border:1px solid var(--c-border);border-left:4px solid var(--c-accent);
+  border-radius:10px;padding:14px 18px;margin-bottom:20px;box-shadow:var(--sh-sm);}
+.eq-rule-icon{font-size:1.5rem;line-height:1;color:var(--c-accent);flex-shrink:0;}
+.eq-rule-text{font-size:.9rem;line-height:1.5;color:var(--c-text);}
+.eq-tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:.78rem;
+  font-weight:700;letter-spacing:.02em;white-space:nowrap;}
+.eq-tag-hp{background:var(--c-green-bg);color:var(--c-green);}
+.eq-tag-hsa{background:var(--c-indigo-bg);color:var(--c-indigo);}
+
+.eq-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.eq-kpi{background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;
+  padding:16px 18px;box-shadow:var(--sh-sm);position:relative;overflow:hidden;}
+.eq-kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;}
+.eq-kpi-hp::before{background:var(--c-green);}
+.eq-kpi-hsa::before{background:var(--c-indigo);}
+.eq-kpi-tot::before{background:var(--c-accent);}
+.eq-kpi-env::before{background:var(--c-amber);}
+.eq-kpi-label{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--c-text-muted);font-weight:600;}
+.eq-kpi-value{font-size:1.9rem;font-weight:800;font-variant-numeric:tabular-nums;
+  margin:4px 0 2px;color:var(--c-text);}
+.eq-kpi-sub{font-size:.78rem;color:var(--c-text-dim);}
+.eq-kpi-value.is-over{color:var(--c-red);}
+.eq-kpi-value.is-ok{color:var(--c-green);}
+
+.eq-statut-strip{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;}
+.eq-statut-chip{display:flex;flex-direction:column;gap:2px;background:var(--c-surface2);
+  border:1px solid var(--c-border);border-radius:10px;padding:8px 14px;min-width:130px;}
+.eq-statut-chip-name{font-size:.78rem;font-weight:700;color:var(--c-text);text-transform:capitalize;}
+.eq-statut-chip-detail{font-size:.74rem;color:var(--c-text-muted);font-variant-numeric:tabular-nums;}
+.eq-statut-chip-detail .eq-mini-hp{color:var(--c-green);font-weight:700;}
+.eq-statut-chip-detail .eq-mini-hsa{color:var(--c-indigo);font-weight:700;}
+
+.eq-table-wrap{background:var(--c-surface);border:1px solid var(--c-border);
+  border-radius:12px;overflow:hidden;box-shadow:var(--sh-sm);}
+.eq-table{width:100%;border-collapse:collapse;font-size:.88rem;}
+.eq-table thead th{background:var(--c-surface3);color:var(--c-text-muted);
+  font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;font-weight:700;
+  padding:10px 12px;text-align:left;border-bottom:1px solid var(--c-border2);position:sticky;top:0;}
+.eq-table th.eq-num,.eq-table td.eq-num{text-align:right;font-variant-numeric:tabular-nums;}
+.eq-table tbody td{padding:10px 12px;border-bottom:1px solid var(--c-border);vertical-align:middle;}
+.eq-table tbody tr:last-child td{border-bottom:none;}
+.eq-table tbody tr:hover{background:var(--c-surface2);}
+.eq-name{font-weight:600;color:var(--c-text);}
+.eq-firstname{color:var(--c-text-muted);font-weight:400;}
+.eq-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:700;}
+.eq-badge-titulaire{background:var(--c-green-bg);color:var(--c-green);}
+.eq-badge-bmp{background:var(--c-amber-bg);color:var(--c-amber);}
+.eq-badge-tzr{background:var(--c-blue-bg);color:var(--c-blue);}
+.eq-badge-contractuel{background:var(--c-surface3);color:var(--c-text-muted);}
+.eq-badge-temps-partiel{background:var(--c-indigo-bg);color:var(--c-indigo);}
+.eq-hp-val{font-weight:700;color:var(--c-green);font-variant-numeric:tabular-nums;}
+.eq-hsa-val{font-weight:700;color:var(--c-indigo);font-variant-numeric:tabular-nums;}
+.eq-hsa-zero{color:var(--c-text-dim);}
+.eq-seuil{color:var(--c-text-muted);font-variant-numeric:tabular-nums;}
+.eq-seuil-src{font-size:.7rem;color:var(--c-text-dim);display:block;}
+.eq-motif{font-size:.74rem;color:var(--c-amber);font-style:italic;}
+.eq-bar{display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--c-surface3);min-width:90px;}
+.eq-bar-hp{background:var(--c-green);}
+.eq-bar-hsa{background:var(--c-indigo);}
+.eq-table tfoot td{padding:12px;background:var(--c-surface3);font-weight:800;
+  border-top:2px solid var(--c-border2);font-variant-numeric:tabular-nums;}
+.eq-empty{padding:48px 20px;text-align:center;color:var(--c-text-muted);}
+.eq-empty-hint{font-size:.85rem;color:var(--c-text-dim);margin-top:6px;}
+.eq-action-btn{background:none;border:none;cursor:pointer;color:var(--c-text-dim);
+  font-size:1rem;padding:4px 6px;border-radius:6px;}
+.eq-action-btn:hover{background:var(--c-surface3);color:var(--c-text);}
+
+@media(max-width:900px){
+  .eq-kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .eq-table{font-size:.8rem;}
+  .eq-table .eq-hide-sm{display:none;}
+}
+
+/* Dashboard — carte équipe (apport réel HP/HSA) — Sprint 19 */
+.dash-equipe-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:14px 0 12px;}
+.dash-equipe-stat{display:flex;flex-direction:column;gap:2px;}
+.dash-equipe-lbl{font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--c-text-muted);font-weight:600;}
+.dash-equipe-val{font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--c-text);}
+.dash-equipe-hp .dash-equipe-val{color:var(--c-green);}
+.dash-equipe-hsa .dash-equipe-val{color:var(--c-indigo);}
+.dash-equipe-val.is-over{color:var(--c-red);}
+.dash-equipe-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--c-surface3);}
+.dash-equipe-bar-hp{background:var(--c-green);transition:width .3s;}
+.dash-equipe-bar-hsa{background:var(--c-indigo);transition:width .3s;}
+.dash-equipe-note{font-size:.78rem;color:var(--c-text-dim);margin-top:8px;}
+@media(max-width:768px){.dash-equipe-row{grid-template-columns:repeat(2,1fr);}}
+
+/* Tri tableau enseignants — Sprint 19.1 */
+.ens-th-sort{cursor:pointer;user-select:none;white-space:nowrap;}
+.ens-th-sort:hover{color:var(--c-accent);background:var(--c-surface3);}
+
+/* ═══════════════════════════════════════════════════════════════
+   BESOINS & APPORTS ÉTABLISSEMENT — Sprint 19.1
+   ═══════════════════════════════════════════════════════════════ */
+.ba-scen-banner{background:var(--c-indigo-bg);color:var(--c-indigo);border:1px solid var(--c-indigo);
+  border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:.88rem;font-weight:600;}
+.ba-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.ba-kpi{background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;
+  padding:16px 18px;box-shadow:var(--sh-sm);position:relative;overflow:hidden;}
+.ba-kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c-text-muted);}
+.ba-kpi-hp::before{background:var(--c-green);}
+.ba-kpi-hsa::before{background:var(--c-indigo);}
+.ba-kpi-ecart::before{background:var(--c-amber);}
+.ba-kpi-label{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--c-text-muted);font-weight:600;}
+.ba-kpi-value{font-size:1.8rem;font-weight:800;font-variant-numeric:tabular-nums;margin:4px 0 2px;color:var(--c-text);}
+.ba-kpi-value.is-over{color:var(--c-red);}
+.ba-kpi-value.is-ok{color:var(--c-green);}
+.ba-kpi-sub{font-size:.78rem;color:var(--c-text-dim);}
+
+.ba-table-wrap{background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;overflow:hidden;box-shadow:var(--sh-sm);}
+.ba-table{width:100%;border-collapse:collapse;font-size:.88rem;}
+.ba-table thead th{background:var(--c-surface3);color:var(--c-text-muted);font-size:.72rem;
+  text-transform:uppercase;letter-spacing:.04em;font-weight:700;padding:10px 12px;text-align:left;
+  border-bottom:1px solid var(--c-border2);}
+.ba-table th.ba-num,.ba-table td.ba-num{text-align:right;font-variant-numeric:tabular-nums;}
+.ba-table tbody td{padding:10px 12px;border-bottom:1px solid var(--c-border);vertical-align:middle;}
+.ba-disc-row{cursor:pointer;}
+.ba-disc-row:hover{background:var(--c-surface2);}
+.ba-disc-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:middle;}
+.ba-disc-name{font-weight:600;color:var(--c-text);}
+.ba-caret{display:inline-block;width:14px;color:var(--c-text-dim);transition:transform .15s;}
+.ba-caret.open{transform:rotate(90deg);}
+.ba-besoin-val{font-variant-numeric:tabular-nums;}
+.ba-delta{font-size:.74rem;color:var(--c-indigo);}
+.ba-hp-val{color:var(--c-green);font-weight:700;font-variant-numeric:tabular-nums;}
+.ba-hsa-val{color:var(--c-indigo);font-weight:700;font-variant-numeric:tabular-nums;}
+.ba-zero{color:var(--c-text-dim);}
+.ba-ecart-pos{color:var(--c-red);font-weight:700;}
+.ba-ecart-neg{color:var(--c-green);font-weight:700;}
+.ba-ecart-zero{color:var(--c-text-muted);}
+.ba-hsa-input{width:64px;padding:4px 6px;border:1px solid var(--c-border2);border-radius:6px;
+  text-align:right;font-variant-numeric:tabular-nums;background:var(--c-surface);color:var(--c-text);}
+.ba-hsa-input:focus{outline:none;border-color:var(--c-accent);box-shadow:0 0 0 2px var(--c-accent-light);}
+.ba-prof-row td{background:var(--c-surface2);border-bottom:1px solid var(--c-border);padding:7px 12px 7px 34px;font-size:.84rem;}
+.ba-prof-name{color:var(--c-text);}
+.ba-prof-statut{font-size:.72rem;color:var(--c-text-muted);margin-left:6px;}
+.ba-prof-sum{font-size:.74rem;color:var(--c-text-dim);margin-top:6px;font-style:italic;}
+.ba-table tfoot td{padding:12px;background:var(--c-surface3);font-weight:800;border-top:2px solid var(--c-border2);font-variant-numeric:tabular-nums;}
+.ba-empty{padding:48px 20px;text-align:center;color:var(--c-text-muted);}
+.ba-empty-hint{font-size:.85rem;color:var(--c-text-dim);margin-top:6px;}
+@media(max-width:900px){.ba-kpi-grid{grid-template-columns:repeat(2,1fr);}}
+
+/* ── Encart Vérification du moteur de calcul (tableau de bord) ───────── */
+/* Voyant de fiabilité : discret quand tout va bien, alarmant si un contrôle échoue. */
+.dash-verifs { border-radius: 8px; margin-bottom: 1rem; overflow: hidden; border: 1px solid var(--c-border); }
+.dash-verifs-ok { background: var(--c-green-bg); border-color: var(--c-green); }
+.dash-verifs-ko { background: var(--c-red-bg);  border-color: var(--c-red); }
+.dash-verifs-head {
+  display: flex; align-items: center; gap: .6rem; width: 100%;
+  padding: .55rem .9rem; background: none; border: none; cursor: pointer;
+  font-size: .85rem; color: var(--c-text); text-align: left;
+}
+.dash-verifs-icon { font-weight: 700; flex-shrink: 0; }
+.dash-verifs-ok .dash-verifs-icon { color: var(--c-green); }
+.dash-verifs-ko .dash-verifs-icon { color: var(--c-red); font-size: 1.05rem; }
+.dash-verifs-txt { flex: 1; }
+.dash-verifs-ko .dash-verifs-txt { color: var(--c-red); }
+.dash-verifs-chevron { flex-shrink: 0; transition: transform .15s ease; color: var(--c-text-muted); font-size: 1.1rem; }
+.dash-verifs.is-open .dash-verifs-chevron { transform: rotate(90deg); }
+.dash-verifs-detail { padding: .25rem .9rem .7rem; }
+.dash-verifs-detail.is-hidden { display: none; }
+.dash-verifs-groupe { margin-top: .5rem; }
+.dash-verifs-groupe-titre { font-size: .78rem; font-weight: 600; color: var(--c-text-muted); margin-bottom: .2rem; }
+.dash-verifs-ligne { display: flex; align-items: baseline; gap: .5rem; font-size: .8rem; padding: .1rem 0; }
+.dash-verifs-ligne-icon { flex-shrink: 0; font-weight: 700; }
+.dash-verifs-ligne.is-ok .dash-verifs-ligne-icon { color: var(--c-green); }
+.dash-verifs-ligne.is-ko .dash-verifs-ligne-icon { color: var(--c-red); }
+.dash-verifs-ligne.is-ko { color: var(--c-red); font-weight: 600; }
+.dash-verifs-ligne-lbl { flex: 1; }
+.dash-verifs-ligne-val { flex-shrink: 0; color: var(--c-text-muted); }
+.dash-verifs-ligne.is-ko .dash-verifs-ligne-val { color: var(--c-red); }

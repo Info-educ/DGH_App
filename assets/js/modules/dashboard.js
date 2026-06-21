@@ -1,6 +1,11 @@
 /**
  * DGH App — Module Dashboard
  * Rendu du tableau de bord et du bouton établissement.
+ *
+ * v3.8.0 : Quand un scénario est actif, il devient la VÉRITÉ affichée.
+ *   - Tous les KPI reflètent les valeurs simulées (pas de double lecture).
+ *   - Un bandeau coloré bien visible rappelle le scénario actif + bouton désactiver.
+ *   - Le bilan de base reste accessible dans les tooltips KPI.
  */
 
 const DGHDashboard = (() => {
@@ -8,31 +13,48 @@ const DGHDashboard = (() => {
   // ── RENDU PRINCIPAL ───────────────────────────────────────────────
   function renderDashboard() {
     try {
-      const data    = DGHData.getAnnee();
-      const bilan   = Calculs.bilanDotation(data);
+      const data       = DGHData.getAnnee();
+      const bilanBase  = Calculs.bilanDotation(data);
       const scenActif  = DGHData.getScenarioActif();
       const bilanScen  = scenActif ? Calculs.bilanScenario(data, scenActif.modificateurs) : null;
-      const alertes = Calculs.genererAlertes(data);
-      const resume  = Calculs.resumeStructures(DGHData.getStructures());
+
+      // ── Bilan "effectif" : scénario actif s'il existe, sinon base ──
+      // Quand un scénario est actif, l'application se comporte comme si
+      // c'était la réalité. bilanEff est la source de vérité pour les KPI.
+      const bilanEff   = bilanScen ? _bilanEffectif(bilanBase, bilanScen) : bilanBase;
+
+      const alertes    = Calculs.genererAlertes(data);
+      const resume     = Calculs.resumeStructures(DGHData.getStructures());
 
       _set('dashYear', DGHData.getAnneeActive().replace('-', '–'));
-      _set('kpi-dghtotal',  bilan.enveloppe  ? bilan.enveloppe + ' h'   : '— h');
-      _set('kpi-hposte',    bilan.hPosteEnv  ? bilan.hPosteEnv + ' h'   : '— h');
-      _set('kpi-hsa-total', bilan.hsaEnv     ? bilan.hsaEnv + ' h'      : '— h');
-      _set('kpi-hposte-sub', bilan.hPosteEnv ? 'enveloppe HP'           : 'dotation structurelle');
-      _set('kpi-hsa-sub',   bilan.hsaEnv     ? 'enveloppe HSA'          : 'heures sup payées');
+
+      // KPI Enveloppe DGH : toujours la valeur DSDEN (ne change pas avec le scénario)
+      _set('kpi-dghtotal',  bilanBase.enveloppe ? bilanBase.enveloppe + ' h' : '— h');
+
+      // KPI HP / HSA : valeurs effectives (simulées si scénario actif)
+      _set('kpi-hposte',    bilanBase.hPosteEnv ? bilanBase.hPosteEnv + ' h' : '— h');
+      _set('kpi-hsa-total', bilanBase.hsaEnv    ? bilanBase.hsaEnv + ' h'    : '— h');
+      _set('kpi-hposte-sub', bilanBase.hPosteEnv ? 'enveloppe HP' : 'dotation structurelle');
+      _set('kpi-hsa-sub',   bilanBase.hsaEnv     ? 'enveloppe HSA' : 'heures sup payées');
       _set('kpi-alertes',   alertes.filter(a => a.severite !== 'info').length || '—');
       _set('kpi-divisions', resume.nbDivisions || '—');
       _set('kpi-effectif',  resume.effectifTotal ? resume.effectifTotal + ' élèves' : '— élèves');
 
-      // Solde — couleur via classes CSS
+      // KPI Solde — affiche le solde effectif (simulé si scénario actif)
       const soldeEl  = document.getElementById('kpi-solde');
       const soldeSub = document.getElementById('kpi-solde-sub');
+      const soldeEff = bilanEff.solde;
       if (soldeEl) {
-        soldeEl.textContent = bilan.enveloppe ? bilan.solde + ' h' : '— h';
-        soldeEl.classList.toggle('kpi-solde-danger', !!bilan.depassement);
+        soldeEl.textContent = bilanBase.enveloppe ? soldeEff + ' h' : '— h';
+        soldeEl.classList.toggle('kpi-solde-danger', !!bilanEff.depassement);
       }
-      if (soldeSub) soldeSub.textContent = bilan.depassement ? 'dépassement !' : 'heures restantes';
+      if (soldeSub) {
+        if (scenActif) {
+          soldeSub.textContent = 'avec scénario actif';
+        } else {
+          soldeSub.textContent = bilanBase.depassement ? 'dépassement !' : 'heures restantes';
+        }
+      }
 
       // Badge alertes sidebar
       const nb    = alertes.filter(a => a.severite === 'error' || a.severite === 'warning').length;
@@ -42,68 +64,87 @@ const DGHDashboard = (() => {
         badge.classList.toggle('badge-hidden', !nb);
       }
 
-      // Stats topbar (présente sur toutes les vues — reflète le scénario actif)
+      // Stats topbar
       _renderTopbar();
 
-      // Barre progression duale
-      // Barre progression duale (+ segment scénario actif)
-      const barHP  = document.getElementById('progressBarHP');
-      const barHSA = document.getElementById('progressBarHSA');
-      const barScen= document.getElementById('progressBarScen');
-      const lbl    = document.getElementById('progress-label');
-      const coutScenTot = bilanScen ? bilanScen.coutTotal : 0;
-      if (bilan.enveloppe > 0) {
-        const pctHP  = Math.min(100, Math.round((bilan.totalHP  / bilan.enveloppe) * 100));
-        const pctHSA = Math.min(100 - pctHP, Math.round((bilan.totalHSA / bilan.enveloppe) * 100));
-        if (barHP)  barHP.style.width = pctHP + '%';
+      // ── Barre de progression — reflète la consommation effective ──
+      const barHP   = document.getElementById('progressBarHP');
+      const barHSA  = document.getElementById('progressBarHSA');
+      const barScen = document.getElementById('progressBarScen');
+      const lbl     = document.getElementById('progress-label');
+
+      if (bilanBase.enveloppe > 0) {
+        const totalHP  = bilanBase.totalHP;
+        const totalHSA = bilanBase.totalHSA;
+        const coutScen = bilanScen ? bilanScen.coutTotal : 0;
+
+        const pctHP  = Math.min(100, Math.round((totalHP  / bilanBase.enveloppe) * 100));
+        const pctHSA = Math.min(100 - pctHP, Math.round((totalHSA / bilanBase.enveloppe) * 100));
+        if (barHP)  barHP.style.width  = pctHP  + '%';
         if (barHSA) { barHSA.style.width = pctHSA + '%'; barHSA.style.marginLeft = pctHP + '%'; }
+
         if (barScen) {
-          if (coutScenTot > 0) {
-            const pctScen = Math.min(Math.max(0, 100 - pctHP - pctHSA), Math.round((coutScenTot / bilan.enveloppe) * 100));
-            barScen.style.width = pctScen + '%';
+          if (coutScen > 0) {
+            const pctScen = Math.min(
+              Math.max(0, 100 - pctHP - pctHSA),
+              Math.round((coutScen / bilanBase.enveloppe) * 100)
+            );
+            barScen.style.width      = pctScen + '%';
             barScen.style.marginLeft = (pctHP + pctHSA) + '%';
             barScen.classList.remove('is-hidden');
-          } else { barScen.classList.add('is-hidden'); }
+          } else {
+            barScen.classList.add('is-hidden');
+          }
         }
-      } else if (barScen) { barScen.classList.add('is-hidden'); }
-      if (lbl) {
-        lbl.textContent = bilan.enveloppe > 0
-          ? (coutScenTot > 0
-              ? (Math.round((bilan.totalAlloue + coutScenTot) * 2) / 2) + ' / ' + bilan.enveloppe + ' h (dont +' + coutScenTot + ' h scénario)'
-              : bilan.totalAlloue + ' / ' + bilan.enveloppe + ' h')
-          : '0 / 0 h';
-      }
-      _set('prog-leg-hp',  bilan.totalHP  + ' h');
-      _set('prog-leg-hsa', bilan.totalHSA + ' h');
 
-      // Encart HP/HSA — jauges Dotation / Consommé / Marge
+        if (lbl) {
+          const totalEff = Math.round((totalHP + totalHSA + (bilanScen ? bilanScen.coutTotal : 0)) * 2) / 2;
+          lbl.textContent = scenActif
+            ? totalEff + ' / ' + bilanBase.enveloppe + ' h (dont +' + bilanScen.coutTotal + ' h scénario)'
+            : totalHP + totalHSA + ' / ' + bilanBase.enveloppe + ' h';
+        }
+      } else if (barScen) {
+        barScen.classList.add('is-hidden');
+      }
+      _set('prog-leg-hp',  bilanBase.totalHP  + ' h');
+      _set('prog-leg-hsa', bilanBase.totalHSA + ' h');
+
+      // ── Jauges HP / HSA — valeurs effectives (simulation intégrée si scénario) ──
       const hpHsaGrid = document.getElementById('dashHpHsaGrid');
       if (hpHsaGrid) {
-        if (bilan.enveloppe > 0) {
+        if (bilanBase.enveloppe > 0) {
           hpHsaGrid.classList.remove('is-hidden');
-          _renderJauge('hp',  bilan.hPosteEnv, bilan.totalHP,  bilanScen ? bilanScen.coutHP  : 0);
-          _renderJauge('hsa', bilan.hsaEnv,    bilan.totalHSA, bilanScen ? bilanScen.coutHSA : 0);
+          _renderJauge('hp',  bilanBase.hPosteEnv, bilanBase.totalHP,  bilanScen ? bilanScen.coutHP  : 0, !!scenActif);
+          _renderJauge('hsa', bilanBase.hsaEnv,    bilanBase.totalHSA, bilanScen ? bilanScen.coutHSA : 0, !!scenActif);
         } else {
           hpHsaGrid.classList.add('is-hidden');
         }
       }
 
-      // Tooltips KPI
+      // ── Tooltips KPI — montrent toujours base + simulation ──
       const tooltipDGH = document.getElementById('kpi-tooltip-dghtotal');
-      if (tooltipDGH && bilan.enveloppe > 0) {
-        tooltipDGH.innerHTML = '<strong>Enveloppe DSDEN</strong><br>HP\u00a0: ' + bilan.hPosteEnv + '\u00a0h<br>HSA\u00a0: ' + bilan.hsaEnv + '\u00a0h<br>Total\u00a0: ' + bilan.enveloppe + '\u00a0h';
+      if (tooltipDGH && bilanBase.enveloppe > 0) {
+        tooltipDGH.innerHTML = '<strong>Enveloppe DSDEN</strong><br>HP\u00a0: ' + bilanBase.hPosteEnv + '\u00a0h<br>HSA\u00a0: ' + bilanBase.hsaEnv + '\u00a0h<br>Total\u00a0: ' + bilanBase.enveloppe + '\u00a0h';
       }
       const tooltipHP = document.getElementById('kpi-tooltip-hposte');
-      if (tooltipHP && bilan.hPosteEnv > 0) {
-        tooltipHP.innerHTML = '<strong>H-Poste</strong><br>Enveloppe\u00a0: ' + bilan.hPosteEnv + '\u00a0h<br>Allouées\u00a0: ' + bilan.totalHP + '\u00a0h<br>Dont Dotation\u00a0: ' + (bilan.totalHPDisc||0) + '\u00a0h<br>Dont HPC\u00a0: ' + (bilan.totalHPHPC||0) + '\u00a0h<br>Disponibles\u00a0: ' + Math.round((bilan.hPosteEnv - bilan.totalHP)*2)/2 + '\u00a0h';
+      if (tooltipHP && bilanBase.hPosteEnv > 0) {
+        tooltipHP.innerHTML = '<strong>H-Poste</strong><br>Enveloppe\u00a0: ' + bilanBase.hPosteEnv + '\u00a0h<br>Allouées (base)\u00a0: ' + bilanBase.totalHP + '\u00a0h'
+          + (bilanScen ? '<br>+ Scénario\u00a0: +' + bilanScen.coutHP + '\u00a0h' : '')
+          + '<br>Dont Dotation\u00a0: ' + (bilanBase.totalHPDisc||0) + '\u00a0h<br>Dont HPC\u00a0: ' + (bilanBase.totalHPHPC||0) + '\u00a0h';
       }
       const tooltipHSA = document.getElementById('kpi-tooltip-hsa');
-      if (tooltipHSA && bilan.hsaEnv > 0) {
-        tooltipHSA.innerHTML = '<strong>HSA</strong><br>Enveloppe\u00a0: ' + bilan.hsaEnv + '\u00a0h<br>Allouées\u00a0: ' + bilan.totalHSA + '\u00a0h<br>Dont Dotation\u00a0: ' + (bilan.totalHSADisc||0) + '\u00a0h<br>Dont HPC\u00a0: ' + (bilan.totalHSAHPC||0) + '\u00a0h<br>Disponibles\u00a0: ' + Math.round((bilan.hsaEnv - bilan.totalHSA)*2)/2 + '\u00a0h';
+      if (tooltipHSA && bilanBase.hsaEnv > 0) {
+        tooltipHSA.innerHTML = '<strong>HSA</strong><br>Enveloppe\u00a0: ' + bilanBase.hsaEnv + '\u00a0h<br>Allouées (base)\u00a0: ' + bilanBase.totalHSA + '\u00a0h'
+          + (bilanScen ? '<br>+ Scénario\u00a0: +' + bilanScen.coutHSA + '\u00a0h' : '')
+          + '<br>Dont Dotation\u00a0: ' + (bilanBase.totalHSADisc||0) + '\u00a0h<br>Dont HPC\u00a0: ' + (bilanBase.totalHSAHPC||0) + '\u00a0h';
       }
       const tooltipSolde = document.getElementById('kpi-tooltip-solde');
-      if (tooltipSolde && bilan.enveloppe > 0) {
-        tooltipSolde.innerHTML = '<strong>Solde global</strong><br>Enveloppe\u00a0: ' + bilan.enveloppe + '\u00a0h<br>Consommées\u00a0: ' + bilan.totalAlloue + '\u00a0h<br>Solde\u00a0: ' + bilan.solde + '\u00a0h (' + bilan.pctConsomme + '% consommé)';
+      if (tooltipSolde && bilanBase.enveloppe > 0) {
+        let tipHtml = '<strong>Solde de base</strong><br>Enveloppe\u00a0: ' + bilanBase.enveloppe + '\u00a0h<br>Consommées\u00a0: ' + bilanBase.totalAlloue + '\u00a0h<br>Solde\u00a0: ' + (bilanBase.solde >= 0 ? '+' : '') + bilanBase.solde + '\u00a0h (' + bilanBase.pctConsomme + '% consommé)';
+        if (bilanScen) {
+          tipHtml += '<br><br><strong>Avec scénario \u00ab ' + _esc(scenActif.nom) + ' \u00bb</strong><br>Coût\u00a0: +' + bilanScen.coutTotal + '\u00a0h<br>Solde simulé\u00a0: ' + (bilanScen.soldeSimule >= 0 ? '+' : '') + bilanScen.soldeSimule + '\u00a0h';
+        }
+        tooltipSolde.innerHTML = tipHtml;
       }
 
       // Empty state
@@ -113,59 +154,168 @@ const DGHDashboard = (() => {
       if (emptyEl)  emptyEl.classList.toggle('is-hidden', !isEmpty);
       if (resumeEl) resumeEl.classList.toggle('is-hidden', isEmpty);
 
-      // Résumé disciplines
-      _renderDiscResume(bilan);
+      // Carte équipe — apport réel HP/HSA (source TRM)
+      _renderEquipeCard(bilanBase);
+
+      // Résumé disciplines (passé bilanEff pour que les ecarts reflètent le scénario)
+      _renderDiscResume(bilanBase);
 
       // Résumé HPC
       _renderHPCResume();
 
-      // Scénario actif — bandeau informatif dans le dashboard
-      const scenDashEl = document.getElementById('dashScenActif');
-      if (scenDashEl) {
-        if (scenActif) {
-          const bs    = bilanScen;
-          const delta = Math.round((bs.soldeSimule - bilan.solde) * 2) / 2;
-          const sCls  = bs.depassement ? 'scen-solde-danger' : 'scen-solde-ok';
-          const ssign = bs.soldeSimule >= 0 ? '+' : '';
-          const dsign = delta > 0 ? '+' : '';
-          const coutTxt = [
-            bs.coutHP  > 0 ? '+' + bs.coutHP  + ' h HP'  : '',
-            bs.coutHSA > 0 ? '+' + bs.coutHSA + ' h HSA' : ''
-          ].filter(Boolean).join(' / ') || '0 h';
-          scenDashEl.classList.remove('is-hidden');
-          scenDashEl.innerHTML =
-            '<div class="dash-scen-line">'
-            + '<span class="dash-scen-tag">⊕ Scénario actif</span>'
-            + '<strong class="dash-scen-nom">' + _esc(scenActif.nom) + '</strong>'
-            + '<span class="dash-scen-cout">Coût : <span class="font-mono">' + coutTxt + '</span></span>'
-            + '<span class="dash-scen-solde">Solde : <span class="font-mono">' + (bilan.solde >= 0 ? '+' : '') + bilan.solde + ' h</span>'
-              + ' → <strong class="font-mono ' + sCls + '">' + ssign + bs.soldeSimule + ' h</strong>'
-              + (delta !== 0 ? ' <span class="font-mono ' + sCls + '">(' + dsign + delta + ' h)</span>' : '') + '</span>'
-            + '<button class="btn-link" data-navigate="pilotage">Voir le détail →</button>'
-            + '</div>';
-        } else {
-          scenDashEl.classList.add('is-hidden');
-        }
-      }
-      // Reporter le solde simulé sous le KPI Solde + dans son infobulle
-      if (soldeSub) {
-        soldeSub.textContent = scenActif
-          ? 'simulé : ' + (bilanScen.soldeSimule >= 0 ? '+' : '') + bilanScen.soldeSimule + ' h'
-          : (bilan.depassement ? 'dépassement !' : 'heures restantes');
-      }
-      if (scenActif && soldeEl) soldeEl.classList.toggle('kpi-solde-danger', !!bilanScen.depassement);
-      const tipSolde2 = document.getElementById('kpi-tooltip-solde');
-      if (tipSolde2 && scenActif && bilan.enveloppe > 0) {
-        tipSolde2.innerHTML += '<br><strong>Avec scénario actif</strong><br>Coût\u00a0: +' + bilanScen.coutTotal
-          + '\u00a0h<br>Solde simulé\u00a0: ' + (bilanScen.soldeSimule >= 0 ? '+' : '') + bilanScen.soldeSimule + '\u00a0h';
-      }
+      // ── Bandeau scénario actif (bien visible, en haut du dashboard) ──
+      _renderBandeauScenario(scenActif, bilanBase, bilanScen);
+
+      // ── Encart Vérification du moteur de calcul (discret si OK, alarmant si problème) ──
+      _renderVerifs();
 
     } catch(e) { console.error('[DGH] renderDashboard:', e); }
     updateBtnEtab();
   }
 
-  // Barre supérieure — rendue sur chaque navigation (app.navigate), donc visible
-  // partout. Affiche le solde SIMULÉ dès qu'un scénario est actif.
+  /**
+   * Construit un bilan "effectif" fusionnant base + scénario,
+   * pour que les KPI affichent les valeurs simulées directement.
+   */
+  function _bilanEffectif(bilanBase, bilanScen) {
+    return {
+      enveloppe:   bilanBase.enveloppe,
+      hPosteEnv:   bilanBase.hPosteEnv,
+      hsaEnv:      bilanBase.hsaEnv,
+      totalHP:     Math.round((bilanBase.totalHP  + bilanScen.coutHP)  * 2) / 2,
+      totalHSA:    Math.round((bilanBase.totalHSA + bilanScen.coutHSA) * 2) / 2,
+      totalAlloue: Math.round((bilanBase.totalAlloue + bilanScen.coutTotal) * 2) / 2,
+      solde:       bilanScen.soldeSimule,
+      depassement: bilanScen.depassement,
+      pctConsomme: bilanBase.enveloppe > 0
+        ? Math.round(((bilanBase.totalAlloue + bilanScen.coutTotal) / bilanBase.enveloppe) * 100)
+        : 0
+    };
+  }
+
+  /** Bandeau coloré bien visible en haut du dashboard quand un scénario est actif. */
+  function _renderBandeauScenario(scenActif, bilanBase, bilanScen) {
+    const el = document.getElementById('dashScenActif');
+    if (!el) return;
+
+    if (!scenActif) {
+      el.classList.add('is-hidden');
+      el.innerHTML = '';
+      return;
+    }
+
+    const soldeSimule = bilanScen.soldeSimule;
+    const delta       = Math.round((soldeSimule - bilanBase.solde) * 2) / 2;
+    const sCls        = bilanScen.depassement ? 'scen-solde-danger' : 'scen-solde-ok';
+    const ssign       = soldeSimule >= 0 ? '+' : '';
+    const dsign       = delta >= 0 ? '+' : '';
+    const coutParts   = [
+      bilanScen.coutHP  > 0 ? '+' + bilanScen.coutHP  + '\u00a0h HP'  : '',
+      bilanScen.coutHSA > 0 ? '+' + bilanScen.coutHSA + '\u00a0h HSA' : ''
+    ].filter(Boolean);
+    const coutTxt = coutParts.length ? coutParts.join(' / ') : '0\u00a0h';
+
+    el.classList.remove('is-hidden');
+    el.innerHTML =
+      '<div class="dash-scen-actif-banner">'
+        + '<div class="dash-scen-actif-left">'
+          + '<span class="dash-scen-actif-icon">\u2295</span>'
+          + '<div class="dash-scen-actif-info">'
+            + '<span class="dash-scen-actif-label">Scénario actif</span>'
+            + '<strong class="dash-scen-actif-nom">' + _esc(scenActif.nom) + '</strong>'
+          + '</div>'
+        + '</div>'
+        + '<div class="dash-scen-actif-kpis">'
+          + '<span class="dash-scen-actif-kpi"><span class="dash-scen-actif-kpi-lbl">Coût</span><span class="dash-scen-actif-kpi-val font-mono">' + coutTxt + '</span></span>'
+          + '<span class="dash-scen-actif-kpi"><span class="dash-scen-actif-kpi-lbl">Solde simulé</span><span class="dash-scen-actif-kpi-val font-mono ' + sCls + '">' + ssign + soldeSimule + '\u00a0h</span></span>'
+          + '<span class="dash-scen-actif-kpi"><span class="dash-scen-actif-kpi-lbl">Δ vs base</span><span class="dash-scen-actif-kpi-val font-mono ' + sCls + '">' + dsign + delta + '\u00a0h</span></span>'
+        + '</div>'
+        + '<div class="dash-scen-actif-actions">'
+          + '<button class="btn-link dash-scen-actif-detail" data-navigate="pilotage">Voir détail \u2192</button>'
+          + '<button class="btn-secondary btn-sm dash-scen-actif-off" id="btnDesactiverScen">Désactiver</button>'
+        + '</div>'
+      + '</div>';
+  }
+
+  /**
+   * Encart « Vérification du moteur de calcul ».
+   * Rejoue Verifs.lancer() à chaque rendu du dashboard.
+   *  - Tout OK  → ligne verte sobre, repliée, non intrusive.
+   *  - Échec(s) → bandeau rouge bien visible, déplié d'office sur les contrôles fautifs.
+   */
+  function _renderVerifs() {
+    const el = document.getElementById('dashVerifs');
+    if (!el) return;
+    if (typeof Verifs === 'undefined') { el.classList.add('is-hidden'); el.innerHTML = ''; return; }
+
+    let r;
+    try { r = Verifs.lancer(); }
+    catch (e) {
+      console.error('[DGH] Verifs:', e);
+      el.classList.remove('is-hidden');
+      el.innerHTML = '<div class="dash-verifs dash-verifs-ko">'
+        + '<span class="dash-verifs-icon">\u26a0</span>'
+        + '<span class="dash-verifs-txt">Impossible de lancer la vérification du moteur de calcul.</span>'
+        + '</div>';
+      return;
+    }
+
+    el.classList.remove('is-hidden');
+
+    if (r.ok) {
+      // État sain : sobre, repliable. data-open piloté par délégation globale.
+      el.innerHTML =
+        '<div class="dash-verifs dash-verifs-ok" id="dashVerifsBox">'
+          + '<button class="dash-verifs-head" data-action="toggle-verifs">'
+            + '<span class="dash-verifs-icon">\u2713</span>'
+            + '<span class="dash-verifs-txt">Moteur de calcul vérifié \u2014 '
+              + r.total + ' contrôles OK</span>'
+            + '<span class="dash-verifs-chevron">\u203a</span>'
+          + '</button>'
+          + '<div class="dash-verifs-detail is-hidden">' + _verifsDetailHTML(r) + '</div>'
+        + '</div>';
+    } else {
+      // État problème : rouge, visible, détail ouvert d'emblée.
+      el.innerHTML =
+        '<div class="dash-verifs dash-verifs-ko" id="dashVerifsBox">'
+          + '<button class="dash-verifs-head" data-action="toggle-verifs">'
+            + '<span class="dash-verifs-icon">\u26a0</span>'
+            + '<span class="dash-verifs-txt"><strong>'
+              + r.echoues + ' contrôle' + (r.echoues > 1 ? 's' : '') + ' en échec</strong> '
+              + 'sur le moteur de calcul \u2014 le résultat des heures peut être faux.</span>'
+            + '<span class="dash-verifs-chevron">\u203a</span>'
+          + '</button>'
+          + '<div class="dash-verifs-detail">' + _verifsDetailHTML(r, true) + '</div>'
+        + '</div>';
+    }
+  }
+
+  // Détail des contrôles. echecsSeuls=true → n'affiche que les groupes en échec.
+  function _verifsDetailHTML(r, echecsSeuls) {
+    let html = '';
+    r.groupes.forEach(g => {
+      const koLignes = g.lignes.filter(l => !l.ok);
+      if (echecsSeuls && koLignes.length === 0) return;
+      html += '<div class="dash-verifs-groupe"><div class="dash-verifs-groupe-titre">'
+            + _esc(g.titre) + '</div>';
+      g.lignes.forEach(l => {
+        if (echecsSeuls && l.ok) return;
+        html += '<div class="dash-verifs-ligne ' + (l.ok ? 'is-ok' : 'is-ko') + '">'
+              + '<span class="dash-verifs-ligne-icon">' + (l.ok ? '\u2713' : '\u2717') + '</span>'
+              + '<span class="dash-verifs-ligne-lbl">' + _esc(l.label) + '</span>'
+              + '<span class="dash-verifs-ligne-val font-mono">'
+              + (l.ok ? _esc(String(l.obtenu))
+                      : 'obtenu ' + _esc(String(l.obtenu)) + ', attendu ' + _esc(String(l.attendu)))
+              + '</span>'
+              + '</div>';
+      });
+      html += '</div>';
+    });
+    return html;
+  }
+
+  // Barre supérieure — rendue sur chaque navigation, visible partout.
+  // Quand un scénario est actif, affiche le solde SIMULÉ.
   function _renderTopbar() {
     const stats = document.getElementById('topbarStats');
     if (!stats) return;
@@ -174,12 +324,13 @@ const DGHDashboard = (() => {
     if (!(bilan.enveloppe > 0)) { stats.innerHTML = ''; return; }
     const scen  = DGHData.getScenarioActif();
     const bScen = scen ? Calculs.bilanScenario(data, scen.modificateurs) : null;
+
     let html = '<div class="topbar-stat"><span>HP</span><span class="topbar-stat-val">' + bilan.hPosteEnv + 'h</span></div>'
              + '<div class="topbar-stat"><span>HSA</span><span class="topbar-stat-val">' + bilan.hsaEnv + 'h</span></div>';
     if (bScen) {
       const sCls = bScen.depassement ? 'topbar-solde-neg' : 'topbar-solde-ok';
-      html += '<div class="topbar-stat topbar-stat-scen" title="Solde simul\u00e9 sous le sc\u00e9nario actif \u00ab ' + _esc(scen.nom) + ' \u00bb">'
-            + '<span>\u2295 Solde simul\u00e9</span>'
+      html += '<div class="topbar-stat topbar-stat-scen" title="Solde simul\u00e9 \u2014 sc\u00e9nario \u00ab ' + _esc(scen.nom) + ' \u00bb actif">'
+            + '<span>\u2295 ' + _esc(scen.nom) + '</span>'
             + '<span class="topbar-stat-val ' + sCls + '">' + (bScen.soldeSimule >= 0 ? '+' : '') + bScen.soldeSimule + 'h</span></div>';
     } else {
       html += '<div class="topbar-stat"><span>Solde</span><span class="topbar-stat-val">' + bilan.solde + 'h</span></div>';
@@ -274,44 +425,46 @@ const DGHDashboard = (() => {
     hpcListEl.innerHTML = hpcHtml;
   }
 
-  // ── Jauge HP / HSA : Dotation / Consommé / Marge (+ simulation) ────
-  function _renderJauge(pfx, dotation, conso, coutScen) {
-    const marge = Math.round((dotation - conso) * 2) / 2;
-    const pct   = dotation > 0 ? (conso / dotation) * 100 : 0;
+  // ── Jauge HP / HSA ──────────────────────────────────────────────
+  function _renderJauge(pfx, dotation, conso, coutScen, scenActif) {
+    const marge    = Math.round((dotation - conso) * 2) / 2;
+    const pct      = dotation > 0 ? (conso / dotation) * 100 : 0;
     const pctClamp = Math.max(0, Math.min(100, Math.round(pct)));
-    const etat  = marge < 0 ? 'over' : marge === 0 ? 'tight' : 'ok';
+
+    // Si scénario actif, on affiche la marge SIMULÉE directement
+    const consoEff = scenActif ? Math.round((conso + coutScen) * 2) / 2 : conso;
+    const margeEff = Math.round((dotation - consoEff) * 2) / 2;
+    const etat     = margeEff < 0 ? 'over' : margeEff === 0 ? 'tight' : 'ok';
 
     _set('dash-' + pfx + '-dotation', dotation + ' h');
-    _set('dash-' + pfx + '-conso',    conso + ' h');
+    _set('dash-' + pfx + '-conso',    consoEff + ' h');
     const margeEl = document.getElementById('dash-' + pfx + '-marge');
     if (margeEl) {
-      margeEl.textContent = (marge >= 0 ? '+' : '') + marge + ' h';
+      margeEl.textContent = (margeEff >= 0 ? '+' : '') + margeEff + ' h';
       margeEl.classList.toggle('gauge-marge-over',  etat === 'over');
       margeEl.classList.toggle('gauge-marge-tight', etat === 'tight');
       margeEl.classList.toggle('gauge-marge-ok',    etat === 'ok');
     }
-    _set('dash-' + pfx + '-pct', pctClamp + '%');
+
+    const pctEff = dotation > 0 ? Math.max(0, Math.min(100, Math.round((consoEff / dotation) * 100))) : 0;
+    _set('dash-' + pfx + '-pct', pctEff + '%');
 
     const fill = document.getElementById('dash-gauge-' + pfx);
     if (fill) {
-      fill.style.width = pctClamp + '%';
+      fill.style.width = pctEff + '%';
       fill.classList.toggle('gauge-fill-over',  etat === 'over');
       fill.classList.toggle('gauge-fill-tight', etat === 'tight');
     }
 
-    // Surcouche simulation (scénario actif) : marqueur + ligne
+    // Marqueur de simulation : si scénario actif, montrer l'écart vs base
     const simMark = document.getElementById('dash-gauge-' + pfx + '-sim');
     const simLine = document.getElementById('dash-' + pfx + '-sim');
-    if (coutScen > 0) {
-      const consoSim = Math.round((conso + coutScen) * 2) / 2;
-      const margeSim = Math.round((dotation - consoSim) * 2) / 2;
-      const pctSim   = dotation > 0 ? Math.max(0, Math.min(100, Math.round((consoSim / dotation) * 100))) : 100;
-      if (simMark) { simMark.style.left = pctSim + '%'; simMark.classList.remove('is-hidden'); }
+    if (scenActif && coutScen > 0) {
+      const pctBase = Math.max(0, Math.min(100, Math.round((conso / dotation) * 100)));
+      if (simMark) { simMark.style.left = pctBase + '%'; simMark.classList.remove('is-hidden'); }
       if (simLine) {
         simLine.classList.remove('is-hidden');
-        simLine.innerHTML = '⊕ avec scénario : consommé <strong class="font-mono">' + consoSim
-          + ' h</strong> · marge <strong class="font-mono ' + (margeSim < 0 ? 'gauge-marge-over' : 'gauge-marge-ok')
-          + '">' + (margeSim >= 0 ? '+' : '') + margeSim + ' h</strong>';
+        simLine.innerHTML = 'Base : <strong class="font-mono">' + conso + ' h</strong> · +Scénario : <strong class="font-mono">' + coutScen + ' h</strong>';
       }
     } else {
       if (simMark) simMark.classList.add('is-hidden');
@@ -328,7 +481,36 @@ const DGHDashboard = (() => {
     } catch(e) { btn.textContent = 'Mon Coll\u00e8ge \u2699'; }
   }
 
-  // ── UTILITAIRES LOCAUX (dépendances injectées par app.js) ─────────
+  // ── UTILITAIRES LOCAUX ─────────────────────────────────────────────
+  function _renderEquipeCard(bilanBase) {
+    const card = document.getElementById('dashEquipeCard');
+    if (!card) return;
+    const bilan = Calculs.bilanEquipe(DGHData.getEnseignants(), DGHData.getHeuresPedaComp());
+    if (!bilan.nbEns) { card.classList.add('is-hidden'); return; }
+    card.classList.remove('is-hidden');
+    const r = n => Math.round((n||0)*2)/2;
+    _set('dash-eq-hp',  r(bilan.totalHP)  + ' h');
+    _set('dash-eq-hsa', r(bilan.totalHSA) + ' h');
+    _set('dash-eq-tot', r(bilan.totalGeneral) + ' h');
+
+    const env = bilanBase.enveloppe || 0;
+    const soldeEl = document.getElementById('dash-eq-solde');
+    if (soldeEl) {
+      if (env <= 0) { soldeEl.textContent = '— h'; soldeEl.className = 'dash-equipe-val'; }
+      else {
+        const solde = r(env - bilan.totalGeneral);
+        soldeEl.textContent = (solde >= 0 ? '+' : '') + solde + ' h';
+        soldeEl.className = 'dash-equipe-val' + (solde < 0 ? ' is-over' : '');
+      }
+    }
+    const tot = bilan.totalGeneral > 0 ? bilan.totalGeneral : 1;
+    const pctHP = Math.round((bilan.totalHP / tot) * 100);
+    const barHP = document.getElementById('dash-eq-bar-hp');
+    const barHSA = document.getElementById('dash-eq-bar-hsa');
+    if (barHP)  barHP.style.width  = pctHP + '%';
+    if (barHSA) barHSA.style.width = (100 - pctHP) + '%';
+  }
+
   function _set(id, val)  { const el=document.getElementById(id); if(el) el.textContent=val; }
   function _esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 

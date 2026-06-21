@@ -20,7 +20,7 @@ const DGHRepartition = (() => {
   const NIVEAUX_ORD = ['6e','5e','4e','3e','SEGPA','ULIS','UPE2A'];
 
   // ── État ──────────────────────────────────────────────────────────
-  let _mode      = 'discipline'; // 'discipline' | 'enseignant'
+  let _mode      = 'discipline'; // 'discipline' | 'enseignant' | 'rapide'
   let _selDiscId = null;
   let _selEnsId  = null;
 
@@ -29,7 +29,6 @@ const DGHRepartition = (() => {
     return String(s == null ? '' : s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-  function _set(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
   function _nomEns(ens) {
     if (!ens) return '?';
     return ((ens.nom || '') + (ens.prenom ? ' ' + ens.prenom : '')).trim() || '?';
@@ -80,10 +79,13 @@ const DGHRepartition = (() => {
         + '<div class="rep-mode-toggle">'
           + '<button class="rep-mode-btn' + (_mode==='discipline'?' active':'') + '" data-action="rep-mode" data-mode="discipline">Par discipline</button>'
           + '<button class="rep-mode-btn' + (_mode==='enseignant'?' active':'') + '" data-action="rep-mode" data-mode="enseignant">Par enseignant</button>'
+          + '<button class="rep-mode-btn rep-mode-btn-rapide' + (_mode==='rapide'?' active':'') + '" data-action="rep-mode" data-mode="rapide" title="Tableau enseignants × classes">&#9889; Saisie rapide</button>'
         + '</div>'
         + '<div class="rep-saisie">' + (_mode==='discipline'
             ? _htmlSaisieDiscipline(divisions, disciplines, enseignants)
-            : _htmlSaisieEnseignant(divisions, disciplines, enseignants)) + '</div>'
+            : _mode==='rapide'
+              ? _htmlSaisieRapide(divisions, disciplines, enseignants)
+              : _htmlSaisieEnseignant(divisions, disciplines, enseignants)) + '</div>'
         + _htmlGrille(data, divisions, disciplines, enseignants)
         + _htmlControles(data);
 
@@ -255,6 +257,121 @@ const DGHRepartition = (() => {
   }
 
   // ══════════════════════════════════════════════════════════════════
+  // SAISIE RAPIDE — matrice discipline × classe × enseignant
+  // ══════════════════════════════════════════════════════════════════
+  /**
+   * Affiche un tableau croisé :
+   *   lignes = enseignants de la discipline sélectionnée
+   *   colonnes = toutes les divisions (groupées par niveau)
+   *   cellule = checkbox cochée si l'enseignant est affecté à cette classe pour cette discipline
+   * Permet de tout saisir en une seule vue sans navigation.
+   */
+  function _htmlSaisieRapide(divisions, disciplines, enseignants) {
+    const disc = disciplines.find(d => d.id === _selDiscId) || disciplines[0];
+
+    const discOpts = disciplines.map(d =>
+      '<option value="' + d.id + '"' + (d.id === disc.id ? ' selected' : '') + '>' + _esc(d.nom) + '</option>'
+    ).join('');
+
+    // Enseignants ayant cette discipline (priorité) + les autres en fin
+    const ensDisc   = enseignants.filter(e => _ensADiscipline(e, disc.nom));
+    const ensAutres = enseignants.filter(e => !_ensADiscipline(e, disc.nom));
+    const ensListe  = [...ensDisc, ...ensAutres];
+
+    if (ensListe.length === 0) {
+      return '<div class="rep-saisie-head">'
+        + '<label class="rep-select-lbl">Discipline :</label>'
+        + '<select class="rep-disc-select" id="repDiscSelectRapide" data-action="rep-sel-disc">' + discOpts + '</select>'
+        + '</div>'
+        + '<p class="rep-saisie-hint">Aucun enseignant trouvé. Ajoutez des enseignants dans le module Équipe pédagogique.</p>';
+    }
+
+    // Colonnes : divisions triées par niveau
+    const parNiv = {};
+    divisions.forEach(div => { (parNiv[div.niveau] = parNiv[div.niveau] || []).push(div); });
+    const nivsOrd = NIVEAUX_ORD.filter(n => parNiv[n] && parNiv[n].length);
+    const allDivs = nivsOrd.flatMap(n => parNiv[n]);
+
+    // En-tête niveau (colspan par niveau)
+    const thNivGroups = nivsOrd.map(n =>
+      '<th colspan="' + parNiv[n].length + '" class="rep-rapid-th-niv">'
+        + '<span class="niveau-badge niveau-' + n.toLowerCase().replace(/[^a-z0-9]/g,'') + '">' + n + '</span>'
+      + '</th>'
+    ).join('');
+
+    // En-tête classe
+    const thClasses = allDivs.map(div =>
+      '<th class="rep-rapid-th-cls">' + _esc(div.nom) + '</th>'
+    ).join('');
+
+    // Compteur "cocher tout" par classe (en-tête)
+    const thTout = allDivs.map(div =>
+      '<th class="rep-rapid-th-tout">'
+        + '<button class="rep-rapid-tout-btn" data-action="rep-rapid-tout-col"'
+          + ' data-division-id="' + div.id + '" data-discipline-id="' + disc.id
+          + '" title="Cocher/décocher tous les profs de cette discipline pour ' + _esc(div.nom) + '">⬜ tous</button>'
+      + '</th>'
+    ).join('');
+
+    // Lignes enseignants
+    const rows = ensListe.map(ens => {
+      const isDisc = _ensADiscipline(ens, disc.nom);
+      const cells = allDivs.map(div => {
+        const cell    = DGHData.getAffectationsCell(div.id, disc.id);
+        const mienne  = cell.find(a => a.ensId === ens.id);
+        const checked = !!mienne;
+        const partage = !checked && cell.length > 0;
+        return '<td class="rep-rapid-cell' + (partage ? ' rep-rapid-partage' : '') + '">'
+          + '<label class="rep-rapid-chk-lbl" title="' + _esc(div.nom) + (partage ? ' — partagée' : '') + '">'
+            + '<input type="checkbox" class="rep-rapid-chk" data-action="rep-toggle-ens-classe"'
+              + ' data-ens-id="' + ens.id + '"'
+              + ' data-division-id="' + div.id + '"'
+              + ' data-discipline-id="' + disc.id + '"'
+              + (checked ? ' checked' : '') + '>'
+            + (checked && mienne
+                ? '<span class="rep-rapid-h font-mono">' + (mienne.heures||0) + 'h</span>'
+                : '')
+          + '</label>'
+        + '</td>';
+      }).join('');
+
+      // Barre latérale : nb classes affectées
+      const nbAff = allDivs.filter(div => DGHData.getAffectationsCell(div.id, disc.id).some(a => a.ensId === ens.id)).length;
+
+      return '<tr class="rep-rapid-tr' + (!isDisc ? ' rep-rapid-tr-autre' : '') + '">'
+        + '<td class="rep-rapid-td-ens">'
+          + (isDisc
+              ? '<span class="rep-rapid-dot" style="background:' + _esc(disc.couleur||'#6b6860') + '"></span>'
+              : '<span class="rep-rapid-dot-autre" title="Discipline différente">?</span>')
+          + '<span class="rep-rapid-ens-nom">' + _esc(_nomEns(ens)) + '</span>'
+          + (nbAff > 0 ? '<span class="rep-rapid-nbcls font-mono">' + nbAff + ' cl.</span>' : '')
+        + '</td>'
+        + cells
+      + '</tr>';
+    }).join('');
+
+    return '<div class="rep-saisie-head">'
+        + '<label class="rep-select-lbl">Discipline :</label>'
+        + '<select class="rep-disc-select" id="repDiscSelectRapide" data-action="rep-sel-disc">' + discOpts + '</select>'
+        + '<span class="rep-saisie-hint rep-rapid-hint">Cochez les classes de chaque enseignant. '
+          + 'Les heures se calculent automatiquement depuis la grille MEN — ajustez-les ensuite en mode « Par enseignant ».</span>'
+      + '</div>'
+      + '<div class="rep-rapid-wrap">'
+        + '<table class="rep-rapid-table">'
+          + '<thead>'
+            + '<tr class="rep-rapid-tr-niv"><th class="rep-rapid-td-ens rep-rapid-th-corner">Enseignant</th>' + thNivGroups + '</tr>'
+            + '<tr class="rep-rapid-tr-cls"><th class="rep-rapid-td-ens"></th>' + thClasses + '</tr>'
+          + '</thead>'
+          + '<tbody>' + rows + '</tbody>'
+        + '</table>'
+      + '</div>'
+      + '<p class="rep-saisie-hint rep-rapid-legend">'
+        + '<span class="rep-rapid-dot" style="background:#6b6860;display:inline-block;vertical-align:middle"></span> = enseigne cette discipline  &nbsp;|&nbsp;  '
+        + '<span class="rep-rapid-dot-autre" style="display:inline-block;vertical-align:middle">?</span> = autre discipline (affectation possible mais inhabituelle)'
+      + '</p>';
+  }
+
+  // ══════════════════════════════════════════════════════════════════
   // GRILLE RÉCAP classe × discipline (+ professeur principal)
   // ══════════════════════════════════════════════════════════════════
   function _htmlGrille(data, divisions, disciplines, enseignants) {
@@ -337,7 +454,7 @@ const DGHRepartition = (() => {
   // ══════════════════════════════════════════════════════════════════
   // ACTIONS (appelées via délégation app.js)
   // ══════════════════════════════════════════════════════════════════
-  function setMode(mode)        { _mode = (mode === 'enseignant' ? 'enseignant' : 'discipline'); renderRepartition(); }
+  function setMode(mode)        { _mode = (mode === 'enseignant' ? 'enseignant' : mode === 'rapide' ? 'rapide' : 'discipline'); renderRepartition(); }
   function selectDiscipline(el) { _selDiscId = el.value; renderRepartition(); }
   function selectEnseignant(el) { _selEnsId  = el.value; renderRepartition(); }
 
@@ -402,6 +519,40 @@ const DGHRepartition = (() => {
     renderRepartition();
   }
 
+  /**
+   * Bascule TOUS les enseignants de la discipline courante sur une classe donnée.
+   * Si tous sont déjà cochés → décocher. Sinon → cocher ceux qui manquent.
+   */
+  function toutColonne(btn) {
+    const divisionId   = btn.dataset.divisionId;
+    const disciplineId = btn.dataset.disciplineId;
+    const div  = DGHData.getDivision(divisionId);
+    const disc = DGHData.getDiscipline(disciplineId);
+    if (!div || !disc) return;
+
+    const enseignants = DGHData.getEnseignants();
+    const ensDisc = enseignants.filter(e => _ensADiscipline(e, disc.nom));
+    if (ensDisc.length === 0) return;
+
+    const cell = DGHData.getAffectationsCell(divisionId, disciplineId);
+    const tousCoches = ensDisc.every(e => cell.some(a => a.ensId === e.id));
+
+    if (tousCoches) {
+      // Tout décocher
+      cell.filter(a => ensDisc.some(e => e.id === a.ensId)).forEach(a => DGHData.deleteAffectation(a.id));
+    } else {
+      // Cocher ceux qui manquent
+      ensDisc.forEach(ens => {
+        if (!cell.some(a => a.ensId === ens.id)) {
+          let h = Calculs.heuresGrille(div.niveau, disc.nom);
+          if (h <= 0) h = 1;
+          DGHData.addAffectation({ divisionId, disciplineId, ensId: ens.id, heures: h });
+        }
+      });
+    }
+    renderRepartition();
+  }
+
   function setPP(el) {
     const divisionId = el.dataset.divisionId;
     DGHData.setProfesseurPrincipal(divisionId, el.value || null);
@@ -411,7 +562,7 @@ const DGHRepartition = (() => {
   return {
     renderRepartition,
     setMode, selectDiscipline, selectEnseignant,
-    addFromSelect, toggleEnsClasse, setHeures, deleteAff, addDiscToEns, setPP
+    addFromSelect, toggleEnsClasse, setHeures, deleteAff, addDiscToEns, setPP, toutColonne
   };
 
 })();
