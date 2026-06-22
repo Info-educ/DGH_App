@@ -910,6 +910,10 @@ const DGHEnseignants = (() => {
     if (!_pendingDeleteId) return;
     DGHData.deleteEnseignant(_pendingDeleteId);
     closeConfirmEns(); renderEnseignants();
+    // Rafraîchir la vue Équipe si elle est affichée (suppression déclenchée depuis la phase 1)
+    if (typeof DGHEquipe !== 'undefined' && document.getElementById('view-equipe')?.classList.contains('active')) {
+      DGHEquipe.renderEquipe();
+    }
     app.toast('Enseignant supprimé.', 'success');
   }
 
@@ -1161,17 +1165,6 @@ const DGHEnseignants = (() => {
     app.toast('Enseignant retiré de la HPC.', 'info');
   }
 
-  function affecterEnsHPCDirect(ensId) {
-    const inp = document.querySelector('.sel-ens-hdisc-input[data-ens-id="' + ensId + '"]');
-    if (!inp) { confirmerSelEns(); return; }
-    const h = parseFloat(inp.value) || 0;
-    if (h <= 0) {
-      app.toast('Saisissez un nombre d\'heures avant de confirmer.', 'warning');
-      return;
-    }
-    confirmerSelEns();
-  }
-
   // ── UTILITAIRES ────────────────────────────────────────────────────────────
   function _esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -1181,7 +1174,7 @@ const DGHEnseignants = (() => {
     setVueListe, setVueDisc, setVueHPC, setSort,
     toggleDiscBloc, toggleAllDiscs,
     toggleHPCCat, toggleAllHPC,
-    openModalAffecterHPC, affecterEnsHPCDirect, retirerEnsHPC,
+    openModalAffecterHPC, retirerEnsHPC,
     handleInlineEdit,
     openModalEns, openModalEnsDisc, closeModalSelEns, confirmerSelEns,
     closeModalEns, saveModalEns, updateOrsPreview,

@@ -12,6 +12,7 @@
  *   5. README.md              → titre + badge
  *   6. CHANGELOG.md           → dernière entrée ## vX.Y.Z
  *   7. SKILL.md               → ligne « Version courante : **X.Y.Z** »
+ *   8. SKILL.md               → ligne de pied de page « *Version : X.Y.Z …* »
  *
  * Usage :
  *   node tests/check-version.js
@@ -57,6 +58,7 @@ const checks = [
   { nom: 'README.md — badge',          valeurs: [ first(/badge\/version-([0-9]+\.[0-9]+\.[0-9]+)-/, readme) ] },
   { nom: 'CHANGELOG.md — dernière',    valeurs: [ first(/^##\s+v([0-9]+\.[0-9]+\.[0-9]+)/m, changelog) ] },
   { nom: 'SKILL.md — version courante',valeurs: [ first(/Version courante\s*:\s*\*\*([0-9]+\.[0-9]+\.[0-9]+)\*\*/, skill) ] },
+  { nom: 'SKILL.md — pied de page',    valeurs: [ first(/\*Version\s*:\s*([0-9]+\.[0-9]+\.[0-9]+)\s/, skill) ] },
 ];
 
 // ── 3. Comparaison ─────────────────────────────────────────────────

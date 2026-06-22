@@ -5,6 +5,171 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.16.1 — Correctif heure bleue (grille) + purge du code mort EDT (2026-06-21)
+
+### Corrigé
+- **Heure bleue (onglet Préparation EDT › Contraintes établissement)** : la section
+  affichait l'ancienne interface « liste de créneaux candidats » dont les boutons
+  « + Ajouter ce créneau » et ✕ étaient inertes (fonctions devenues vides lors du
+  passage à la grille). Elle est remplacée par la **grille cliquable**, cohérente avec
+  celle des indisponibilités : un clic pose/retire un créneau candidat.
+- **Source de données unifiée** : la liste affichée et le bouton « Calculer le créneau
+  optimal » lisaient deux sources différentes (`heuresBleues.creneaux` vs
+  `grilleHeureBleue`). Tout passe désormais par la grille — plus d'incohérence.
+- **Onglet Indisponibilités** : suppression du bouton « + Indisponibilité » mort
+  (la saisie se fait à la grille). Disparition au passage d'un doublon d'`id`
+  `btnAddClibre` qui rendait le DOM invalide quand l'onglet était actif.
+
+### Nettoyé (code mort, aucun impact fonctionnel)
+- `edt.js` : retrait des fonctions fantômes `startAddIndispo`, `editIndispo`,
+  `saveIndispo`, `cancelIndispo`, `deleteIndispo`, `onIndispoPlageChange`,
+  `hbAddCreneau`, `hbRemoveCreneau` et de la variable inutilisée `_editIndispoId`.
+- `app.js` : retrait de 9 handlers orphelins (`edt-edit/save/cancel/delete-indispo`,
+  `edt-indispo-plage-change`, `hb-add-creneau`, `hb-remove-creneau`, `#btnAddIndispo`,
+  `sel-ens-hpc-direct`).
+- `enseignants.js` : retrait de la fonction orpheline `affecterEnsHPCDirect`.
+
+### Outillage
+- `tests/check-version.js` surveille désormais **aussi** la ligne de pied de page de
+  `SKILL.md` (`*Version : X.Y.Z …*`), qui était restée à 4.8.0 sans être détectée.
+
+### Conformité SKILL
+- Grille heure bleue calquée sur `_htmlGrilleIndispo`, branchée sur l'API existante
+  (`getGrilleHeureBleue` / `setGrilleHeureBleue` / `grilleHbToggle`), tokens CSS
+  existants (`etat-hb-*`). Zéro `onclick`, zéro style inline. Validé par simulation DOM
+  en Node + les 4 suites de tests existantes.
+
+---
+
+## v4.16.0 — Pastilles d'avancement par phase (2026-06-21)
+
+### Besoin
+Donner, dans la barre latérale, la sécurité que l'Excel ne donne pas : voir d'un
+coup d'œil où en est chaque phase de l'année, sans rien déclarer à la main.
+
+### Ajouté
+- `calculs.js` › `phaseStatuts(annee)` — **fonction pure** (zéro DOM) qui déduit
+  l'état de chaque phase (`afaire` / `encours` / `termine`) à partir des données
+  réelles, selon les règles validées avec le PERDIR :
+  - **Phase 1** : terminé si structures + enveloppe DGH + ≥ 1 enseignant.
+  - **Phase 2** : terminé si l'année est figée (snapshot).
+  - **Phase 3** : terminé si tous les enseignants ont ≥ 1 affectation.
+  - **Phase 4** : terminé si barrettes ET indisponibilités saisies.
+- `index.html` : pastille `.nav-phase-pill` dans chaque en-tête de phase.
+- `app.js` : `_renderPhaseStatuts()` colore les pastilles, appelé à chaque
+  navigation et dans `renderAll()` (donc après import / restauration / changement
+  d'année). Pastille simple à trois états (rouge / orange / vert).
+- `tests/test-phases.js` : 12 cas unitaires couvrant les règles ci-dessus.
+
+### Conformité SKILL
+- Logique d'avancement = fonction pure dans `calculs.js`, testée hors navigateur.
+- Couleurs via tokens (`--c-red` / `--c-amber` / `--c-green`), aucune en dur.
+
+---
+
+## v4.15.0 — Équipe fixe : créer / modifier / supprimer depuis la phase 1 (2026-06-21)
+
+### Besoin
+Dans la nouvelle navigation par phases, l'onglet « Équipe & HP/HSA » de la phase 1
+doit permettre de gérer directement les membres de l'équipe fixe (ajout,
+modification, suppression), sans avoir à basculer vers l'onglet « Équipe
+pédagogique » de la phase 3.
+
+### Ajouté
+- `equipe.js` : bouton « + Ajouter un membre » visible au-dessus du tableau
+  (et plus seulement à l'état vide) ; bouton « Supprimer » (✕) sur chaque ligne,
+  à côté du bouton « Modifier » existant.
+- Réutilisation des **fenêtres existantes et éprouvées** de `enseignants.js`
+  (`openModalEns`, `confirmDeleteEns`) déjà câblées dans `app.js` — aucune
+  duplication de logique de saisie ou de suppression.
+
+### Corrigé
+- `enseignants.js` › `execDeleteEns` : rafraîchit désormais la vue Équipe quand
+  elle est active (la création le faisait déjà, pas la suppression). La ligne
+  supprimée disparaît immédiatement du tableau de la phase 1.
+
+### Conformité SKILL
+- Boutons en délégation `data-action` (`open-ens-modal`, `edit-ens`,
+  `delete-ens`), tous handlers déjà présents dans `app.js`. Zéro `onclick`.
+- CSS via tokens (`--c-red` pour le survol « supprimer »), aucune couleur en dur.
+
+---
+
+## v4.14.0 — Navigation en « parcours de l'année » (4 phases pliables) (2026-06-21)
+
+### Besoin
+L'ancienne barre latérale mélangeait deux logiques : des sections temporelles
+(« Préparer les instances ») et des sections par objet (« Équipe », « Outils »).
+Rien n'indiquait *quand* on se sert de quoi. La barre devient un fil chronologique
+qui suit le rythme réel du travail de l'année.
+
+### Découpage retenu (validé)
+- **Tableau de bord** — tout en haut, hors phases (point d'entrée).
+- **Phase 1 · Construire & arbitrer la DGH** (dépliée par défaut) — Structures,
+  Dotation DGH, Équipe & HP/HSA, HPC, Scénarios, Besoins & apports, Alertes.
+- **Phase 2 · Présenter (CA / dialogue)** — Synthèse CA, Dialogue de gestion.
+- **Phase 3 · Répartir les services** — Équipe pédagogique, Répartition, PACTE/IMP.
+- **Phase 4 · Préparer l'EDT** — Contraintes EDT, Services enseignants.
+- **Boîte à outils** — Historique (Export / Import / Restaurer restent les boutons
+  d'action en bas de la barre).
+
+### Comportement
+- Pli/dépli **manuel**, aucun automatisme de date. Une seule phase dépliée à la
+  fois ; les autres restent accessibles d'un clic, jamais masquées.
+- La phase contenant l'onglet actif se **déplie automatiquement** lors d'une
+  navigation (l'onglet en cours n'est jamais caché).
+
+### Détail technique
+- `index.html` : bloc `<nav>` reconstruit en phases (`.nav-phase` / `.nav-phase-hd`
+  `data-phase-toggle` / `.nav-phase-items`). Chaque onglet reste un
+  `.nav-item[data-view]` → le routage existant fonctionne sans modification.
+- `app.js` : `_setPhase(n)` + branche de délégation `.nav-phase-hd` dans
+  `_onGlobalClick` (après le test `.nav-item`, donc les onglets routent
+  normalement) + auto-dépliage dans `navigate()`.
+- `style.css` : styles des phases via tokens de thème uniquement, mode réduit
+  géré (tous les onglets restent accessibles en icônes).
+- **Aucune vue modifiée** : seul le contenant de navigation change.
+
+### À suivre (non inclus dans cette version)
+- Pastilles d'avancement par phase (à faire / en cours / terminé) — règles métier
+  à valider avant implémentation.
+- CRUD de l'équipe fixe dans l'onglet Équipe de la phase 1.
+
+### Conformité SKILL
+- Zéro `onclick` inline ; pli/dépli en délégation globale.
+- Zéro couleur en dur ajoutée (tokens de thème).
+
+---
+
+## v4.13.0 — Import sécurisé : bouton « Restaurer la sauvegarde » (2026-06-21)
+
+### Besoin
+L'app créait déjà une sauvegarde de secours avant chaque import, mais celle-ci
+n'était pas récupérable : en cas d'import par erreur (mauvais fichier, mauvaise
+année), aucun moyen de revenir en arrière depuis l'interface. Pour un outil de
+direction manipulant des données qu'on ne veut surtout pas perdre, ce filet doit
+être actionnable d'un clic.
+
+### Ajouté
+- `data.js` › `restoreBackup()` — restaure la sauvegarde de secours. Fonctionne
+  par **échange** : l'état courant devient la nouvelle sauvegarde, donc la
+  restauration est elle-même réversible (un second clic revient en arrière).
+  Refus propre si aucune sauvegarde n'existe ou si elle est invalide.
+- `index.html` : bouton « ⟲ Restaurer » dans le bloc actions de la barre latérale
+  (réutilise la classe `.btn-data`, aucun nouveau style, compatible mode réduit).
+- `app.js` : câblage du bouton avec confirmation explicite avant écrasement, puis
+  re-rendu complet et toast de confirmation.
+- `tests/test-import.js` : +3 cas (retour à l'état d'avant import, réversibilité,
+  refus propre sans sauvegarde) → 10 cas au total.
+
+### Conformité SKILL
+- Tout accès `localStorage` reste dans `data.js` ; `app.js` passe par l'API.
+- Aucun `onclick` inline ; bouton statique câblé en `addEventListener` dans l'init
+  (même motif que `btnExport` / `btnImport`).
+- Aucune couleur en dur ajoutée (classe `.btn-data` réutilisée).
+
+---
+
 ## v4.12.2 — Robustesse : filet de test de l'import / migration (2026-06-21)
 
 ### Besoin

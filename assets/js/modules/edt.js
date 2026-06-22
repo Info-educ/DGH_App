@@ -23,7 +23,6 @@ const DGHEdt = (() => {
   let _tab = 'barrettes';
   let _editBarretteId  = null;
   let _editCoIntervId  = null;
-  let _editIndispoId   = null;
   let _editClibreId    = null;
   let _editSalleId     = null;   // géré dans cet onglet (déplacé depuis DGHEtab)
   let _prefillData     = null;   // données de pré-remplissage depuis un scénario (Sprint 17)
@@ -66,8 +65,9 @@ const DGHEdt = (() => {
     } else if (_tab === 'cointerv') {
       el.innerHTML = '<button class="btn-primary" id="btnAddCoInterv">+ Nouvelle co-intervention</button>';
     } else if (_tab === 'indispos') {
-      el.innerHTML = '<button class="btn-primary" id="btnAddIndispo">+ Indisponibilité</button>'
-        + '<button class="btn-secondary" id="btnAddClibre">+ Contrainte libre</button>';
+      // La saisie des indisponibilités se fait à la grille (clic sur les créneaux).
+      // Le bouton « + Contrainte libre » est rendu en contexte dans _renderIndispos().
+      el.innerHTML = '';
     } else if (_tab === 'notice') {
       el.innerHTML = '<button class="btn-secondary" id="btnPrintEdt">⎙ Imprimer</button>';
     } else {
@@ -748,6 +748,26 @@ const DGHEdt = (() => {
     return html;
   }
 
+  /** Génère la grille HTML pour l'heure bleue (état candidat / libre) */
+  function _htmlGrilleHeureBleue(jours, creneaux, cells) {
+    const JOUR_COURT = { lun:'Lun', mar:'Mar', mer:'Mer', jeu:'Jeu', ven:'Ven' };
+    let html = '<div class="grille-hebdo" id="grilleHbWrap">';
+    html += '<div class="grille-header"><div class="grille-heure-col"></div>';
+    jours.forEach(j => { html += '<div class="grille-jour-col">' + (JOUR_COURT[j]||j) + '</div>'; });
+    html += '</div>';
+    creneaux.forEach(h => {
+      html += '<div class="grille-row"><div class="grille-heure-label">' + h + 'h</div>';
+      jours.forEach(j => {
+        const key  = j + '-' + h;
+        const etat = cells[key] === 'candidat' ? 'candidat' : 'libre';
+        html += '<div class="grille-cell grille-hb-cell etat-hb-' + etat + '" data-action="grille-hb-toggle" data-key="' + key + '" title="' + JOUR_LABEL[j] + ' ' + h + 'h"></div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
   /** Bascule l'état d'une cellule de la grille indispo */
   function grilleToggleCell(ensId, key) {
     const grille = DGHData.getGrilleIndispo(ensId);
@@ -785,22 +805,6 @@ const DGHEdt = (() => {
   function grilleEnsChange(ensId) { _grilleEnsId = ensId; _renderIndispos(); }
   function grilleEnsReset(ensId)  { DGHData.setGrilleIndispo(ensId, {}); _renderIndispos(); app.toast('Grille réinitialisée.', 'info'); }
 
-  // Garder les fonctions d'édition des contraintes libres (inchangées)
-  // Les fonctions startAddIndispo / editIndispo / saveIndispo / deleteIndispo
-  // sont conservées pour compatibilité mais le formulaire texte est retiré
-  function startAddIndispo()  { /* remplacé par grille */ }
-  function editIndispo(id)    { /* remplacé par grille */ }
-  function cancelIndispo()    { _renderIndispos(); }
-
-  function onIndispoPlageChange() {
-    const plage = document.getElementById('inputIndispoPlage')?.value;
-    const wrap  = document.getElementById('indispoCreneauWrap');
-    if (wrap) wrap.classList.toggle('is-hidden', plage !== 'creneau');
-  }
-
-  function saveIndispo(id)   { /* remplacé par grille */ }
-  function deleteIndispo(id) { DGHData.deleteIndisponibilite(id); _renderIndispos(); }
-
   // ══════════════════════════════════════════════════════════════════
   // ONGLET 4 — CONTRAINTES ÉTABLISSEMENT (Sprint 15 / v4.9.0)
   //   • Organisation de la semaine scolaire
@@ -816,7 +820,6 @@ const DGHEdt = (() => {
     const salles = DGHData.getSalles();
     const types  = DGHData.getTypesSalle();
     const hb     = DGHData.getHeuresBleues();
-    const jours  = DGHData.getJoursSemaine();
 
     const typeLabel = t => (types.find(x => x.value === t) || {}).label || t;
 
@@ -876,27 +879,27 @@ const DGHEdt = (() => {
       + formSalle + listSalles
     + '</div>';
 
-    // ── Section 3 : Heure bleue ─────────────────────────────────────
-    const creneaux     = hb.creneaux || [];
-    const joursOpts    = jours.map(j => '<option value="' + j.value + '">' + _esc(j.label) + '</option>').join('');
-    const creneauxHtml = creneaux.map((c, i) =>
-      '<div class="hb-creneau-row">'
-        + '<span class="hb-creneau-label">' + _esc((jours.find(j=>j.value===c.jour)||{}).label || c.jour) + ' ' + _esc(c.debut) + '–' + _esc(c.fin) + '</span>'
-        + '<button class="btn-icon btn-icon-danger" data-action="hb-remove-creneau" data-idx="' + i + '" title="Retirer">✕</button>'
-      + '</div>'
-    ).join('') || '<p class="form-hint">Ajoutez 1 à 4 créneaux candidats — l\'application recommandera le meilleur.</p>';
+    // ── Section 3 : Heure bleue (grille de créneaux candidats) ──────
+    const grilleHB   = DGHData.getGrilleHeureBleue();
+    const cellsHB    = grilleHB.creneaux || {};
+    const joursHB    = os.joursOuvres && os.joursOuvres.length ? os.joursOuvres : JOURS_ALL;
+    const creneauxHB = _buildCreneaux(os);
+    const nbCand     = Object.values(cellsHB).filter(v => v === 'candidat').length;
 
     const hbSection = '<div class="edt-etab-section">'
       + '<h3 class="edt-synth-h3">Heure bleue <span class="edt-form-hint">— créneau de réunion commun</span></h3>'
       + '<label class="hb-actif-label"><input type="checkbox" id="inputHBActif"' + (hb.actif ? ' checked' : '') + '> Activer la recherche de créneau bleu</label>'
-      + '<div class="hb-creneaux-add">'
-        + '<select id="inputHBJour">' + joursOpts + '</select>'
-        + '<input type="time" id="inputHBDebut" value="12:00" />'
-        + '<input type="time" id="inputHBFin" value="13:00" />'
-        + '<button class="btn-secondary btn-sm" data-action="hb-add-creneau">+ Ajouter ce créneau</button>'
+      + '<div class="grid-ens-header">'
+        + '<div class="grid-legende">'
+          + '<span class="grid-leg-item"><span class="grid-cell-sample etat-hb-candidat"></span> Créneau candidat</span>'
+          + '<span class="grid-leg-item"><span class="grid-cell-sample etat-hb-libre"></span> Libre</span>'
+          + '<span class="grid-leg-hint">Clic pour basculer</span>'
+        + '</div>'
+        + '<button class="btn-secondary btn-sm" data-action="hb-reset-grille">Réinitialiser</button>'
       + '</div>'
-      + '<div class="hb-creneaux-list">' + creneauxHtml + '</div>'
-      + '<button class="btn-primary btn-sm" data-action="hb-calculer" ' + (creneaux.length === 0 ? 'disabled' : '') + '>Calculer le créneau optimal</button>'
+      + _htmlGrilleHeureBleue(joursHB, creneauxHB, cellsHB)
+      + '<p class="grid-recap"><span class="grid-recap-hb">' + (nbCand > 0 ? nbCand + ' créneau' + (nbCand>1?'x':'') + ' candidat' + (nbCand>1?'s':'') : '') + '</span></p>'
+      + '<button class="btn-primary btn-sm" data-action="hb-calculer"' + (nbCand === 0 ? ' disabled' : '') + '>Calculer le créneau optimal</button>'
       + '<div id="hbResultatWrap"></div>'
     + '</div>';
 
@@ -995,9 +998,6 @@ const DGHEdt = (() => {
     app.toast('Grille heure bleue réinitialisée.', 'info');
   }
 
-  // Garder pour compatibilité (le formulaire texte HB est retiré)
-  function hbAddCreneau()      { /* remplacé par grille */ }
-  function hbRemoveCreneau()   { /* remplacé par grille */ }
   function hbToggleActif(checked) { DGHData.setHeuresBleues({ actif: !!checked }); }
 
   function hbCalculer() {
@@ -1469,14 +1469,13 @@ const DGHEdt = (() => {
     kanbanDragStart, kanbanDragEnd, kanbanDragOver, kanbanDrop,
     onBarrDiscChange, barrAddSlot, barrRemoveSlot, barrSlotTypeChange,
     startAddCoInterv, editCoInterv, cancelCoInterv, saveCoInterv, deleteCoInterv,
-    startAddIndispo, editIndispo, cancelIndispo, saveIndispo, deleteIndispo, onIndispoPlageChange,
     startAddClibre, editClibre, cancelClibre, saveClibre, deleteClibre,
     // Onglet Indispos — grille (Sprint 16bis)
     grilleToggleCell, grilleEnsChange, grilleEnsReset, grilleHbToggle, hbResetGrille,
     // Onglet Contraintes établissement (Sprint 15)
     startAddSalleEdt, editSalleEdt, cancelSalleEdt, saveSalleEdt, deleteSalleEdt,
     etabJourToggle, etabMercrediToggle, etabHoraireChange,
-    hbAddCreneau, hbRemoveCreneau, hbToggleActif, hbCalculer,
+    hbToggleActif, hbCalculer,
     printSynthese
   };
 

@@ -1,7 +1,7 @@
 # SKILL.md — Instructions de développement DGH App
 
 > **À fournir à Claude au début de chaque session de développement.**
-> Version courante : **4.12.2** — robustesse : filet de test de l'import / migration (`tests/test-import.js` + fixture `legacy-4.8.0.json`) garantissant la relecture des anciens fichiers. (Précédent : resynchronisation des marqueurs de version + garde-fou `tests/check-version.js`, v4.12.1.)
+> Version courante : **4.16.1** — pastilles d'avancement par phase : `calculs.phaseStatuts(annee)` (fonction pure) déduit l'état (à faire / en cours / terminé) de chaque phase à partir des données réelles ; pastille colorée dans chaque en-tête de phase, rafraîchie à chaque navigation. (Précédent : CRUD équipe fixe en phase 1, v4.15.0. Le « parcours de l'année » est désormais complet.)
 
 ---
 
@@ -398,6 +398,29 @@ Calculs.bilanParDiscipline(enseignants, repartition, disciplines)
 
 ## Sprints futurs — Conception à valider lors d'une prochaine session
 
+### Dette technique connue — CSS dupliqué (audité v4.16.1)
+`style.css` contient **146 sélecteurs redéfinis dans le même contexte** (tous en
+contexte `BASE`, pas des variantes thème/impression). Audit de v4.16.1 :
+- **~81 occurrences = copies exactes** (mêmes propriétés, mêmes valeurs) → la 2ᵉ est
+  redondante, la supprimer serait *render-neutre*.
+- **~92 occurrences = surcharges porteuses** : soit valeurs divergentes (la dernière
+  l'emporte par cascade — ex. `.scen-tableau th`, `.scen-form-grid`), soit ajout de
+  propriétés uniques (souvent `font-family` sur cellules chiffrées — ex. `.dot-theorique`,
+  `.dot-input-h`, `.ens-onglet` défini 3×). **Ces blocs sont vivants : ne pas les retirer.**
+
+Régions principalement concernées : bloc `.dot-*` (≈ L829-936 dupliqué partiellement
+L950-1014), bloc `.scen-*` (≈ L2608-2928 vs L3308-3816, parfois en triple), onglets
+`.ens-onglet*` (L1917/2136/2204).
+
+**Règle de traitement (haut risque — cf. §2 « CSS = haut risque ») :** aucun retrait en
+masse. Les copies exactes et les surcharges porteuses sont **entrelacées** dans chaque
+région ; il n'existe aucun bloc entier supprimable d'un coup. Consolider **opportunément**,
+sélecteur par sélecteur, **uniquement** quand on édite déjà la section concernée, en
+vérifiant propriété par propriété qu'aucune règle unique n'est perdue, puis **QA visuelle
+en navigateur réel** (la simulation Node ne rend pas le CSS). Outil d'audit reproductible :
+le script `css_audit` / `css_classify` utilisé en v4.16.1 (suit la pile `@media`/`@supports`
+par comptage d'accolades et compare les jeux de propriétés).
+
 ### Dispositifs spécialisés SEGPA / ULIS / UPE2A
 Grilles MEN spécifiques non implémentées. Contraintes EDT propres à ces dispositifs
 (enseignants partagés avec d'autres établissements, horaires AESH, emplois du temps
@@ -572,6 +595,7 @@ Calculs.creneauBleuOptimal(enseignants, indispos, contraintesLibres, creneaux)
 node tests/check-version.js   # cohérence des marqueurs de version
 node tests/test-service.js    # moteur de calcul (cas de verifs.js)
 node tests/test-import.js     # compatibilité ascendante de l'import / migration
+node tests/test-phases.js     # avancement par phase (Calculs.phaseStatuts)
 ```
 Les trois doivent renvoyer exit 0. `test-import.js` rejoue l'import d'un vrai fichier
 ancien (`tests/fixtures/legacy-4.8.0.json`) dans le schéma courant : c'est le filet qui
@@ -591,7 +615,7 @@ changement de schéma majeur (`legacy-<version>.json`).
 
 *Ce fichier fait partie intégrante du projet DGH App.*
 *Le mettre à jour à chaque évolution structurelle.*
-*Version : 4.8.0 — Dernière mise à jour : Préparation EDT (Sprint 14)*
+*Version : 4.16.1 — Dernière mise à jour : correctif heure bleue (grille) + purge du code mort EDT*
 
 ## Modèle de données — Répartition de service (v4.2)
 

@@ -123,6 +123,32 @@ function check(label, fn) {
     JSON.parse(backup); // doit être un JSON valide
   });
 
+  // ════ CAS 4 — la restauration ramène l'état précédent, et est réversible ════
+  DGHData.init();
+  const freshNom = DGHData.get().etablissement.nom;            // état vierge
+  await DGHData.importJSON({ name: 'legacy.json', _text: legacy });
+  const legacyNom = DGHData.get().etablissement.nom;           // état importé
+
+  const r1 = DGHData.restoreBackup();
+  check('Restauration : revient à l\'état d\'avant le dernier import', () => {
+    assert(r1.ok, r1.message);
+    assert.strictEqual(DGHData.get().etablissement.nom, freshNom);
+  });
+
+  const r2 = DGHData.restoreBackup();
+  check('Restauration réversible : un 2e appel ré-applique l\'import', () => {
+    assert(r2.ok, r2.message);
+    assert.strictEqual(DGHData.get().etablissement.nom, legacyNom);
+  });
+
+  // ════ CAS 5 — restauration sans sauvegarde : refus propre ════
+  localStorage.removeItem('dgh-app-data-backup');
+  const r3 = DGHData.restoreBackup();
+  check('Sans sauvegarde disponible : refus propre (pas de plantage)', () => {
+    assert(r3 && r3.ok === false, 'devrait renvoyer { ok:false }');
+    assert(/sauvegarde/i.test(r3.message || ''), 'message explicite attendu');
+  });
+
   // ── Bilan ──
   console.log('\n' + '─'.repeat(52));
   if (fail === 0) {

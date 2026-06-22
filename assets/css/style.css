@@ -232,9 +232,47 @@ input::placeholder { color: var(--c-text-dim); }
   display: none;
 }
 
+/* ── Parcours de l'année : phases chronologiques pliables ── */
+.nav-parcours-label {
+  font-size: .58rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .12em;
+  color: var(--c-sb-muted);
+  padding: .875rem .875rem .25rem; white-space: nowrap;
+}
+.nav-phase { list-style: none; }
+.nav-phase-hd {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .5rem .75rem; margin: .1rem .5rem;
+  border-radius: 7px; cursor: pointer; user-select: none;
+  white-space: nowrap; transition: background var(--tf);
+}
+.nav-phase-hd:hover { background: var(--c-sb-hover); }
+.nav-phase-chevron {
+  font-size: .65rem; width: 12px; text-align: center; flex-shrink: 0;
+  color: var(--c-sb-muted); transition: transform var(--tf);
+}
+.nav-phase.expanded .nav-phase-chevron { transform: rotate(90deg); }
+.nav-phase-num {
+  font-size: .62rem; font-weight: 700; flex-shrink: 0;
+  width: 18px; height: 18px; line-height: 18px; text-align: center;
+  border-radius: 50%; color: var(--c-sb-active-t); background: var(--c-sb-active);
+}
+.nav-phase-title { font-weight: 600; font-size: .78rem; flex: 1; color: var(--c-sb-text); }
+.nav-phase-items { list-style: none; display: none; padding: 0; margin: 0; }
+.nav-phase.expanded .nav-phase-items { display: block; }
+.nav-phase-items .nav-item { margin-left: 1.1rem; }
+.nav-phase-pill { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-left: .35rem; background: var(--c-sb-muted); }
+.nav-phase-pill.is-afaire  { background: var(--c-red); }
+.nav-phase-pill.is-encours { background: var(--c-amber); }
+.nav-phase-pill.is-termine { background: var(--c-green); }
+.sidebar.collapsed .nav-phase-pill { display: none; }
+
 /* Collapsed */
 .sidebar.collapsed .nav-label,
 .sidebar.collapsed .nav-section-label,
+.sidebar.collapsed .nav-parcours-label,
+.sidebar.collapsed .nav-phase-title,
+.sidebar.collapsed .nav-phase-chevron,
 .sidebar.collapsed .nav-badge-alert,
 .sidebar.collapsed .year-label,
 .sidebar.collapsed .year-select,
@@ -246,6 +284,11 @@ input::placeholder { color: var(--c-text-dim); }
 .sidebar.collapsed .nav-item  { justify-content: center; margin: .1rem .4rem; padding: .5rem; }
 .sidebar.collapsed .nav-icon  { width: auto; font-size: 1rem; }
 .sidebar.collapsed .sidebar-actions { padding: .5rem .4rem; }
+/* Mode réduit : tous les onglets de phase restent accessibles en icônes */
+.sidebar.collapsed .nav-phase-items { display: block; }
+.sidebar.collapsed .nav-phase-items .nav-item { margin-left: .4rem; }
+.sidebar.collapsed .nav-phase-hd { justify-content: center; padding: .4rem; gap: .2rem; }
+.sidebar.collapsed .nav-phase-num { width: 16px; height: 16px; line-height: 16px; }
 
 .sidebar-actions {
   padding: .625rem .875rem;
@@ -5621,6 +5664,9 @@ td.col-grille {
 .eq-action-btn{background:none;border:none;cursor:pointer;color:var(--c-text-dim);
   font-size:1rem;padding:4px 6px;border-radius:6px;}
 .eq-action-btn:hover{background:var(--c-surface3);color:var(--c-text);}
+.eq-row-actions{white-space:nowrap;}
+.eq-action-del:hover{background:var(--c-red);color:#fff;}
+.eq-table-actions{display:flex;justify-content:flex-end;margin-bottom:10px;}
 
 @media(max-width:900px){
   .eq-kpi-grid{grid-template-columns:repeat(2,1fr);}

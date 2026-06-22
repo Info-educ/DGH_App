@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DGH App — Pilotage de la Dotation Globale Horaire</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=4.12.2" />
+  <link rel="stylesheet" href="assets/css/style.css?v=4.16.1" />
 </head>
 <body>
 
@@ -26,47 +26,79 @@
     </div>
     <ul class="nav-list" aria-label="Navigation principale">
 
-      <!-- TABLEAU DE BORD -->
+      <!-- TABLEAU DE BORD — point d'entrée, hors phases -->
       <li class="nav-item active" data-view="dashboard"><span class="nav-icon">⬡</span><span class="nav-label">Tableau de bord</span></li>
 
-      <!-- CADRE DE L'ANNÉE -->
-      <li class="nav-section-label">Cadre de l'année</li>
-      <li class="nav-item" data-view="structures"><span class="nav-icon">⊞</span><span class="nav-label">Structures</span></li>
-      <li class="nav-item" data-view="dotation"><span class="nav-icon">◎</span><span class="nav-label">Dotation DGH</span></li>
-      <li class="nav-item" data-view="equipe"><span class="nav-icon">◉</span><span class="nav-label">Équipe & HP/HSA</span></li>
-      <li class="nav-item" data-view="besoins"><span class="nav-icon">⊜</span><span class="nav-label">Besoins & apports</span></li>
-      <li class="nav-item" data-view="hpc"><span class="nav-icon">◈</span><span class="nav-label">H. péda. complémentaires</span></li>
+      <!-- PARCOURS DE L'ANNÉE — 4 phases chronologiques pliables -->
+      <li class="nav-parcours-label">Parcours de l'année</li>
 
-      <!-- PILOTER -->
-      <li class="nav-section-label">Piloter</li>
-      <li class="nav-item" data-view="scenarios"><span class="nav-icon">⊕</span><span class="nav-label">Scénarios</span><span class="nav-badge-scen is-hidden" id="badge-pilotage"></span></li>
+      <!-- Phase 1 -->
+      <li class="nav-phase expanded">
+        <div class="nav-phase-hd" data-phase-toggle="1">
+          <span class="nav-phase-chevron">▸</span><span class="nav-phase-num">1</span>
+          <span class="nav-phase-title">Construire &amp; arbitrer la DGH</span><span class="nav-phase-pill" data-phase-pill="1"></span>
+        </div>
+        <ul class="nav-phase-items">
+          <li class="nav-item" data-view="structures"><span class="nav-icon">⊞</span><span class="nav-label">Structures</span></li>
+          <li class="nav-item" data-view="dotation"><span class="nav-icon">◎</span><span class="nav-label">Dotation DGH</span></li>
+          <li class="nav-item" data-view="equipe"><span class="nav-icon">◉</span><span class="nav-label">Équipe & HP/HSA</span></li>
+          <li class="nav-item" data-view="hpc"><span class="nav-icon">◈</span><span class="nav-label">H. péda. complémentaires</span></li>
+          <li class="nav-item" data-view="scenarios"><span class="nav-icon">⊕</span><span class="nav-label">Scénarios</span><span class="nav-badge-scen is-hidden" id="badge-pilotage"></span></li>
+          <li class="nav-item" data-view="besoins"><span class="nav-icon">⊜</span><span class="nav-label">Besoins & apports</span></li>
+          <li class="nav-item" data-view="alertes"><span class="nav-icon">◬</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
+        </ul>
+      </li>
+
+      <!-- Phase 2 -->
+      <li class="nav-phase">
+        <div class="nav-phase-hd" data-phase-toggle="2">
+          <span class="nav-phase-chevron">▸</span><span class="nav-phase-num">2</span>
+          <span class="nav-phase-title">Présenter (CA / dialogue)</span><span class="nav-phase-pill" data-phase-pill="2"></span>
+        </div>
+        <ul class="nav-phase-items">
+          <li class="nav-item" data-view="instances" data-tab="synthese-ca"><span class="nav-icon">▤</span><span class="nav-label">Synthèse CA</span></li>
+          <li class="nav-item" data-view="instances" data-tab="dialogue"><span class="nav-icon">◈</span><span class="nav-label">Dialogue de gestion</span></li>
+        </ul>
+      </li>
+
+      <!-- Phase 3 -->
+      <li class="nav-phase">
+        <div class="nav-phase-hd" data-phase-toggle="3">
+          <span class="nav-phase-chevron">▸</span><span class="nav-phase-num">3</span>
+          <span class="nav-phase-title">Répartir les services</span><span class="nav-phase-pill" data-phase-pill="3"></span>
+        </div>
+        <ul class="nav-phase-items">
+          <li class="nav-item" data-view="enseignants"><span class="nav-icon">◉</span><span class="nav-label">Équipe pédagogique</span></li>
+          <li class="nav-item" data-view="repartition"><span class="nav-icon">▦</span><span class="nav-label">Répartition de service</span></li>
+          <li class="nav-item" data-view="missions"><span class="nav-icon">◑</span><span class="nav-label">PACTE / IMP</span></li>
+        </ul>
+      </li>
+
+      <!-- Phase 4 -->
+      <li class="nav-phase">
+        <div class="nav-phase-hd" data-phase-toggle="4">
+          <span class="nav-phase-chevron">▸</span><span class="nav-phase-num">4</span>
+          <span class="nav-phase-title">Préparer l'EDT</span><span class="nav-phase-pill" data-phase-pill="4"></span>
+        </div>
+        <ul class="nav-phase-items">
+          <li class="nav-item" data-view="edt"><span class="nav-icon">⊟</span><span class="nav-label">Contraintes EDT</span></li>
+          <li class="nav-item" data-view="instances" data-tab="services"><span class="nav-icon">◉</span><span class="nav-label">Services enseignants</span></li>
+        </ul>
+      </li>
+
+      <!-- BOÎTE À OUTILS — indépendante du moment de l'année -->
+      <li class="nav-section-label">Boîte à outils</li>
       <li class="nav-item" data-view="historique"><span class="nav-icon">◷</span><span class="nav-label">Historique</span></li>
-      <li class="nav-item" data-view="alertes"><span class="nav-icon">◬</span><span class="nav-label">Alertes</span><span class="nav-badge-alert" id="badge-alertes"></span></li>
-
-      <!-- PRÉPARER LES INSTANCES -->
-      <li class="nav-section-label">Préparer les instances</li>
-      <li class="nav-item" data-view="instances" data-tab="synthese-ca"><span class="nav-icon">▤</span><span class="nav-label">Synthèse CA</span></li>
-      <li class="nav-item" data-view="instances" data-tab="dialogue"><span class="nav-icon">◈</span><span class="nav-label">Dialogue de gestion</span></li>
-      <li class="nav-item" data-view="instances" data-tab="services"><span class="nav-icon">◉</span><span class="nav-label">Services enseignants</span></li>
-
-      <!-- ÉQUIPE -->
-      <li class="nav-section-label">Équipe</li>
-      <li class="nav-item" data-view="enseignants"><span class="nav-icon">◉</span><span class="nav-label">Équipe pédagogique</span></li>
-      <li class="nav-item" data-view="repartition"><span class="nav-icon">▦</span><span class="nav-label">Répartition de service</span></li>
-      <li class="nav-item" data-view="missions"><span class="nav-icon">◑</span><span class="nav-label">PACTE / IMP</span></li>
-
-      <!-- OUTILS -->
-      <li class="nav-section-label">Outils</li>
-      <li class="nav-item" data-view="edt"><span class="nav-icon">⊟</span><span class="nav-label">Contraintes EDT</span></li>
 
     </ul>
     <div class="sidebar-actions">
       <button class="btn-data" id="btnExport"><span>↓</span><span class="btn-data-label">Exporter</span></button>
       <button class="btn-data btn-data-import" id="btnImport"><span>↑</span><span class="btn-data-label">Importer</span></button>
       <input type="file" id="fileImport" accept=".json" style="display:none" />
+      <button class="btn-data" id="btnRestore" title="Restaurer l'état d'avant le dernier import"><span>⟲</span><span class="btn-data-label">Restaurer</span></button>
     </div>
     <div class="sidebar-footer">
-      <span>v4.12.2</span>
+      <span>v4.16.1</span>
       <a href="https://github.com/Info-educ/DGH_App" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -1045,25 +1077,25 @@
     </div>
   </div>
 
-  <script src="assets/js/data.js?v=4.12.2"></script>
-  <script src="assets/js/calculs.js?v=4.12.2"></script>
-  <script src="assets/js/verifs.js?v=4.12.2"></script>
-  <script src="assets/js/modules/dashboard.js?v=4.12.2"></script>
-  <script src="assets/js/modules/structures.js?v=4.12.2"></script>
-  <script src="assets/js/modules/dotation.js?v=4.12.2"></script>
-  <script src="assets/js/modules/equipe.js?v=4.12.2"></script>
-  <script src="assets/js/modules/besoins.js?v=4.12.2"></script>
-  <script src="assets/js/modules/hpc.js?v=4.12.2"></script>
-  <script src="assets/js/modules/etab.js?v=4.12.2"></script>
-  <script src="assets/js/modules/enseignants.js?v=4.12.2"></script>
-  <script src="assets/js/modules/repartition.js?v=4.12.2"></script>
-  <script src="assets/js/modules/pilotage.js?v=4.12.2"></script>
-  <script src="assets/js/modules/edt.js?v=4.12.2"></script>
-  <script src="assets/js/modules/historique.js?v=4.12.2"></script>
-  <script src="assets/js/modules/missions.js?v=4.12.2"></script>
-  <script src="assets/js/modules/instances.js?v=4.12.2"></script>
-  <script src="assets/js/app.js?v=4.12.2"></script>
-  <script src="assets/js/tutorial.js?v=4.12.2"></script>
+  <script src="assets/js/data.js?v=4.16.1"></script>
+  <script src="assets/js/calculs.js?v=4.16.1"></script>
+  <script src="assets/js/verifs.js?v=4.16.1"></script>
+  <script src="assets/js/modules/dashboard.js?v=4.16.1"></script>
+  <script src="assets/js/modules/structures.js?v=4.16.1"></script>
+  <script src="assets/js/modules/dotation.js?v=4.16.1"></script>
+  <script src="assets/js/modules/equipe.js?v=4.16.1"></script>
+  <script src="assets/js/modules/besoins.js?v=4.16.1"></script>
+  <script src="assets/js/modules/hpc.js?v=4.16.1"></script>
+  <script src="assets/js/modules/etab.js?v=4.16.1"></script>
+  <script src="assets/js/modules/enseignants.js?v=4.16.1"></script>
+  <script src="assets/js/modules/repartition.js?v=4.16.1"></script>
+  <script src="assets/js/modules/pilotage.js?v=4.16.1"></script>
+  <script src="assets/js/modules/edt.js?v=4.16.1"></script>
+  <script src="assets/js/modules/historique.js?v=4.16.1"></script>
+  <script src="assets/js/modules/missions.js?v=4.16.1"></script>
+  <script src="assets/js/modules/instances.js?v=4.16.1"></script>
+  <script src="assets/js/app.js?v=4.16.1"></script>
+  <script src="assets/js/tutorial.js?v=4.16.1"></script>
 
   <!-- Modale génération groupée de barrettes (Sprint 18) -->
   <div class="modal-overlay" id="modalGenBarrettes" role="dialog" aria-modal="true">

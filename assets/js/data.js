@@ -17,7 +17,7 @@
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '4.12.2';
+  const VERSION = '4.16.1';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   const TYPES_SALLE = [
@@ -1528,6 +1528,20 @@ const DGHData = (() => {
     });
   }
 
+  // Restaure la sauvegarde de secours créée avant le dernier import.
+  // Échange (swap) : l'état courant devient la nouvelle sauvegarde, de sorte
+  // que la restauration est elle-même réversible (un second appel revient en arrière).
+  function restoreBackup() {
+    const raw = localStorage.getItem(KEY + '-backup');
+    if (!raw) return { ok: false, message: 'Aucune sauvegarde disponible (aucun import effectué depuis l\'ouverture).' };
+    let backup;
+    try { backup = JSON.parse(raw); } catch (e) { return { ok: false, message: 'Sauvegarde illisible.' }; }
+    if (!backup.annees || !backup.etablissement) return { ok: false, message: 'Sauvegarde invalide.' };
+    localStorage.setItem(KEY + '-backup', JSON.stringify(_data)); // swap : l'état courant devient récupérable
+    _data = backup; _migrate(); // _migrate() réestampille et sauvegarde
+    return { ok: true, etablissement: _data.etablissement.nom || '?', annees: Object.keys(_data.annees) };
+  }
+
   function genId(prefix){return(prefix||'id')+'_'+Date.now()+'_'+Math.random().toString(36).substr(2,6);}
 
   // ══════════════════════════════════════════════════════════════════
@@ -1656,6 +1670,6 @@ const DGHData = (() => {
     resetAnnee,deleteAnnee,
     figerSnapshot,getSnapshot,supprimerSnapshot,
     getMissions,getMission,getMissionsEnseignant,addMission,updateMission,deleteMission,
-    save,exportJSON,importJSON,genId,isEmpty
+    save,exportJSON,importJSON,restoreBackup,genId,isEmpty
   };
 })();

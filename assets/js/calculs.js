@@ -1269,6 +1269,54 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
     return alertes.sort((a, b) => b.depassement - a.depassement);
   }
 
+  // ── AVANCEMENT PAR PHASE (parcours de l'année) ──────────────────────
+  // Fonction pure : déduit l'état de chaque phase à partir des données réelles.
+  // Règles validées avec le PERDIR (voir CHANGELOG v4.16.0).
+  // Retourne { 1:'afaire'|'encours'|'termine', 2:…, 3:…, 4:… }.
+  function phaseStatuts(annee) {
+    if (!annee) return { 1: 'afaire', 2: 'afaire', 3: 'afaire', 4: 'afaire' };
+    const structures   = annee.structures   || [];
+    const enseignants  = annee.enseignants  || [];
+    const affectations = annee.affectations  || [];
+    const dot = annee.dotation || {};
+    const edt = annee.contraintesEDT || {};
+
+    const hasStruct = structures.length > 0;
+    const hasEnv    = ((dot.hPosteEnveloppe || 0) + (dot.hsaEnveloppe || 0)) > 0;
+    const hasEns    = enseignants.length > 0;
+
+    // Phase 1 — Construire & arbitrer
+    let p1;
+    if (!hasStruct && !hasEnv && !hasEns)       p1 = 'afaire';
+    else if (hasStruct && hasEnv && hasEns)     p1 = 'termine';
+    else                                        p1 = 'encours';
+
+    // Phase 2 — Présenter : terminé si l'année a été figée (snapshot)
+    let p2;
+    if (p1 === 'afaire')      p2 = 'afaire';
+    else if (annee.snapshot)  p2 = 'termine';
+    else                      p2 = 'encours';
+
+    // Phase 3 — Répartir : terminé si tous les enseignants ont ≥ 1 affectation
+    let p3;
+    if (affectations.length === 0) p3 = 'afaire';
+    else {
+      const avecAff = new Set(affectations.map(a => a.ensId));
+      p3 = (hasEns && enseignants.every(e => avecAff.has(e.id))) ? 'termine' : 'encours';
+    }
+
+    // Phase 4 — EDT : terminé si barrettes ET indisponibilités saisies
+    let p4;
+    const nbBar = (edt.barrettes || []).length;
+    const nbInd = (edt.indisponibilites || []).length;
+    const total = nbBar + nbInd + (edt.coInterventions || []).length + (edt.contraintesLibres || []).length;
+    if (total === 0)               p4 = 'afaire';
+    else if (nbBar > 0 && nbInd > 0) p4 = 'termine';
+    else                           p4 = 'encours';
+
+    return { 1: p1, 2: p2, 3: p3, 4: p4 };
+  }
+
   return {
     GRILLES_MEN,
     getORS, plafondHP, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
@@ -1280,7 +1328,8 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
     heuresGrille, affectationsExistent, profsDeClasseDiscipline,
     grilleRepartition, controlesRepartition,
     controlesEDT, creneauBleuOptimal,
-    alertesBMP
+    alertesBMP,
+    phaseStatuts
   };
 
 })();

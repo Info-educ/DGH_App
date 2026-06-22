@@ -56,6 +56,27 @@ const app = (() => {
   }
 
   // ── NAVIGATION ───────────────────────────────────────────────────
+  // Pli/dépli des phases : une seule phase dépliée à la fois ; les autres
+  // restent accessibles d'un clic, jamais masquées ni supprimées.
+  function _setPhase(n) {
+    document.querySelectorAll('.nav-phase').forEach(ph => {
+      const hd = ph.querySelector('.nav-phase-hd');
+      ph.classList.toggle('expanded', !!hd && hd.dataset.phaseToggle === String(n));
+    });
+  }
+
+  // Pastilles d'avancement par phase, dérivées des données réelles (fonction pure Calculs).
+  function _renderPhaseStatuts() {
+    if (typeof Calculs === 'undefined' || !Calculs.phaseStatuts) return;
+    const st = Calculs.phaseStatuts(DGHData.getAnnee());
+    const LBL = { afaire: 'À faire', encours: 'En cours', termine: 'Terminé' };
+    document.querySelectorAll('.nav-phase-pill').forEach(p => {
+      const s = st[p.dataset.phasePill] || 'afaire';
+      p.className = 'nav-phase-pill is-' + s;
+      p.title = LBL[s];
+    });
+  }
+
   function navigate(viewId, tab) {
     if (!VIEWS[viewId]) return;
     // scenarios est un alias de pilotage (même view HTML)
@@ -71,6 +92,12 @@ const app = (() => {
     if (!navEl) navEl = document.querySelector(`.nav-item[data-view="${viewId}"]`);
     if (viewEl) viewEl.classList.add('active');
     if (navEl)  navEl.classList.add('active');
+    // Auto-déplier la phase qui contient l'onglet actif (sinon il resterait masqué).
+    const parentItems = navEl && navEl.closest('.nav-phase-items');
+    if (parentItems) {
+      const hd = parentItems.closest('.nav-phase') && parentItems.closest('.nav-phase').querySelector('.nav-phase-hd');
+      if (hd) _setPhase(hd.dataset.phaseToggle);
+    }
     const bc = document.getElementById('breadcrumb');
     if (bc) bc.textContent = VIEWS[viewId];
     if (window.innerWidth <= 768) document.getElementById('sidebar')?.classList.remove('open');
@@ -90,6 +117,7 @@ const app = (() => {
     if (viewId === 'instances')       DGHInstances.renderInstances(tab || null);
     // Barre supérieure : rafraîchie sur chaque vue → solde simulé visible partout
     DGHDashboard.renderTopbar();
+    _renderPhaseStatuts();
   }
 
   // ── EXPORT CSV (Excel FR : séparateur ; · BOM UTF-8 · décimales ,) ──
@@ -110,7 +138,7 @@ const app = (() => {
   }
 
   // ── RENDU GLOBAL ─────────────────────────────────────────────────
-  function renderAll() { DGHDashboard.updateBtnEtab(); renderYearSelect(); }
+  function renderAll() { DGHDashboard.updateBtnEtab(); renderYearSelect(); _renderPhaseStatuts(); }
 
   function renderYearSelect() {
     const sel    = document.getElementById('yearSelect'); if (!sel) return;
@@ -154,6 +182,8 @@ const app = (() => {
   function _onGlobalClick(e) {
     const navItem = e.target.closest('.nav-item[data-view]');
     if (navItem) { navigate(navItem.dataset.view, navItem.dataset.tab || null); return; }
+    const phaseHd = e.target.closest('.nav-phase-hd');
+    if (phaseHd) { _setPhase(phaseHd.dataset.phaseToggle); return; }
     const navBtn = e.target.closest('[data-navigate]');
     if (navBtn)  { navigate(navBtn.dataset.navigate); return; }
 
@@ -181,7 +211,6 @@ const app = (() => {
       if (action==='toggle-all-disc')  { DGHEnseignants.toggleAllDiscs(actionBtn.dataset.open==='1');                              return; }
       if (action==='affecter-ens-hpc') { DGHEnseignants.openModalAffecterHPC(actionBtn.dataset.hpcId);                            return; }
       if (action==='retirer-ens-hpc')  { DGHEnseignants.retirerEnsHPC(actionBtn.dataset.hpcId, actionBtn.dataset.ensIdx);           return; }
-      if (action==='sel-ens-hpc-direct'){ DGHEnseignants.affecterEnsHPCDirect(actionBtn.dataset.ensId||id);                        return; }
       if (action==='toggle-hpc-cat')    { DGHEnseignants.toggleHPCCat(actionBtn.dataset.cat);                                     return; }
       if (action==='toggle-all-hpc')    { DGHEnseignants.toggleAllHPC(actionBtn.dataset.open==='1');                              return; }
       if (action === 'pil-tab')            { DGHPilotage.switchTab(actionBtn.dataset.tab);           return; }
@@ -217,10 +246,6 @@ const app = (() => {
       if (action === 'edt-save-cointerv')         { DGHEdt.saveCoInterv(id);                        return; }
       if (action === 'edt-cancel-cointerv')       { DGHEdt.cancelCoInterv();                         return; }
       if (action === 'edt-delete-cointerv')       { DGHEdt.deleteCoInterv(id);                      return; }
-      if (action === 'edt-edit-indispo')          { DGHEdt.editIndispo(id);                         return; }
-      if (action === 'edt-save-indispo')          { DGHEdt.saveIndispo(id);                         return; }
-      if (action === 'edt-cancel-indispo')        { DGHEdt.cancelIndispo();                          return; }
-      if (action === 'edt-delete-indispo')        { DGHEdt.deleteIndispo(id);                       return; }
       if (action === 'edt-edit-clibre')           { DGHEdt.editClibre(id);                          return; }
       if (action === 'edt-save-clibre')           { DGHEdt.saveClibre(id);                          return; }
       if (action === 'edt-cancel-clibre')         { DGHEdt.cancelClibre();                           return; }
@@ -258,8 +283,6 @@ const app = (() => {
       if (action === 'salle-save')            { DGHEdt.saveSalleEdt(id);                            return; }
       if (action === 'salle-cancel')          { DGHEdt.cancelSalleEdt();                            return; }
       if (action === 'salle-delete')          { DGHEdt.deleteSalleEdt(id);                          return; }
-      if (action === 'hb-add-creneau')        { DGHEdt.hbAddCreneau();                              return; }
-      if (action === 'hb-remove-creneau')     { DGHEdt.hbRemoveCreneau(actionBtn.dataset.idx);      return; }
       if (action === 'hb-calculer')           { DGHEdt.hbCalculer();                                return; }
       if (action === 'edt-etab-jour-toggle')  { DGHEdt.etabJourToggle(actionBtn.value, actionBtn.checked); return; }
       if (action === 'edt-etab-mercredi-toggle') { DGHEdt.etabMercrediToggle(actionBtn.checked);    return; }
@@ -287,7 +310,6 @@ const app = (() => {
     if (e.target.closest('#btnAddBarrette'))    { DGHEdt.startAddBarrette();         return; }
     if (e.target.closest('#btnGenBarrettes'))   { DGHEdt.ouvrirModalGenBarrettes();  return; }
     if (e.target.closest('#btnAddCoInterv'))    { DGHEdt.startAddCoInterv();         return; }
-    if (e.target.closest('#btnAddIndispo'))     { DGHEdt.startAddIndispo();          return; }
     if (e.target.closest('#btnAddClibre'))      { DGHEdt.startAddClibre();           return; }
     if (e.target.closest('#modalGenBarrettesClose'))  { DGHEdt.fermerModalGenBarrettes(); return; }
     if (e.target.closest('#modalGenBarrettesCancel')) { DGHEdt.fermerModalGenBarrettes(); return; }
@@ -428,7 +450,6 @@ const app = (() => {
     if (e.target.id === 'edtBarretteDiscs')               { DGHEdt.onBarrDiscChange(); return; }
     if (e.target.classList.contains('edt-slot-type-sel')) { DGHEdt.barrSlotTypeChange(); return; }
     if (e.target.id === 'grilleEnsSelect')                { DGHEdt.grilleEnsChange(e.target.value); return; }
-    if (e.target.dataset.action === 'edt-indispo-plage-change') { DGHEdt.onIndispoPlageChange(); return; }
     if (e.target.id === 'inputMissionHeures')              { DGHMissions.updateHHebdo(); return; }
     if (e.target.id === 'inputMissionEns')                 { DGHMissions.updateEnsInfo(); return; }
     if (e.target.classList.contains('hist-year-sel')) {
@@ -530,6 +551,16 @@ const app = (() => {
         toast('Importé — '+(r.etablissement||'?'),'success');
       } catch(err) { toast('Erreur : '+err.message,'error',5000); }
       fileImport.value='';
+    });
+    document.getElementById('btnRestore').addEventListener('click', () => {
+      if (!confirm('Restaurer la sauvegarde ?\n\nVos données actuelles seront remplacées par l\'état d\'avant le dernier import. Cette restauration est réversible : cliquez à nouveau sur « Restaurer » pour revenir en arrière.')) return;
+      const r = DGHData.restoreBackup();
+      if (r.ok) {
+        renderAll(); DGHDashboard.renderDashboard();
+        toast('Sauvegarde restaurée — '+(r.etablissement||'?'),'success');
+      } else {
+        toast(r.message || 'Restauration impossible','warning',5000);
+      }
     });
     document.addEventListener('dgh:storage-error', ()=>toast('Erreur de sauvegarde locale','error',6000));
 

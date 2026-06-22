@@ -108,7 +108,8 @@ const DGHEquipe = (() => {
       return;
     }
 
-    let html = '<table class="eq-table"><thead><tr>'
+    let html = '<div class="eq-table-actions"><button class="btn-primary eq-btn-add" data-action="open-ens-modal">+ Ajouter un membre</button></div>'
+      + '<table class="eq-table"><thead><tr>'
       + '<th>Nom</th>'
       + '<th>Statut</th>'
       + '<th class="eq-hide-sm">Discipline</th>'
@@ -164,8 +165,10 @@ const DGHEquipe = (() => {
         + '<td class="eq-num"><span class="eq-hp-val">' + _h(r.hpTotal) + ' h</span></td>'
         + '<td class="eq-num">' + hsaCell + '</td>'
         + '<td class="eq-hide-sm">' + bar + '</td>'
-        + '<td class="eq-num"><button class="eq-action-btn" data-action="edit-ens" data-id="'
-          + r.id + '" title="Modifier">✎</button></td>'
+        + '<td class="eq-num eq-row-actions">'
+          + '<button class="eq-action-btn" data-action="edit-ens" data-id="' + r.id + '" title="Modifier">✎</button>'
+          + '<button class="eq-action-btn eq-action-del" data-action="delete-ens" data-id="' + r.id + '" title="Supprimer">✕</button>'
+          + '</td>'
         + '</tr>';
     });
 
