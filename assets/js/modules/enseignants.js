@@ -544,7 +544,7 @@ const DGHEnseignants = (() => {
     // Enseignants pas encore dans cette discipline
     const disponibles = tous.filter(ens => {
       const discs = Array.isArray(ens.disciplines) ? ens.disciplines : [];
-      return !discs.some(d => d.discNom === discNom);
+      return !discs.some(d => _discMatch(d.discNom, discNom));
     });
 
     if (disponibles.length === 0) {
@@ -779,38 +779,89 @@ const DGHEnseignants = (() => {
   }
 
   // ── MODAL DÉTAILS ────────────────────────────────────────────────────────
+
+  // Construit la liste des noms de disciplines "de base" à proposer dans les selects :
+  // on déduplique par matching souple (Anglais, Espagnol, Allemand… pas LV1/LV2)
+  function _discBaseNames() {
+    const disciplines = DGHData.getDisciplines();
+    const seen = [];
+    const opts = [];
+    disciplines.forEach(d => {
+      const norm = _normDisc(d.nom);
+      if (!seen.some(s => s === norm)) {
+        seen.push(norm);
+        opts.push(d.nom);
+      }
+    });
+    return opts.sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+
+  // Reconstruit la zone de selects dans la modal à partir d'un tableau de discNom
+  function _renderDiscSelects(discNoms) {
+    const wrap = document.getElementById('ensDiscSelects');
+    if (!wrap) return;
+    const opts = _discBaseNames();
+    const rows = discNoms.map((nom, i) => {
+      const selectOpts = '<option value="">— Choisir —</option>'
+        + opts.map(o => '<option value="' + _esc(o) + '"' + (_discMatch(o, nom) ? ' selected' : '') + '>' + _esc(o) + '</option>').join('');
+      return '<div class="ens-disc-row">'
+        + '<select class="ens-disc-select" data-idx="' + i + '">' + selectOpts + '</select>'
+        + (i > 0 ? '<button type="button" class="ens-disc-remove" data-action="ens-disc-retirer" data-idx="' + i + '" title="Retirer">✕</button>' : '')
+        + '</div>';
+    }).join('');
+    wrap.innerHTML = rows || '<div class="ens-disc-row"><select class="ens-disc-select" data-idx="0"><option value="">— Choisir —</option>'
+      + opts.map(o => '<option value="' + _esc(o) + '">' + _esc(o) + '</option>').join('')
+      + '</select></div>';
+  }
+
   function openModalEns(id) {
     const modal = document.getElementById('modalEns'); if (!modal) return;
     const ens = id ? DGHData.getEnseignant(id) : null;
-    const discVal = ens ? (ens.disciplinePrincipale || (Array.isArray(ens.disciplines) && ens.disciplines[0] ? ens.disciplines[0].discNom : '')) : '';
-    document.getElementById('modalEnsId').value        = id || '';
-    document.getElementById('modalEnsTitle').textContent = ens ? "Modifier l'enseignant" : 'Ajouter un enseignant';
-    document.getElementById('inputEnsNom').value        = ens ? (ens.nom||'') : '';
-    document.getElementById('inputEnsPrenom').value     = ens ? (ens.prenom||'') : '';
-    document.getElementById('inputEnsGrade').value      = ens ? (ens.grade||'certifie') : 'certifie';
-    document.getElementById('inputEnsStatut').value     = ens ? (ens.statut||'titulaire') : 'titulaire';
-    document.getElementById('inputEnsDisc').value       = discVal;
-    document.getElementById('inputEnsHeures').value     = ens ? (ens.heures||'') : '';
-    document.getElementById('inputEnsOrsManuel').value  = (ens && ens.orsManuel !== null && ens.orsManuel !== undefined) ? ens.orsManuel : '';
-    document.getElementById('inputEnsVolumeBMP').value   = (ens && ens.volumeBMP !== null && ens.volumeBMP !== undefined) ? ens.volumeBMP : '';
-    document.getElementById('inputEnsMotifORS').value    = ens ? (ens.motifORS||'') : '';
-    document.getElementById('inputEnsComment').value    = ens ? (ens.commentaire||'') : '';
+
+    // Disciplines existantes de l'enseignant
+    let discNoms = [];
+    if (ens) {
+      if (Array.isArray(ens.disciplines) && ens.disciplines.length > 0) {
+        discNoms = ens.disciplines.map(d => d.discNom).filter(Boolean);
+      } else if (ens.disciplinePrincipale) {
+        discNoms = [ens.disciplinePrincipale];
+      }
+    }
+    if (discNoms.length === 0) discNoms = [''];
+
+    document.getElementById('modalEnsId').value          = id || '';
+    document.getElementById('modalEnsTitle').textContent  = ens ? "Modifier l'enseignant" : 'Ajouter un enseignant';
+    document.getElementById('inputEnsNom').value          = ens ? (ens.nom||'') : '';
+    document.getElementById('inputEnsPrenom').value       = ens ? (ens.prenom||'') : '';
+    document.getElementById('inputEnsGrade').value        = ens ? (ens.grade||'certifie') : 'certifie';
+    document.getElementById('inputEnsStatut').value       = ens ? (ens.statut||'titulaire') : 'titulaire';
+    document.getElementById('inputEnsHeures').value       = ens ? (ens.heures||'') : '';
+    document.getElementById('inputEnsOrsManuel').value    = (ens && ens.orsManuel != null) ? ens.orsManuel : '';
+    document.getElementById('inputEnsVolumeBMP').value    = (ens && ens.volumeBMP != null) ? ens.volumeBMP : '';
+    document.getElementById('inputEnsMotifORS').value     = ens ? (ens.motifORS||'') : '';
+    document.getElementById('inputEnsComment').value      = ens ? (ens.commentaire||'') : '';
+
+    _renderDiscSelects(discNoms);
     _updateOrsPreview();
     modal.classList.add('modal-open');
-    // Différer le focus hors du cycle d'événement courant pour éviter
-    // que le navigateur génère un clic fantôme sur l'overlay (bug fermeture immédiate).
     setTimeout(() => { document.getElementById('inputEnsNom')?.focus(); }, 0);
   }
 
   function closeModalEns() { document.getElementById('modalEns')?.classList.remove('modal-open'); }
 
   function saveModalEns() {
-    const id = document.getElementById('modalEnsId').value.trim();
-    const nom = document.getElementById('inputEnsNom').value.trim();
+    const id     = document.getElementById('modalEnsId').value.trim();
+    const nom    = document.getElementById('inputEnsNom').value.trim();
     const prenom = document.getElementById('inputEnsPrenom').value.trim();
     if (!nom) { app.toast('Le nom est obligatoire.', 'error'); return; }
-    const disc   = document.getElementById('inputEnsDisc').value.trim();
-    const heures = parseFloat(document.getElementById('inputEnsHeures').value) || 0;
+
+    // Lire les disciplines depuis les selects dynamiques
+    const discSelects = document.querySelectorAll('#ensDiscSelects .ens-disc-select');
+    const discNoms = Array.from(discSelects).map(s => s.value.trim()).filter(Boolean);
+    // dédoublonnage souple
+    const discNomsUniq = discNoms.filter((n, i) => !discNoms.slice(0, i).some(prev => _discMatch(prev, n)));
+
+    const heures    = parseFloat(document.getElementById('inputEnsHeures').value) || 0;
     const statut    = document.getElementById('inputEnsStatut').value;
     const grade     = document.getElementById('inputEnsGrade').value;
     const orsManRaw = document.getElementById('inputEnsOrsManuel').value.trim();
@@ -836,21 +887,25 @@ const DGHEnseignants = (() => {
       volumeBMP:   volBMPRaw || null,
       motifORS,
       commentaire: document.getElementById('inputEnsComment').value.trim(),
-      // Initialiser ou mettre a jour la discipline principale
-      disciplinePrincipale: disc,
+      disciplinePrincipale: discNomsUniq[0] || '',
       heures
     };
     if (id) {
-      // Mettre a jour en preservant les autres disciplines
+      // Reconstruire le tableau disciplines en préservant les heures existantes
       const ens = DGHData.getEnseignant(id);
-      const discs = Array.isArray(ens?.disciplines) ? ens.disciplines.slice() : [];
-      if (disc && discs.length === 0) discs.push({ discNom: disc, heures });
-      else if (disc && discs.length > 0) { discs[0].discNom = disc; if (discs.length === 1) discs[0].heures = heures; }
-      fields.disciplines = discs.length > 0 ? discs : (disc ? [{ discNom: disc, heures }] : []);
+      const oldDiscs = Array.isArray(ens?.disciplines) ? ens.disciplines : [];
+      const newDiscs = discNomsUniq.map(nom => {
+        const old = oldDiscs.find(d => _discMatch(d.discNom, nom));
+        return { discNom: nom, heures: old ? (old.heures || 0) : 0 };
+      });
+      // Si une seule discipline et heures totales saisies, les affecter à cette discipline
+      if (newDiscs.length === 1) newDiscs[0].heures = heures;
+      fields.disciplines = newDiscs.length > 0 ? newDiscs : [];
       DGHData.updateEnseignant(id, fields);
       app.toast('Enseignant mis à jour.', 'success');
     } else {
       if (DGHData.findEnseignantByNomPrenom(nom, prenom)) { app.toast('Cet enseignant existe déjà.', 'warning', 5000); return; }
+      fields.disciplines = discNomsUniq.map((n, i) => ({ discNom: n, heures: i === 0 ? heures : 0 }));
       DGHData.addEnseignant(fields);
       app.toast('Enseignant ajouté.', 'success');
     }
@@ -859,6 +914,21 @@ const DGHEnseignants = (() => {
     if (typeof DGHEquipe !== 'undefined' && document.getElementById('view-equipe')?.classList.contains('active')) {
       DGHEquipe.renderEquipe();
     }
+  }
+
+  function ajouterLigneDisc() {
+    const wrap = document.getElementById('ensDiscSelects');
+    if (!wrap) return;
+    const current = Array.from(wrap.querySelectorAll('.ens-disc-select')).map(s => s.value);
+    _renderDiscSelects([...current, '']);
+  }
+
+  function retirerLigneDisc(idx) {
+    const wrap = document.getElementById('ensDiscSelects');
+    if (!wrap) return;
+    const current = Array.from(wrap.querySelectorAll('.ens-disc-select')).map(s => s.value);
+    current.splice(idx, 1);
+    _renderDiscSelects(current.length > 0 ? current : ['']);
   }
 
   function updateOrsPreview() { _updateOrsPreview(); }
@@ -1020,7 +1090,7 @@ const DGHEnseignants = (() => {
     let s = raw.trim().replace(/^[A-Z]\d{4}\s+/,'').trim();
     const MAP = {
       'ARTS PLAST':'Arts plastiques','PHY.CHIMIE':'Physique-Chimie',
-      'ANGLAIS':'LV1','ALLEMAND':'LV2','ESPAGNOL':'LV2',
+      'ANGLAIS':'Anglais','ALLEMAND':'Allemand','ESPAGNOL':'Espagnol',
       'LET MODERN':'Français','MATHEMATIQ':'Mathématiques',
       'HIST. GEO.':'Histoire-Géographie','TECHNOLOGI':'Technologie',
       'S. V. T.':'SVT','EDU MUSICA':'Éducation musicale',
@@ -1029,6 +1099,19 @@ const DGHEnseignants = (() => {
       'E.M.C.':'EMC','LATIN':'Latin','GREC':'Grec','DOCUMENTATION':'Documentation'
     };
     return MAP[s.toUpperCase().trim()] || s;
+  }
+
+  // Normalisation pour matching souple (identique à repartition.js)
+  function _normDisc(s) {
+    return String(s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+  }
+  function _discMatch(a, b) {
+    const na = _normDisc(a); const nb = _normDisc(b);
+    if (!na || !nb) return false;
+    return na === nb || na.includes(nb) || nb.includes(na);
   }
   function _normalizeGrade(raw) {
     const r = (raw||'').toLowerCase();
@@ -1179,6 +1262,7 @@ const DGHEnseignants = (() => {
     openModalEns, openModalEnsDisc, closeModalSelEns, confirmerSelEns,
     closeModalEns, saveModalEns, updateOrsPreview,
     retirerEnsDisc,
+    ajouterLigneDisc, retirerLigneDisc,
     confirmDeleteEns, closeConfirmEns, execDeleteEns,
     confirmDeleteAll, closeConfirmAll, execDeleteAll,
     openModalCSV, closeModalCSV, handleCSVFile, confirmImportCSV,

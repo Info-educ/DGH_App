@@ -918,7 +918,12 @@
             </select>
           </div>
         </div>
-        <div class="form-group"><label for="inputEnsDisc">Discipline principale</label><input type="text" id="inputEnsDisc" placeholder="ex. Français, Mathématiques…" maxlength="60" /><span class="form-hint">Saisie libre — utilisée uniquement pour l'affichage</span></div>
+        <div class="form-group">
+          <label>Discipline(s) enseignée(s)</label>
+          <div id="ensDiscSelects" class="ens-disc-selects-wrap"></div>
+          <button type="button" class="btn-link ens-disc-add-btn" id="btnEnsDiscAjouter" data-action="ens-disc-ajouter">+ Ajouter une discipline</button>
+          <span class="form-hint">Choisissez la langue ou la matière (ex. Anglais, Espagnol) — pas le rang LV1/LV2 : un angliciste apparaîtra automatiquement sur LV1 <em>et</em> LV2 Anglais.</span>
+        </div>
         <div class="form-row-2">
           <div class="form-group">
             <label for="inputEnsHeures">Heures / semaine dans l'établissement <span class="form-required">*</span></label>

@@ -211,6 +211,8 @@ const app = (() => {
       if (action==='delete-ens')      { DGHEnseignants.confirmDeleteEns(id);                                                       return; }
       if (action==='add-ens-disc')    { DGHEnseignants.openModalEnsDisc(actionBtn.dataset.disc);                                   return; }
       if (action==='retirer-ens-disc'){ DGHEnseignants.retirerEnsDisc(id, actionBtn.dataset.disc);                                 return; }
+      if (action==='ens-disc-ajouter'){ DGHEnseignants.ajouterLigneDisc();                                                         return; }
+      if (action==='ens-disc-retirer'){ DGHEnseignants.retirerLigneDisc(parseInt(actionBtn.dataset.idx));                           return; }
       if (action==='toggle-disc')      { DGHEnseignants.toggleDiscBloc(actionBtn.dataset.disc);                                    return; }
       if (action==='toggle-all-disc')  { DGHEnseignants.toggleAllDiscs(actionBtn.dataset.open==='1');                              return; }
       if (action==='affecter-ens-hpc') { DGHEnseignants.openModalAffecterHPC(actionBtn.dataset.hpcId);                            return; }

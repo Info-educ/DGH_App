@@ -1487,6 +1487,26 @@ td.col-grille {
 .ens-badge-contractuel { background: var(--c-surface3); color: var(--c-text-muted); }
 
 /* ── Aperçu ORS dans la modal ────────────────────────────────────────── */
+/* Disciplines dans la modal enseignant */
+.ens-disc-selects-wrap { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.ens-disc-row { display: flex; align-items: center; gap: 8px; }
+.ens-disc-select {
+  flex: 1; font-family: inherit; font-size: 13px;
+  padding: 6px 10px; border: 1px solid var(--c-border);
+  border-radius: 6px; background: var(--c-surface); color: var(--c-text); cursor: pointer;
+}
+.ens-disc-remove {
+  background: none; border: 1px solid var(--c-border2); border-radius: 4px;
+  color: var(--c-text-dim); font-size: .75rem; padding: 3px 7px; cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.ens-disc-remove:hover { color: var(--c-danger, #c0392b); border-color: var(--c-danger, #c0392b); }
+.ens-disc-add-btn {
+  font-size: .78rem; padding: 0; border: none; cursor: pointer;
+  color: var(--c-accent); background: none; font-family: inherit;
+}
+.ens-disc-add-btn:hover { color: var(--c-accent-hover); text-decoration: underline; }
+
 .ens-ors-preview {
   padding: .5rem .75rem;
   border-radius: var(--radius);

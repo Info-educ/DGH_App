@@ -38,8 +38,24 @@ const DGHRepartition = (() => {
     if (!ens) return '?';
     return ((ens.nom || '') + (ens.prenom ? ' ' + ens.prenom.charAt(0) + '.' : '')).trim() || '?';
   }
+  // Normalise un nom de discipline : minuscules, supprime accents, espaces/tirets/underscores → espace simple
+  function _normDisc(s) {
+    return String(s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+  }
+
+  // Matching souple bidirectionnel : "Anglais" matche "LV1", "LV2 - Anglais", "LV2 Anglais"
+  function _discMatch(a, b) {
+    const na = _normDisc(a);
+    const nb = _normDisc(b);
+    if (!na || !nb) return false;
+    return na === nb || na.includes(nb) || nb.includes(na);
+  }
+
   function _ensADiscipline(ens, discNom) {
-    return Array.isArray(ens.disciplines) && ens.disciplines.some(d => d.discNom === discNom);
+    return Array.isArray(ens.disciplines) && ens.disciplines.some(d => _discMatch(d.discNom, discNom));
   }
 
   // ══════════════════════════════════════════════════════════════════
