@@ -20,6 +20,24 @@ const DGHData = (() => {
   const VERSION = '4.17.0';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
+  // Matching souple discipline (identique à repartition.js et enseignants.js)
+  function _normDisc(s) {
+    return String(s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  const _LANGUES = ['anglais','espagnol','allemand','italien','portugais','arabe','chinois','japonais','russe','neerlandais'];
+  const _LV_RE   = /^lv\d/;
+  function _discMatch(a, b) {
+    const na = _normDisc(a); const nb = _normDisc(b);
+    if (!na || !nb) return false;
+    if (na === nb) return true;
+    if (na.includes(nb) || nb.includes(na)) return true;
+    const aL = _LANGUES.some(l => na === l), bL = _LANGUES.some(l => nb === l);
+    if ((aL && _LV_RE.test(nb)) || (bL && _LV_RE.test(na))) return true;
+    return false;
+  }
+
   const TYPES_SALLE = [
     { value: 'svt',       label: 'Labo SVT' },
     { value: 'physique',  label: 'Labo Physique-Chimie' },
@@ -338,6 +356,28 @@ const DGHData = (() => {
   }
 
   // ── ORCHESTRATEUR ─────────────────────────────────────────────────
+  // v4.17 : nettoie les doublons LV dans les fiches enseignants
+  // Ex. BEDOU avait { discNom:'Anglais', heures:18 } + { discNom:'LV1', heures:18 }
+  // → on garde uniquement l'entrée "Anglais" et on y reporte les heures de "LV1"
+  function _migrateDiscDoublons(ann) {
+    (ann.enseignants||[]).forEach(ens => {
+      if (!Array.isArray(ens.disciplines) || ens.disciplines.length < 2) return;
+      const dedup = [];
+      ens.disciplines.forEach(d => {
+        const existing = dedup.find(x => _discMatch(x.discNom, d.discNom));
+        if (existing) {
+          // Garder le nom le plus "propre" (langue > LV1/LV2 générique)
+          // Prendre les heures max des deux
+          existing.heures = Math.max(existing.heures || 0, d.heures || 0);
+        } else {
+          dedup.push({ ...d });
+        }
+      });
+      ens.disciplines = dedup;
+      if (dedup.length > 0) ens.disciplinePrincipale = dedup[0].discNom;
+    });
+  }
+
   function _migrate() {
     if (!_data._meta) _data._meta = {};
     if (_data.annees) {
@@ -349,6 +389,7 @@ const DGHData = (() => {
         _migrateV38Groupes(ann);
         _migrateV42Affectations(ann);
         _migrateV48EDT(ann);
+        _migrateDiscDoublons(ann);
       });
     }
     _migrateV34Etab();
@@ -1464,10 +1505,16 @@ const DGHData = (() => {
       const parDisc = sommes[ens.id] || {};
       if (!Array.isArray(ens.disciplines)) ens.disciplines = [];
       // Écraser les disciplines pilotées par des affectations
+      // Si "LV1" matche "Anglais" dans la fiche → on met à jour "Anglais" (pas "LV1")
       Object.keys(parDisc).forEach(nom => {
-        const d = ens.disciplines.find(x => x.discNom === nom);
-        if (d) d.heures = parDisc[nom];
-        else   ens.disciplines.push({ discNom: nom, heures: parDisc[nom] });
+        const d = ens.disciplines.find(x => _discMatch(x.discNom, nom));
+        if (d) {
+          // Mettre à jour sous le nom déjà dans la fiche (ex. "Anglais", pas "LV1")
+          d.heures = parDisc[nom];
+        } else {
+          // Pas de correspondance dans la fiche : ajouter sous le nom de la discipline
+          ens.disciplines.push({ discNom: nom, heures: parDisc[nom] });
+        }
       });
       ens.heures = Math.round(ens.disciplines.reduce((s,d)=>s+(parseFloat(d.heures)||0),0)*2)/2;
       ens.disciplinePrincipale = ens.disciplines.length > 0 ? ens.disciplines[0].discNom : '';
@@ -1477,7 +1524,7 @@ const DGHData = (() => {
   /** Indique si une discipline d'un enseignant est pilotée par des affectations. */
   function disciplinePiloteeParAffectation(ensId, discNom, annee) {
     const ann = getAnnee(annee);
-    const disc = (ann.disciplines||[]).find(d => d.nom === discNom);
+    const disc = (ann.disciplines||[]).find(d => _discMatch(d.nom, discNom));
     if (!disc) return false;
     return (ann.affectations||[]).some(a => a.ensId === ensId && a.disciplineId === disc.id);
   }
