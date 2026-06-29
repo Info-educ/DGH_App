@@ -1,5 +1,5 @@
 /**
- * DGH App — Couche données v4.9.5
+ * DGH App — Couche données v4.16.4
  * SEUL fichier qui touche localStorage
  *
  * v3.0.0 — Sprint 5 : enveloppe HP/HSA, groupesCours, heuresPedaComp, sélection classes
@@ -17,7 +17,7 @@
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '4.16.1';
+  const VERSION = '4.16.4';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   const TYPES_SALLE = [
@@ -127,176 +127,168 @@ const DGHData = (() => {
     }
   }
 
-  function _migrate() {
-    if (!_data._meta) _data._meta = {};
-    if (_data.annees) {
-      Object.values(_data.annees).forEach(ann => {
-        if (!Array.isArray(ann.structures)) ann.structures = [];
-        ann.structures.forEach(div => {
-          if (!Array.isArray(div.options))      div.options    = [];
-          if (div.dispositif === undefined)     div.dispositif = null;
-          if (typeof div.effectif !== 'number') div.effectif   = 0;
-        });
-        if (!ann.dotation) ann.dotation = { hPosteEnveloppe: 0, hsaEnveloppe: 0, commentaire: '' };
-        if (ann.dotation.enveloppe !== undefined) {
-          if (ann.dotation.hPosteEnveloppe === undefined) ann.dotation.hPosteEnveloppe = ann.dotation.enveloppe || 0;
-          if (ann.dotation.hsaEnveloppe    === undefined) ann.dotation.hsaEnveloppe    = 0;
-          delete ann.dotation.enveloppe;
-        }
-        if (ann.dotation.hPosteEnveloppe === undefined) ann.dotation.hPosteEnveloppe = 0;
-        if (ann.dotation.hsaEnveloppe    === undefined) ann.dotation.hsaEnveloppe    = 0;
-        if (!Array.isArray(ann.disciplines)) ann.disciplines = [];
-        if (!Array.isArray(ann.repartition)) ann.repartition = [];
-        ann.repartition.forEach(r => {
-          if (r.commentaire === undefined) r.commentaire = '';
-          if (r.hPoste === undefined) { r.hPoste = r.heuresAllouees || 0; delete r.heuresAllouees; }
-          if (r.hsa    === undefined) r.hsa = 0;
-          if (!Array.isArray(r.groupesCours)) r.groupesCours = [];
-          r.groupesCours.forEach(gc => {
-            if (!Array.isArray(gc.classesIds)) gc.classesIds = [];
-            if (typeof gc.heures !== 'number') gc.heures = 0;
-            if (!gc.commentaire) gc.commentaire = '';
-          });
-        });
-        if (!Array.isArray(ann.heuresPedaComp)) {
-          const anciens = Array.isArray(ann.groupes) ? ann.groupes : [];
-          ann.heuresPedaComp = anciens.map(g => ({
-            id: g.id || genId('hpc'), nom: g.nom || '',
-            categorie: _migType(g.type), disciplineId: g.disciplineId || null,
-            classesIds: [], heures: g.heures || 0, effectif: g.effectif || 0, commentaire: g.commentaire || ''
-          }));
-          delete ann.groupes;
-        }
-        if (!ann.grilles || typeof ann.grilles !== 'object') ann.grilles = {};
-        ann.heuresPedaComp.forEach(h => {
-          if (!h.categorie) h.categorie = 'autre';
-          if (!Array.isArray(h.classesIds)) h.classesIds = [];
-          if (typeof h.heures   !== 'number') h.heures   = 0;
-          if (typeof h.effectif !== 'number') h.effectif = 0;
-          if (!h.commentaire) h.commentaire = '';
-          if (!h.typeHeure) h.typeHeure = 'hp';
-          // migration v3.3.3 : enseignantId → enseignants[] (multi-affectation)
-          if (!Array.isArray(h.enseignants)) {
-            if (h.enseignantId) {
-              h.enseignants = [{ ensId: h.enseignantId, heures: h.heures || 0 }];
-            } else {
-              h.enseignants = [];
-            }
-            delete h.enseignantId;
-          }
-        });
-        // — Migration v3.2 : enseignants
-        if (!Array.isArray(ann.enseignants)) ann.enseignants = [];
-        ann.enseignants.forEach(ens => {
-          if (!ens.grade)                       ens.grade               = 'certifie';
-          if (!ens.statut)                      ens.statut              = 'titulaire';
-          // Migration : 'temps-partiel' est un statut valide (v3.3.2)
-          const statutsValides = ['titulaire','bmp','tzr','contractuel','temps-partiel'];
-          if (!statutsValides.includes(ens.statut)) ens.statut = 'titulaire';
-          if (ens.disciplinePrincipale === undefined) ens.disciplinePrincipale = '';
-          if (ens.motifORS  === undefined) ens.motifORS  = '';
-          if (ens.volumeBMP === undefined) ens.volumeBMP = null;
-          if (ens.heures === undefined) {
-            // Compatibilité : ancienne structure services[]
-            ens.heures = Array.isArray(ens.services)
-              ? Math.round(ens.services.reduce((s,srv)=>s+(parseFloat(srv.heures)||0),0)*2)/2
-              : 0;
-          }
-          if (Array.isArray(ens.services)) delete ens.services;
-          if (ens.commentaire === undefined)    ens.commentaire         = '';
-          if (ens.orsManuel   === undefined)    ens.orsManuel           = null;
-          // Migration v3.3 : disciplines[] multi-matieres
-          if (!Array.isArray(ens.disciplines)) {
-            ens.disciplines = (ens.disciplinePrincipale && ens.heures > 0)
-              ? [{ discNom: ens.disciplinePrincipale, heures: ens.heures }]
-              : (ens.disciplinePrincipale ? [{ discNom: ens.disciplinePrincipale, heures: 0 }] : []);
-          }
-          // Synchroniser heures total = somme disciplines
-          ens.heures = Math.round(ens.disciplines.reduce((s,d)=>s+(parseFloat(d.heures)||0),0)*2)/2;
-          // disciplinePrincipale = premiere discipline (compat affichage)
-          ens.disciplinePrincipale = ens.disciplines.length > 0 ? ens.disciplines[0].discNom : '';
-        });
-      });
+  // ── MIGRATIONS PAR VERSION ────────────────────────────────────────
+  // Chaque sous-fonction couvre un périmètre précis ; _migrate() les orchestre.
+
+  // v3.0–3.3 : structures, dotation, repartition, HPC, enseignants (données de base)
+  function _migrateV30Annees(ann) {
+    if (!Array.isArray(ann.structures)) ann.structures = [];
+    ann.structures.forEach(div => {
+      if (!Array.isArray(div.options))      div.options    = [];
+      if (div.dispositif === undefined)     div.dispositif = null;
+      if (typeof div.effectif !== 'number') div.effectif   = 0;
+    });
+    if (!ann.dotation) ann.dotation = { hPosteEnveloppe: 0, hsaEnveloppe: 0, commentaire: '' };
+    if (ann.dotation.enveloppe !== undefined) {
+      if (ann.dotation.hPosteEnveloppe === undefined) ann.dotation.hPosteEnveloppe = ann.dotation.enveloppe || 0;
+      if (ann.dotation.hsaEnveloppe    === undefined) ann.dotation.hsaEnveloppe    = 0;
+      delete ann.dotation.enveloppe;
     }
-    // Migration v3.4 : typeEtab
-    if (!_data.etablissement.typeEtab) {
-      _data.etablissement.typeEtab = 'college';
+    if (ann.dotation.hPosteEnveloppe === undefined) ann.dotation.hPosteEnveloppe = 0;
+    if (ann.dotation.hsaEnveloppe    === undefined) ann.dotation.hsaEnveloppe    = 0;
+    if (!Array.isArray(ann.disciplines)) ann.disciplines = [];
+    if (!Array.isArray(ann.repartition)) ann.repartition = [];
+    ann.repartition.forEach(r => {
+      if (r.commentaire === undefined) r.commentaire = '';
+      if (r.hPoste === undefined) { r.hPoste = r.heuresAllouees || 0; delete r.heuresAllouees; }
+      if (r.hsa    === undefined) r.hsa = 0;
+      if (!Array.isArray(r.groupesCours)) r.groupesCours = [];
+      r.groupesCours.forEach(gc => {
+        if (!Array.isArray(gc.classesIds)) gc.classesIds = [];
+        if (typeof gc.heures !== 'number') gc.heures = 0;
+        if (!gc.commentaire) gc.commentaire = '';
+      });
+    });
+    if (!Array.isArray(ann.heuresPedaComp)) {
+      const anciens = Array.isArray(ann.groupes) ? ann.groupes : [];
+      ann.heuresPedaComp = anciens.map(g => ({
+        id: g.id || genId('hpc'), nom: g.nom || '',
+        categorie: _migType(g.type), disciplineId: g.disciplineId || null,
+        classesIds: [], heures: g.heures || 0, effectif: g.effectif || 0, commentaire: g.commentaire || ''
+      }));
+      delete ann.groupes;
     }
-    // Migration v3.9 : enveloppePacte / enveloppeImp
-    if (_data.etablissement.enveloppePacte === undefined) _data.etablissement.enveloppePacte = 0;
-    if (_data.etablissement.enveloppeImp    === undefined) _data.etablissement.enveloppeImp    = 0;
-    // Migration v4.0 : logo
-    if (_data.etablissement.logo === undefined) _data.etablissement.logo = null;
-    // Migration v3.5 : scenarios[]
-    Object.values(_data.annees).forEach(ann => {
-      if (!Array.isArray(ann.scenarios)) { ann.scenarios = []; delete ann.simulation; }
+    if (!ann.grilles || typeof ann.grilles !== 'object') ann.grilles = {};
+    ann.heuresPedaComp.forEach(h => {
+      if (!h.categorie) h.categorie = 'autre';
+      if (!Array.isArray(h.classesIds)) h.classesIds = [];
+      if (typeof h.heures   !== 'number') h.heures   = 0;
+      if (typeof h.effectif !== 'number') h.effectif = 0;
+      if (!h.commentaire) h.commentaire = '';
+      if (!h.typeHeure) h.typeHeure = 'hp';
+      // v3.3.3 : enseignantId → enseignants[] (multi-affectation)
+      if (!Array.isArray(h.enseignants)) {
+        h.enseignants = h.enseignantId ? [{ ensId: h.enseignantId, heures: h.heures || 0 }] : [];
+        delete h.enseignantId;
+      }
     });
-    // Migration v4.10 (Sprint 21) : modificateur.typeHeure → modificateur.forcage
-    // Avant : typeHeure ('hp'|'hsa') = choix ferme imposé à chaque modalité.
-    // Après : forcage ('hp'|'hsa'|absent). Absent = bascule auto sur l'enveloppe.
-    // Pour ne RIEN changer aux scénarios existants, on convertit l'ancien choix
-    // ferme en forçage explicite (comportement identique, pile dans STSWeb).
-    Object.values(_data.annees).forEach(ann => {
-      (ann.scenarios || []).forEach(scen => {
-        (scen.modificateurs || []).forEach(mod => {
-          if (mod.forcage === undefined && mod.typeHeure !== undefined && mod.type !== 'projet') {
-            mod.forcage = (mod.typeHeure === 'hp') ? 'hp' : 'hsa';
-          }
-          // On conserve typeHeure pour compat lecture, mais forcage fait foi.
-        });
+    // v3.2 : enseignants
+    if (!Array.isArray(ann.enseignants)) ann.enseignants = [];
+    ann.enseignants.forEach(ens => {
+      if (!ens.grade)  ens.grade  = 'certifie';
+      if (!ens.statut) ens.statut = 'titulaire';
+      const statutsValides = ['titulaire','bmp','tzr','contractuel','temps-partiel'];
+      if (!statutsValides.includes(ens.statut)) ens.statut = 'titulaire';
+      if (ens.disciplinePrincipale === undefined) ens.disciplinePrincipale = '';
+      if (ens.motifORS  === undefined) ens.motifORS  = '';
+      if (ens.volumeBMP === undefined) ens.volumeBMP = null;
+      if (ens.heures === undefined) {
+        ens.heures = Array.isArray(ens.services)
+          ? Math.round(ens.services.reduce((s,srv)=>s+(parseFloat(srv.heures)||0),0)*2)/2
+          : 0;
+      }
+      if (Array.isArray(ens.services)) delete ens.services;
+      if (ens.commentaire === undefined) ens.commentaire = '';
+      if (ens.orsManuel   === undefined) ens.orsManuel   = null;
+      // v3.3 : disciplines[] multi-matières
+      if (!Array.isArray(ens.disciplines)) {
+        ens.disciplines = (ens.disciplinePrincipale && ens.heures > 0)
+          ? [{ discNom: ens.disciplinePrincipale, heures: ens.heures }]
+          : (ens.disciplinePrincipale ? [{ discNom: ens.disciplinePrincipale, heures: 0 }] : []);
+      }
+      ens.heures = Math.round(ens.disciplines.reduce((s,d)=>s+(parseFloat(d.heures)||0),0)*2)/2;
+      ens.disciplinePrincipale = ens.disciplines.length > 0 ? ens.disciplines[0].discNom : '';
+    });
+  }
+
+  // v3.4 : typeEtab + enveloppePacte/Imp (v3.9) + logo (v4.0) sur établissement
+  function _migrateV34Etab() {
+    if (!_data.etablissement.typeEtab)                   _data.etablissement.typeEtab         = 'college';
+    if (_data.etablissement.enveloppePacte === undefined) _data.etablissement.enveloppePacte  = 0;
+    if (_data.etablissement.enveloppeImp   === undefined) _data.etablissement.enveloppeImp    = 0;
+    if (_data.etablissement.logo           === undefined) _data.etablissement.logo            = null;
+  }
+
+  // v3.5 : scenarios[] par année (remplace ann.simulation)
+  function _migrateV35Scenarios(ann) {
+    if (!Array.isArray(ann.scenarios)) { ann.scenarios = []; delete ann.simulation; }
+  }
+
+  // v4.10 / Sprint 21 : modificateur.typeHeure → modificateur.forcage
+  function _migrateV410Forcage(ann) {
+    (ann.scenarios || []).forEach(scen => {
+      (scen.modificateurs || []).forEach(mod => {
+        if (mod.forcage === undefined && mod.typeHeure !== undefined && mod.type !== 'projet') {
+          mod.forcage = (mod.typeHeure === 'hp') ? 'hp' : 'hsa';
+        }
+        // typeHeure conservé pour compat lecture ; forcage fait foi.
       });
     });
-    // Migration v3.6 : contraintesEDT (barrettes + coInterventions)
-    Object.values(_data.annees).forEach(ann => {
-      if (!ann.contraintesEDT || typeof ann.contraintesEDT !== 'object') ann.contraintesEDT = _contraintesVides();
-      if (!Array.isArray(ann.contraintesEDT.barrettes))       ann.contraintesEDT.barrettes       = [];
-      if (!Array.isArray(ann.contraintesEDT.coInterventions)) ann.contraintesEDT.coInterventions = [];
+  }
+
+  // v3.6 : contraintesEDT (barrettes + coInterventions)
+  // v3.7 : barrette.slots[] remplace classeIds[]/ensIds[]
+  function _migrateV36EDT(ann) {
+    if (!ann.contraintesEDT || typeof ann.contraintesEDT !== 'object') ann.contraintesEDT = _contraintesVides();
+    if (!Array.isArray(ann.contraintesEDT.barrettes))       ann.contraintesEDT.barrettes       = [];
+    if (!Array.isArray(ann.contraintesEDT.coInterventions)) ann.contraintesEDT.coInterventions = [];
+    // v3.7 : slots[]
+    ann.contraintesEDT.barrettes = ann.contraintesEDT.barrettes.map(b => {
+      if (Array.isArray(b.slots)) return b;
+      const slots = (b.classeIds || []).map(cid => ({ type: 'classe', ref: cid, nomLibre: '', ensIds: [] }));
+      if (slots.length > 0 && Array.isArray(b.ensIds) && b.ensIds.length > 0) slots[0].ensIds = b.ensIds.slice();
+      return { id: b.id, nom: b.nom || '', disciplineIds: b.disciplineIds || [], commentaire: b.commentaire || '', slots };
     });
-    // Migration v3.7 : barrette.slots[] remplace classeIds[]/ensIds[]
-    Object.values(_data.annees).forEach(ann => {
-      ann.contraintesEDT.barrettes = (ann.contraintesEDT.barrettes || []).map(b => {
-        if (Array.isArray(b.slots)) return b;
-        const slots = (b.classeIds || []).map(cid => ({ type: 'classe', ref: cid, nomLibre: '', ensIds: [] }));
-        if (slots.length > 0 && Array.isArray(b.ensIds) && b.ensIds.length > 0) slots[0].ensIds = b.ensIds.slice();
-        return { id: b.id, nom: b.nom || '', disciplineIds: b.disciplineIds || [], commentaire: b.commentaire || '', slots };
-      });
+  }
+
+  // v3.8 : groupes[] référentiel Structures
+  // v3.9 : missions[], snapshot, hsaAbsorbees
+  function _migrateV38Groupes(ann) {
+    if (!Array.isArray(ann.groupes))  ann.groupes  = [];
+    if (!Array.isArray(ann.missions)) ann.missions  = [];
+    if (ann.snapshot     === undefined)             ann.snapshot      = null;
+    if (ann.hsaAbsorbees === undefined || ann.hsaAbsorbees === null) ann.hsaAbsorbees = {};
+  }
+
+  // v4.2 : affectations[] répartition de service + ppEnsId sur divisions
+  function _migrateV42Affectations(ann) {
+    if (!Array.isArray(ann.affectations)) ann.affectations = [];
+    (ann.structures || []).forEach(div => {
+      if (div.ppEnsId === undefined) div.ppEnsId = null;
     });
-    // Migration v3.8 : groupes[] référentiel Structures
-    Object.values(_data.annees).forEach(ann => {
-      if (!Array.isArray(ann.groupes)) ann.groupes = [];
+    const divIds  = new Set((ann.structures  || []).map(d => d.id));
+    const discIds = new Set((ann.disciplines || []).map(d => d.id));
+    const ensIds  = new Set((ann.enseignants || []).map(e => e.id));
+    ann.affectations = ann.affectations.filter(a =>
+      divIds.has(a.divisionId) && discIds.has(a.disciplineId) && ensIds.has(a.ensId)
+    );
+    (ann.structures || []).forEach(div => {
+      if (div.ppEnsId && !ensIds.has(div.ppEnsId)) div.ppEnsId = null;
     });
-    // Migration v3.9 : missions[] et snapshot
-    Object.values(_data.annees).forEach(ann => {
-      if (!Array.isArray(ann.missions)) ann.missions = [];
-      if (ann.snapshot === undefined) ann.snapshot = null;
-      if (ann.hsaAbsorbees === undefined || ann.hsaAbsorbees === null) ann.hsaAbsorbees = {};
-    });
-    // Migration v4.2 : affectations[] (répartition de service) + ppEnsId sur divisions
-    Object.values(_data.annees).forEach(ann => {
-      if (!Array.isArray(ann.affectations)) ann.affectations = [];
-      (ann.structures || []).forEach(div => {
-        if (div.ppEnsId === undefined) div.ppEnsId = null;
-      });
-      // Nettoyer d'éventuelles affectations orphelines (réf. supprimées)
-      const divIds  = new Set((ann.structures  || []).map(d => d.id));
-      const discIds = new Set((ann.disciplines || []).map(d => d.id));
-      const ensIds  = new Set((ann.enseignants || []).map(e => e.id));
-      ann.affectations = ann.affectations.filter(a =>
-        divIds.has(a.divisionId) && discIds.has(a.disciplineId) && ensIds.has(a.ensId)
-      );
-      (ann.structures || []).forEach(div => {
-        if (div.ppEnsId && !ensIds.has(div.ppEnsId)) div.ppEnsId = null;
-      });
-    });
-    // Migration v4.8.0 : salles[] + heuresBleues sur établissement
+  }
+
+  // v4.8.0 : salles[], heuresBleues, organisationSemaine, grilleHeureBleue sur établissement
+  function _migrateV48Etab() {
     if (!Array.isArray(_data.etablissement.salles)) _data.etablissement.salles = [];
     if (!_data.etablissement.heuresBleues || typeof _data.etablissement.heuresBleues !== 'object') {
       _data.etablissement.heuresBleues = { actif: false, creneaux: [], commentaire: '' };
     }
     if (!Array.isArray(_data.etablissement.heuresBleues.creneaux)) _data.etablissement.heuresBleues.creneaux = [];
     if (typeof _data.etablissement.heuresBleues.actif !== 'boolean') _data.etablissement.heuresBleues.actif = false;
-    if (_data.etablissement.heuresBleues.commentaire === undefined) _data.etablissement.heuresBleues.commentaire = '';
-    // Migration v4.9.0 : organisationSemaine sur établissement
+    if (_data.etablissement.heuresBleues.commentaire === undefined)  _data.etablissement.heuresBleues.commentaire = '';
+    if (!_data.etablissement.grilleHeureBleue || typeof _data.etablissement.grilleHeureBleue !== 'object') {
+      _data.etablissement.grilleHeureBleue = { creneaux: {} };
+    }
     if (!_data.etablissement.organisationSemaine || typeof _data.etablissement.organisationSemaine !== 'object') {
       _data.etablissement.organisationSemaine = {
         joursOuvres: ['lun','mar','mer','jeu','ven'],
@@ -304,45 +296,63 @@ const DGHData = (() => {
         horaires: { debutMatin: '08:00', finMatin: '12:00', debutAprem: '13:00', finAprem: '17:00' }
       };
     }
-    if (!_data.etablissement.grilleHeureBleue || typeof _data.etablissement.grilleHeureBleue !== 'object') _data.etablissement.grilleHeureBleue = { creneaux: {} };
     const os = _data.etablissement.organisationSemaine;
-    if (!Array.isArray(os.joursOuvres))   os.joursOuvres  = ['lun','mar','mer','jeu','ven'];
-    if (os.mercrediMatin === undefined)   os.mercrediMatin = true;
-    if (!os.horaires || typeof os.horaires !== 'object') os.horaires = { debutMatin:'08:00', finMatin:'12:00', debutAprem:'13:00', finAprem:'17:00' };
+    if (!Array.isArray(os.joursOuvres))  os.joursOuvres   = ['lun','mar','mer','jeu','ven'];
+    if (os.mercrediMatin === undefined)  os.mercrediMatin  = true;
+    if (!os.horaires || typeof os.horaires !== 'object') {
+      os.horaires = { debutMatin:'08:00', finMatin:'12:00', debutAprem:'13:00', finAprem:'17:00' };
+    }
     if (!os.horaires.debutMatin)  os.horaires.debutMatin  = '08:00';
     if (!os.horaires.finMatin)    os.horaires.finMatin    = '12:00';
     if (!os.horaires.debutAprem)  os.horaires.debutAprem  = '13:00';
     if (!os.horaires.finAprem)    os.horaires.finAprem    = '17:00';
-    // Migration v4.8.0 : indisponibilites[] + contraintesLibres[] (réintroduites avec nouveau schéma,
-    // distinctes du champ retiré en v3.8) + frequence sur les slots de barrettes
-    Object.values(_data.annees).forEach(ann => {
-      if (!ann.contraintesEDT || typeof ann.contraintesEDT !== 'object') ann.contraintesEDT = _contraintesVides();
-      if (!Array.isArray(ann.contraintesEDT.indisponibilites))   ann.contraintesEDT.indisponibilites   = [];
-      // Migration v4.9.3 : grilles indispo et heure bleue (planning visuel)
-      if (!ann.contraintesEDT.grillesIndispo  || typeof ann.contraintesEDT.grillesIndispo  !== 'object') ann.contraintesEDT.grillesIndispo  = {};
-      if (!ann.contraintesEDT.grilleHeureBleue || typeof ann.contraintesEDT.grilleHeureBleue !== 'object') ann.contraintesEDT.grilleHeureBleue = {};
-      if (!Array.isArray(ann.contraintesEDT.contraintesLibres)) ann.contraintesEDT.contraintesLibres = [];
-      ann.contraintesEDT.indisponibilites.forEach(ind => {
-        if (!ind.type)  ind.type  = 'dure';
-        if (!ind.plage) ind.plage = 'journee';
-        if (ind.heureDebut === undefined) ind.heureDebut = '';
-        if (ind.heureFin   === undefined) ind.heureFin   = '';
-        if (!ind.motif) ind.motif = '';
-      });
-      ann.contraintesEDT.contraintesLibres.forEach(cl => {
-        if (!Array.isArray(cl.ensIds))    cl.ensIds    = [];
-        if (!Array.isArray(cl.classeIds)) cl.classeIds = [];
-        if (!cl.scope) cl.scope = 'classe';
-        if (!cl.commentaire) cl.commentaire = '';
-      });
-      (ann.contraintesEDT.barrettes || []).forEach(b => {
-        (b.slots || []).forEach(s => {
-          if (!s.frequence) s.frequence = 'hebdo';
-          // Migration v4.9.4 : discId par slot
-          if (s.discId === undefined) s.discId = (b.disciplineIds && b.disciplineIds[0]) ? b.disciplineIds[0] : null;
-        });
+  }
+
+  // v4.8.0–4.9.4 : indisponibilites[], contraintesLibres[], grilles, frequence, discId par slot
+  function _migrateV48EDT(ann) {
+    if (!ann.contraintesEDT || typeof ann.contraintesEDT !== 'object') ann.contraintesEDT = _contraintesVides();
+    if (!Array.isArray(ann.contraintesEDT.indisponibilites))   ann.contraintesEDT.indisponibilites   = [];
+    if (!Array.isArray(ann.contraintesEDT.contraintesLibres))  ann.contraintesEDT.contraintesLibres  = [];
+    if (!ann.contraintesEDT.grillesIndispo   || typeof ann.contraintesEDT.grillesIndispo   !== 'object') ann.contraintesEDT.grillesIndispo   = {};
+    if (!ann.contraintesEDT.grilleHeureBleue || typeof ann.contraintesEDT.grilleHeureBleue !== 'object') ann.contraintesEDT.grilleHeureBleue = {};
+    ann.contraintesEDT.indisponibilites.forEach(ind => {
+      if (!ind.type)  ind.type  = 'dure';
+      if (!ind.plage) ind.plage = 'journee';
+      if (ind.heureDebut === undefined) ind.heureDebut = '';
+      if (ind.heureFin   === undefined) ind.heureFin   = '';
+      if (!ind.motif) ind.motif = '';
+    });
+    ann.contraintesEDT.contraintesLibres.forEach(cl => {
+      if (!Array.isArray(cl.ensIds))    cl.ensIds    = [];
+      if (!Array.isArray(cl.classeIds)) cl.classeIds = [];
+      if (!cl.scope)       cl.scope       = 'classe';
+      if (!cl.commentaire) cl.commentaire = '';
+    });
+    // v4.9.4 : frequence + discId par slot de barrette
+    (ann.contraintesEDT.barrettes || []).forEach(b => {
+      (b.slots || []).forEach(s => {
+        if (!s.frequence)          s.frequence = 'hebdo';
+        if (s.discId === undefined) s.discId   = (b.disciplineIds && b.disciplineIds[0]) ? b.disciplineIds[0] : null;
       });
     });
+  }
+
+  // ── ORCHESTRATEUR ─────────────────────────────────────────────────
+  function _migrate() {
+    if (!_data._meta) _data._meta = {};
+    if (_data.annees) {
+      Object.values(_data.annees).forEach(ann => {
+        _migrateV30Annees(ann);
+        _migrateV35Scenarios(ann);
+        _migrateV410Forcage(ann);
+        _migrateV36EDT(ann);
+        _migrateV38Groupes(ann);
+        _migrateV42Affectations(ann);
+        _migrateV48EDT(ann);
+      });
+    }
+    _migrateV34Etab();
+    _migrateV48Etab();
     _data._meta.version = VERSION;
     _recomputeHeuresFromAffectations();
     save();
@@ -1542,7 +1552,7 @@ const DGHData = (() => {
     return { ok: true, etablissement: _data.etablissement.nom || '?', annees: Object.keys(_data.annees) };
   }
 
-  function genId(prefix){return(prefix||'id')+'_'+Date.now()+'_'+Math.random().toString(36).substr(2,6);}
+  function genId(prefix){return(prefix||'id')+'_'+Date.now()+'_'+Math.random().toString(36).substring(2,8);}
 
   // ══════════════════════════════════════════════════════════════════
   // MISSIONS — PACTE & IMP (v3.9)

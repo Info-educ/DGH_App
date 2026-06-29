@@ -5,6 +5,86 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.16.4 — Accessibilité lecteurs d'écran : h1 unique + aria-hidden (2026-06-28)
+
+### Accessibilité (WCAG 1.3.1, 4.1.2)
+- **[I6] Un seul `<h1>` par page** (`index.html`) : les 12 titres de vue étaient tous
+  en `<h1>`, visibles simultanément par les lecteurs d'écran. Désormais seul le
+  « Tableau de bord » (vue initiale) conserve `<h1>`. Les 11 autres titres de vue
+  passent en `<h2 class="view-title">` — rendu visuel identique (la mise en forme est
+  portée par la classe CSS, pas par la balise).
+- **`aria-hidden` sur les vues inactives** (`index.html`, `app.js`) : chaque
+  `<section class="view">` inactive reçoit `aria-hidden="true"` dès le HTML statique.
+  À chaque navigation, `navigate()` pose `aria-hidden="true"` sur toutes les vues
+  puis le retire sur la vue activée. Les utilisateurs de lecteurs d'écran ne
+  traversent donc plus 12 sections de contenu masqué pour atteindre la vue courante.
+
+---
+
+## v4.16.3 — Améliorations audit : UX, CSS, architecture (2026-06-28)
+
+### Améliorations UX
+- **[I2] Fin des `confirm()` natifs** (`app.js`, `edt.js`, `pilotage.js`, `structures.js`) :
+  toutes les confirmations de suppression passent désormais par une modale stylisée
+  générique `confirmGeneric` (HTML + logique `app.confirmAction()`). Concernées :
+  barrette, co-intervention, contrainte libre, salle, groupe, scénario, restauration
+  de sauvegarde. Cohérence UX complète, plus aucun dialogue navigateur bloquant.
+
+### Performance
+- **[I5] Double `bilanScenario` supprimé** (`app.js`) : lors d'une navigation vers le
+  dashboard, `renderTopbar()` n'est plus appelé deux fois (une fois par `renderDashboard`
+  en interne, une fois après). Le calcul `bilanScenario` n'est donc plus doublé sur
+  cette navigation.
+
+### CSS — conformité SKILL.md
+- **[I4] Zéro style inline `width:0%`** (`index.html`, `style.css`) : les 7 barres de
+  progression et jauges portaient leur largeur initiale en attribut HTML. Ces valeurs
+  sont désormais dans les classes CSS (`.progress-fill`, `.gauge-fill`,
+  `.dash-equipe-bar-hp/hsa`, `.dot-bar-hp`, `.dot-bar-hsa-part` avec `margin-left:0%`).
+- **[A1] 5 `!important` injustifiés supprimés** (`style.css`) : `.btn-icon-gc` (→
+  sélecteur composé `.btn-icon.btn-icon-gc`), `.gc-indent` (→ `.gc-subrow td.gc-indent`),
+  `.struct-total-row td` (→ `.struct-niveau-table .struct-total-row td`), `.btn-add-gc`
+  et `.gc-subrows-row > td` (→ spécificité naturelle suffisante après vérification).
+
+### Lisibilité / maintenabilité
+- **[A2] `_migrate()` découpée** (`data.js`) : la fonction monolithique de 220 lignes
+  est remplacée par 8 sous-fonctions nommées par version/domaine (`_migrateV30Annees`,
+  `_migrateV34Etab`, `_migrateV35Scenarios`, `_migrateV410Forcage`, `_migrateV36EDT`,
+  `_migrateV38Groupes`, `_migrateV42Affectations`, `_migrateV48Etab`, `_migrateV48EDT`)
+  orchestrées par `_migrate()`. Comportement identique, lisibilité et auditabilité
+  améliorées.
+
+---
+
+## v4.16.2 — Corrections audit (2026-06-28)
+
+### Corrigé
+- **[B3] Modales sans Échap** (`app.js`) : `modalGenBarrettes`, `modalMission` et
+  `confirmMission` étaient absentes de la liste du gestionnaire `keydown 'Escape'`.
+  Un utilisateur ne pouvait pas fermer ces modales au clavier. Désormais les 20 modales
+  de l'application répondent à la touche Échap.
+- **[I3] Résidu `typeHeure` dans les affectations de scénario** (`app.js`, `pilotage.js`) :
+  le handler `impact-th-radio` sauvegardait le champ `typeHeure` dans `mod.affectations[]`
+  tandis que la migration Sprint 21 avait aligné tout sur `forcage`. Le field sauvegardé
+  est désormais `forcage`; la lecture combine `aff.forcage || aff.typeHeure` pour la
+  compatibilité des données existantes; l'init d'une nouvelle affectation utilise aussi
+  `forcage: 'hsa'`.
+
+### Accessibilité / bonnes pratiques
+- **[I1] `font-size` relatif** (`style.css`) : remplace `font-size: 14px` fixe par
+  `font-size: 87.5%` (≈ 14 px sur base 16 px navigateur), ce qui respecte le zoom texte
+  du système — conformité WCAG 1.4.4.
+- **[A5] Styles inline `font-family`** (`index.html`) : les 6 `<span>` portant
+  `style="font-family:'JetBrains Mono',monospace"` utilisent désormais la classe `.font-mono`
+  déjà définie dans le design system. Zéro style inline.
+
+### En-têtes & code
+- **[B2] En-têtes de version** (`app.js`, `data.js`, `calculs.js`) : synchronisés sur
+  `v4.16.1` (étaient restés à `v4.9.5` depuis le Sprint 19 environ).
+- **[A3] `substr` déprécié** (`data.js`, `genId`) : remplacé par `substring(2, 8)`.
+
+---
+
 ## v4.16.1 — Correctif heure bleue (grille) + purge du code mort EDT (2026-06-21)
 
 ### Corrigé

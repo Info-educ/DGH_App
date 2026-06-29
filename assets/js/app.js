@@ -1,5 +1,5 @@
 /**
- * DGH App — Contrôleur principal v4.9.5
+ * DGH App — Contrôleur principal v4.16.4
  * Noyau : init, navigation, délégation événements globaux, utilitaires.
  *
  * ARCHITECTURE :
@@ -82,6 +82,7 @@ const app = (() => {
     // scenarios est un alias de pilotage (même view HTML)
     const realViewId = viewId === 'scenarios' ? 'pilotage' : viewId;
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.setAttribute('aria-hidden', 'true'));
     document.querySelectorAll('.nav-item[data-view]').forEach(n => n.classList.remove('active'));
     const viewEl = document.getElementById('view-' + realViewId);
     // Nav : activer l'item exact (avec data-tab si fourni)
@@ -91,6 +92,7 @@ const app = (() => {
     }
     if (!navEl) navEl = document.querySelector(`.nav-item[data-view="${viewId}"]`);
     if (viewEl) viewEl.classList.add('active');
+    if (viewEl) viewEl.removeAttribute('aria-hidden');
     if (navEl)  navEl.classList.add('active');
     // Auto-déplier la phase qui contient l'onglet actif (sinon il resterait masqué).
     const parentItems = navEl && navEl.closest('.nav-phase-items');
@@ -115,8 +117,9 @@ const app = (() => {
     if (realViewId === 'historique')  DGHHistorique.render();
     if (realViewId === 'missions')    DGHMissions.renderMissions();
     if (viewId === 'instances')       DGHInstances.renderInstances(tab || null);
-    // Barre supérieure : rafraîchie sur chaque vue → solde simulé visible partout
-    DGHDashboard.renderTopbar();
+    // Barre supérieure : rafraîchie sur chaque vue → solde simulé visible partout.
+    // Sauf pour le dashboard qui l'appelle déjà en interne (évite un double bilanScenario).
+    if (realViewId !== 'dashboard') DGHDashboard.renderTopbar();
     _renderPhaseStatuts();
   }
 
@@ -173,7 +176,8 @@ const app = (() => {
       modalSelEns:        DGHEnseignants.closeModalSelEns,
       modalGenBarrettes:  DGHEdt.fermerModalGenBarrettes,
       modalMission:       DGHMissions.closeModal,
-      confirmMission:     DGHMissions.closeConfirmMission
+      confirmMission:     DGHMissions.closeConfirmMission,
+      confirmGeneric:     _closeConfirmGeneric
     };
     if (M[id]) M[id]();
   }
@@ -335,7 +339,7 @@ const app = (() => {
     if (e.target.closest('#btnEtab'))         { DGHEtab.openModal();                      return; }
 
     // Fermeture modales par clic overlay — uniquement si le geste a DÉBUTÉ sur l'overlay
-    const overlays = ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice','confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee','modalEns','modalCSV','confirmEns','confirmEnsAll','modalSelEns','modalMission','confirmMission','modalGenBarrettes'];
+    const overlays = ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice','confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee','modalEns','modalCSV','confirmEns','confirmEnsAll','modalSelEns','modalMission','confirmMission','modalGenBarrettes','confirmGeneric'];
     for (const oid of overlays) {
       if (e.target === document.getElementById(oid)) {
         if (!_mousedownOnOverlay) return; // clic relâché sur overlay mais initié ailleurs → ignorer
@@ -419,6 +423,10 @@ const app = (() => {
     if (e.target.closest('#confirmMissionAnnuler')){ DGHMissions.closeConfirmMission();     return; }
     if (e.target.closest('#confirmMissionOk'))    { DGHMissions.execDeleteMission();        return; }
 
+    if (e.target.closest('#confirmGenericCancel'))  { _closeConfirmGeneric(); return; }
+    if (e.target.closest('#confirmGenericAnnuler')) { _closeConfirmGeneric(); return; }
+    if (e.target.closest('#confirmGenericOk'))      { _execConfirmGeneric();  return; }
+
     // Sidebar mobile
     if (window.innerWidth <= 768) {
       const sb=document.getElementById('sidebar'), mb=document.getElementById('mobileMenuBtn');
@@ -444,7 +452,7 @@ const app = (() => {
     // H.discipline dans vue par discipline (field heures-disc)
     if (e.target.classList.contains('ens-inline-hdisc'))  { DGHEnseignants.handleInlineEdit(e.target); return; }
     if (e.target.classList.contains('impact-aff-check')) { const d=e.target.dataset; DGHPilotage.saveAffectation(d.ensId,d.modId,d.scenId,'affecte',e.target.checked); return; }
-    if (e.target.classList.contains('impact-th-radio'))  { const d=e.target.dataset; DGHPilotage.saveAffectation(d.ensId,d.modId,d.scenId,'typeHeure',e.target.value); return; }
+    if (e.target.classList.contains('impact-th-radio'))  { const d=e.target.dataset; DGHPilotage.saveAffectation(d.ensId,d.modId,d.scenId,'forcage',e.target.value); return; }
     if (e.target.id === 'recapScenSelect')                { DGHPilotage.setRecapScen(e.target.value);  return; }
     if (e.target.id === 'impactScenSelect')               { DGHPilotage.setImpactScen(e.target.value); return; }
     if (e.target.id === 'edtBarretteDiscs')               { DGHEdt.onBarrDiscChange(); return; }
@@ -553,14 +561,21 @@ const app = (() => {
       fileImport.value='';
     });
     document.getElementById('btnRestore').addEventListener('click', () => {
-      if (!confirm('Restaurer la sauvegarde ?\n\nVos données actuelles seront remplacées par l\'état d\'avant le dernier import. Cette restauration est réversible : cliquez à nouveau sur « Restaurer » pour revenir en arrière.')) return;
-      const r = DGHData.restoreBackup();
-      if (r.ok) {
-        renderAll(); DGHDashboard.renderDashboard();
-        toast('Sauvegarde restaurée — '+(r.etablissement||'?'),'success');
-      } else {
-        toast(r.message || 'Restauration impossible','warning',5000);
-      }
+      confirmAction({
+        titre:   'Restaurer la sauvegarde ?',
+        message: 'Vos données actuelles seront remplacées par l\'état d\'avant le dernier import.',
+        sub:     'Cette restauration est réversible : cliquez à nouveau sur « Restaurer » pour revenir en arrière.',
+        labelOk: 'Restaurer',
+        callback: () => {
+          const r = DGHData.restoreBackup();
+          if (r.ok) {
+            renderAll(); DGHDashboard.renderDashboard();
+            toast('Sauvegarde restaurée — '+(r.etablissement||'?'),'success');
+          } else {
+            toast(r.message || 'Restauration impossible','warning',5000);
+          }
+        }
+      });
     });
     document.addEventListener('dgh:storage-error', ()=>toast('Erreur de sauvegarde locale','error',6000));
 
@@ -588,7 +603,8 @@ const app = (() => {
       if (e.key==='Escape') {
         ['modalEtab','modalDiv','modalDisc','modalGC','modalHPC','modalMatrice',
          'confirmDiv','confirmDisc','confirmGC','confirmHPC','confirmReset','confirmDeleteAnnee',
-         'modalEns','modalCSV','confirmEns','confirmEnsAll','modalSelEns']
+         'modalEns','modalCSV','confirmEns','confirmEnsAll','modalSelEns',
+         'modalGenBarrettes','modalMission','confirmMission','confirmGeneric']
           .forEach(id => { if(document.getElementById(id)?.classList.contains('modal-open')) _closeModalById(id); });
       }
     });
@@ -659,6 +675,34 @@ const app = (() => {
     }
   }
 
+  // ── MODALE DE CONFIRMATION GÉNÉRIQUE ─────────────────────────────
+  // Remplace window.confirm() pour les suppressions dans EDT, Pilotage, Structures.
+  // Usage : app.confirmAction({ titre, message, sub, labelOk, callback })
+  let _confirmGenericCb = null;
+
+  function confirmAction({ titre, message, sub, labelOk, callback }) {
+    const m = document.getElementById('confirmGeneric'); if (!m) { if (callback) callback(); return; }
+    const el = id => document.getElementById(id);
+    if (el('confirmGenericTitle')) el('confirmGenericTitle').textContent = titre || 'Confirmer';
+    if (el('confirmGenericMsg'))   el('confirmGenericMsg').textContent   = message || '';
+    if (el('confirmGenericSub'))   el('confirmGenericSub').textContent   = sub || '';
+    if (el('confirmGenericOk'))    el('confirmGenericOk').textContent    = labelOk || 'Confirmer';
+    _confirmGenericCb = callback || null;
+    m.classList.add('modal-open');
+  }
+
+  function _closeConfirmGeneric() {
+    const m = document.getElementById('confirmGeneric');
+    if (m) { m.classList.remove('modal-open'); }
+    _confirmGenericCb = null;
+  }
+
+  function _execConfirmGeneric() {
+    const cb = _confirmGenericCb;
+    _closeConfirmGeneric();
+    if (cb) cb();
+  }
+
   // ── TOAST ────────────────────────────────────────────────────────
   function toast(msg, type, duration) {
     type=type||'info'; duration=duration||3500;
@@ -685,7 +729,7 @@ const app = (() => {
     toast('Logo supprimé', 'info');
   }
 
-  return { init, navigate, toast, renderAll, renderYearSelect, downloadCSV };
+  return { init, navigate, toast, renderAll, renderYearSelect, downloadCSV, confirmAction };
 
 })();
 

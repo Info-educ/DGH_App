@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DGH App — Pilotage de la Dotation Globale Horaire</title>
-  <link rel="stylesheet" href="assets/css/style.css?v=4.16.1" />
+  <link rel="stylesheet" href="assets/css/style.css?v=4.16.4" />
 </head>
 <body>
 
@@ -142,9 +142,9 @@
         <div class="progress-section">
           <div class="progress-header"><span>Consommation DGH</span><span id="progress-label">0 / 0 h</span></div>
           <div class="progress-track">
-            <div class="progress-fill dot-bar-hp" id="progressBarHP" style="width:0%"></div>
-            <div class="progress-fill dot-bar-hsa-part" id="progressBarHSA" style="width:0%"></div>
-            <div class="progress-fill dash-bar-scen is-hidden" id="progressBarScen" style="width:0%"></div>
+            <div class="progress-fill dot-bar-hp" id="progressBarHP"></div>
+            <div class="progress-fill dot-bar-hsa-part" id="progressBarHSA"></div>
+            <div class="progress-fill dash-bar-scen is-hidden" id="progressBarScen"></div>
           </div>
           <div class="progress-legend">
             <span class="prog-leg-item prog-leg-hp">H-Poste allouées : <strong id="prog-leg-hp">—</strong></span>
@@ -155,7 +155,7 @@
         <div class="dash-hphsa-grid is-hidden" id="dashHpHsaGrid">
           <div class="gauge-block gauge-hp">
             <div class="gauge-head"><span class="gauge-name">Heures-poste (HP)</span><span class="gauge-pct" id="dash-hp-pct">—</span></div>
-            <div class="gauge-track"><div class="gauge-fill gauge-fill-hp" id="dash-gauge-hp" style="width:0%"></div><span class="gauge-sim-mark is-hidden" id="dash-gauge-hp-sim"></span></div>
+            <div class="gauge-track"><div class="gauge-fill gauge-fill-hp" id="dash-gauge-hp"></div><span class="gauge-sim-mark is-hidden" id="dash-gauge-hp-sim"></span></div>
             <div class="gauge-figures">
               <span class="gauge-fig">Dotation <strong id="dash-hp-dotation">— h</strong></span>
               <span class="gauge-fig">Consommé <strong id="dash-hp-conso">— h</strong></span>
@@ -165,7 +165,7 @@
           </div>
           <div class="gauge-block gauge-hsa">
             <div class="gauge-head"><span class="gauge-name">HSA autorisées</span><span class="gauge-pct" id="dash-hsa-pct">—</span></div>
-            <div class="gauge-track"><div class="gauge-fill gauge-fill-hsa" id="dash-gauge-hsa" style="width:0%"></div><span class="gauge-sim-mark is-hidden" id="dash-gauge-hsa-sim"></span></div>
+            <div class="gauge-track"><div class="gauge-fill gauge-fill-hsa" id="dash-gauge-hsa"></div><span class="gauge-sim-mark is-hidden" id="dash-gauge-hsa-sim"></span></div>
             <div class="gauge-figures">
               <span class="gauge-fig">Dotation <strong id="dash-hsa-dotation">— h</strong></span>
               <span class="gauge-fig">Consommé <strong id="dash-hsa-conso">— h</strong></span>
@@ -187,7 +187,7 @@
             <div class="dash-equipe-stat"><span class="dash-equipe-lbl">Total service</span><span class="dash-equipe-val" id="dash-eq-tot">— h</span></div>
             <div class="dash-equipe-stat"><span class="dash-equipe-lbl">vs enveloppe</span><span class="dash-equipe-val" id="dash-eq-solde">— h</span></div>
           </div>
-          <div class="dash-equipe-bar"><div class="dash-equipe-bar-hp" id="dash-eq-bar-hp" style="width:0%"></div><div class="dash-equipe-bar-hsa" id="dash-eq-bar-hsa" style="width:0%"></div></div>
+          <div class="dash-equipe-bar"><div class="dash-equipe-bar-hp" id="dash-eq-bar-hp"></div><div class="dash-equipe-bar-hsa" id="dash-eq-bar-hsa"></div></div>
           <p class="dash-equipe-note">HP plafonnées par l'ORS (ou le volume du bloc pour les BMP) — le dépassement bascule en HSA.</p>
         </div>
 
@@ -221,11 +221,11 @@
       </section>
 
 <!-- ══ PILOTAGE ══════════════════════════════════════════════ -->
-      <section class="view" id="view-pilotage">
+      <section class="view" aria-hidden="true" id="view-pilotage">
         <div class="view-header">
           <div class="view-header-row">
             <div>
-              <h1 class="view-title">Pilotage pédagogique</h1>
+              <h2 class="view-title">Pilotage pédagogique</h2>
               <p class="view-subtitle">Scénarios · Récapitulatif DGH · Synthèse</p>
             </div>
             <div class="view-header-actions" id="pilotageHeaderActions">
@@ -272,11 +272,11 @@
       </section>
 
 <!-- ══ EDT — CONTRAINTES ══════════════════════════════════════════════ -->
-      <section class="view" id="view-edt">
+      <section class="view" aria-hidden="true" id="view-edt">
         <div class="view-header">
           <div class="view-header-row">
             <div>
-              <h1 class="view-title">Contraintes EDT</h1>
+              <h2 class="view-title">Contraintes EDT</h2>
               <p class="view-subtitle">Préparez la saisie dans Index Education</p>
             </div>
             <div class="view-header-actions" id="edtHeaderActions"></div>
@@ -297,11 +297,11 @@
       </section>
 
             <!-- ══ STRUCTURES ══════════════════════════════════════════════ -->
-      <section class="view" id="view-structures">
+      <section class="view" aria-hidden="true" id="view-structures">
         <div class="view-header">
           <div class="view-header-row">
             <div>
-              <h1 class="view-title">Structures de classes</h1>
+              <h2 class="view-title">Structures de classes</h2>
               <p class="view-subtitle">Divisions par niveau</p>
             </div>
             <div class="view-header-actions">
@@ -341,11 +341,11 @@
       </section>
 
       <!-- ══ DOTATION DGH ════════════════════════════════════════════ -->
-      <section class="view" id="view-dotation">
+      <section class="view" aria-hidden="true" id="view-dotation">
         <div class="view-header">
           <div class="view-header-row">
             <div>
-              <h1 class="view-title">DGH + Vol. Horaire</h1>
+              <h2 class="view-title">DGH + Vol. Horaire</h2>
               <p class="view-subtitle">Enveloppe HP/HSA · répartition par discipline · groupes de cours</p>
             </div>
             <div class="view-header-actions">
@@ -391,19 +391,19 @@
         </div>
 
         <div class="dot-kpi-bar">
-          <div class="struct-kpi-item"><span class="struct-kpi-val dot-col-hp" id="dot-kpi-hposte" style="font-family:'JetBrains Mono',monospace">—</span><span class="struct-kpi-label">h-poste allouées</span></div>
+          <div class="struct-kpi-item"><span class="struct-kpi-val dot-col-hp font-mono" id="dot-kpi-hposte">—</span><span class="struct-kpi-label">h-poste allouées</span></div>
           <div class="struct-kpi-sep"></div>
-          <div class="struct-kpi-item"><span class="struct-kpi-val dot-col-hsa" id="dot-kpi-hsa" style="font-family:'JetBrains Mono',monospace">—</span><span class="struct-kpi-label">HSA allouées</span></div>
+          <div class="struct-kpi-item"><span class="struct-kpi-val dot-col-hsa font-mono" id="dot-kpi-hsa">—</span><span class="struct-kpi-label">HSA allouées</span></div>
           <div class="struct-kpi-sep"></div>
-          <div class="struct-kpi-item"><span class="struct-kpi-val" id="dot-kpi-solde" style="font-family:'JetBrains Mono',monospace">—</span><span class="struct-kpi-label" id="dot-kpi-solde-label">h solde</span></div>
+          <div class="struct-kpi-item"><span class="struct-kpi-val font-mono" id="dot-kpi-solde">—</span><span class="struct-kpi-label" id="dot-kpi-solde-label">h solde</span></div>
           <div class="struct-kpi-sep struct-kpi-sep-right"></div>
-          <div class="struct-kpi-item"><span class="struct-kpi-val" id="dot-kpi-nb" style="font-family:'JetBrains Mono',monospace">0</span><span class="struct-kpi-label">disciplines</span></div>
+          <div class="struct-kpi-item"><span class="struct-kpi-val font-mono" id="dot-kpi-nb">0</span><span class="struct-kpi-label">disciplines</span></div>
         </div>
         <div class="progress-section">
           <div class="progress-header"><span>Consommation de l'enveloppe</span><span id="dot-progress-label">0 / 0 h</span></div>
           <div class="progress-track">
-            <div class="progress-fill dot-bar-hp" id="dot-bar-hp" style="width:0%"></div>
-            <div class="progress-fill dot-bar-hsa-part" id="dot-bar-hsa" style="width:0%;margin-left:0%"></div>
+            <div class="progress-fill dot-bar-hp" id="dot-bar-hp"></div>
+            <div class="progress-fill dot-bar-hsa-part" id="dot-bar-hsa"></div>
           </div>
           <div class="progress-legend">
             <span class="prog-leg-item prog-leg-hp">H-Poste : <strong id="dot-leg-hp">—</strong></span>
@@ -433,11 +433,11 @@
       </section>
 
       <!-- ══ ÉQUIPE & HP/HSA ═════════════════════════════════════════ -->
-      <section class="view" id="view-equipe">
+      <section class="view" aria-hidden="true" id="view-equipe">
         <div class="view-header">
           <div class="view-header-row">
             <div>
-              <h1 class="view-title">Équipe & répartition HP / HSA</h1>
+              <h2 class="view-title">Équipe & répartition HP / HSA</h2>
               <p class="view-subtitle">Tableau de l'équipe · apport de chacun dans l'établissement · bascule automatique HP → HSA · prêt pour la remontée TRM de février</p>
             </div>
             <div class="view-header-actions">
@@ -476,11 +476,11 @@
       </section>
 
       <!-- ══ BESOINS & APPORTS ÉTABLISSEMENT ════════════════════════ -->
-      <section class="view" id="view-besoins">
+      <section class="view" aria-hidden="true" id="view-besoins">
         <div class="view-header">
           <div class="view-header-row">
             <div>
-              <h1 class="view-title">Besoins & apports établissement</h1>
+              <h2 class="view-title">Besoins & apports établissement</h2>
               <p class="view-subtitle">Par discipline : besoin (répartition × divisions) vs apport de l'équipe — pour calibrer les BMP et tracer les HSA absorbées</p>
             </div>
             <div class="view-header-actions">
@@ -504,30 +504,30 @@
       </section>
 
       <!-- ══ HEURES PÉDAGOGIQUES COMPLÉMENTAIRES ═════════════════════ -->
-      <section class="view" id="view-hpc">
+      <section class="view" aria-hidden="true" id="view-hpc">
         <div class="view-header">
           <div class="view-header-row">
             <div>
-              <h1 class="view-title">Heures pédagogiques complémentaires</h1>
+              <h2 class="view-title">Heures pédagogiques complémentaires</h2>
               <p class="view-subtitle">Options, labo, dispositifs, arts &amp; culture, sport…</p>
             </div>
             <button class="btn-primary" id="btnAddHPC">+ Ajouter</button>
           </div>
         </div>
         <div class="dot-kpi-bar">
-          <div class="struct-kpi-item"><span class="struct-kpi-val" id="hpc-kpi-nb" style="font-family:'JetBrains Mono',monospace">0</span><span class="struct-kpi-label">entrées</span></div>
+          <div class="struct-kpi-item"><span class="struct-kpi-val font-mono" id="hpc-kpi-nb">0</span><span class="struct-kpi-label">entrées</span></div>
           <div class="struct-kpi-sep"></div>
-          <div class="struct-kpi-item"><span class="struct-kpi-val" id="hpc-kpi-heures" style="font-family:'JetBrains Mono',monospace">0</span><span class="struct-kpi-label">h / semaine</span></div>
+          <div class="struct-kpi-item"><span class="struct-kpi-val font-mono" id="hpc-kpi-heures">0</span><span class="struct-kpi-label">h / semaine</span></div>
         </div>
         <div class="section-card"><div class="section-card-header"><h2>Liste</h2></div><div id="hpc-list"></div></div>
       </section>
 
       <!-- ══ ÉQUIPE PÉDAGOGIQUE ══════════════════════════════════════════ -->
-      <section class="view" id="view-enseignants">
+      <section class="view" aria-hidden="true" id="view-enseignants">
         <div class="view-header">
           <div class="view-header-row">
             <div>
-              <h1 class="view-title">Équipe pédagogique</h1>
+              <h2 class="view-title">Équipe pédagogique</h2>
               <p class="view-subtitle">Enseignants · disciplines · heures pédagogiques complémentaires</p>
             </div>
             <div class="view-header-actions">
@@ -568,43 +568,43 @@
       </section>
 
       <!-- ══ ALERTES ══════════════════════════════════════════════════ -->
-      <section class="view" id="view-alertes">
-        <div class="view-header"><h1 class="view-title">Alertes</h1><p class="view-subtitle">Dépassements, sous-services, anomalies détectées</p></div>
+      <section class="view" aria-hidden="true" id="view-alertes">
+        <div class="view-header"><h2 class="view-title">Alertes</h2><p class="view-subtitle">Dépassements, sous-services, anomalies détectées</p></div>
         <div id="alertes-zone"></div>
       </section>
 
       <!-- ══ SYNTHÈSE ══════════════════════════════════════════════════ -->
-      <section class="view" id="view-synthese">
-        <div class="view-header"><h1 class="view-title">Synthèses</h1><p class="view-subtitle">Documents pour le CA et les équipes pédagogiques</p></div>
+      <section class="view" aria-hidden="true" id="view-synthese">
+        <div class="view-header"><h2 class="view-title">Synthèses</h2><p class="view-subtitle">Documents pour le CA et les équipes pédagogiques</p></div>
         <div class="placeholder-view"><div class="placeholder-icon">▤</div><p><strong>Module Synthèses</strong> — Sprint 7</p></div>
       </section>
 
       <!-- ══ INSTANCES ══════════════════════════════════════════════ -->
-      <section class="view" id="view-instances">
+      <section class="view" aria-hidden="true" id="view-instances">
         <!-- Rendu dynamique par DGHInstances.renderInstances() -->
       </section>
 
       <!-- ══ SCÉNARIOS (ex-Pilotage) ════════════════════════════════ -->
-      <section class="view" id="view-scenarios">
+      <section class="view" aria-hidden="true" id="view-scenarios">
         <!-- Alias : redirige vers view-pilotage via navigate() -->
       </section>
 
       <!-- ══ HISTORIQUE ══════════════════════════════════════════════ -->
-      <section class="view" id="view-historique">
+      <section class="view" aria-hidden="true" id="view-historique">
         <!-- Rendu dynamique par DGHHistorique.render() -->
       </section>
 
       <!-- ══ RÉPARTITION DE SERVICE ══════════════════════════════════ -->
-      <section class="view" id="view-repartition">
+      <section class="view" aria-hidden="true" id="view-repartition">
         <div class="view-header">
-          <h1 class="view-title">Répartition de service</h1>
+          <h2 class="view-title">Répartition de service</h2>
           <p class="view-subtitle">Affectation des enseignants aux classes par discipline · professeurs principaux</p>
         </div>
         <div id="repartition-zone"></div>
       </section>
 
       <!-- ══ MISSIONS (PACTE / IMP) ══════════════════════════════════ -->
-      <section class="view" id="view-missions">
+      <section class="view" aria-hidden="true" id="view-missions">
         <!-- Rendu dynamique par DGHMissions.renderMissions() -->
       </section>
 
@@ -1077,25 +1077,25 @@
     </div>
   </div>
 
-  <script src="assets/js/data.js?v=4.16.1"></script>
-  <script src="assets/js/calculs.js?v=4.16.1"></script>
-  <script src="assets/js/verifs.js?v=4.16.1"></script>
-  <script src="assets/js/modules/dashboard.js?v=4.16.1"></script>
-  <script src="assets/js/modules/structures.js?v=4.16.1"></script>
-  <script src="assets/js/modules/dotation.js?v=4.16.1"></script>
-  <script src="assets/js/modules/equipe.js?v=4.16.1"></script>
-  <script src="assets/js/modules/besoins.js?v=4.16.1"></script>
-  <script src="assets/js/modules/hpc.js?v=4.16.1"></script>
-  <script src="assets/js/modules/etab.js?v=4.16.1"></script>
-  <script src="assets/js/modules/enseignants.js?v=4.16.1"></script>
-  <script src="assets/js/modules/repartition.js?v=4.16.1"></script>
-  <script src="assets/js/modules/pilotage.js?v=4.16.1"></script>
-  <script src="assets/js/modules/edt.js?v=4.16.1"></script>
-  <script src="assets/js/modules/historique.js?v=4.16.1"></script>
-  <script src="assets/js/modules/missions.js?v=4.16.1"></script>
-  <script src="assets/js/modules/instances.js?v=4.16.1"></script>
-  <script src="assets/js/app.js?v=4.16.1"></script>
-  <script src="assets/js/tutorial.js?v=4.16.1"></script>
+  <script src="assets/js/data.js?v=4.16.4"></script>
+  <script src="assets/js/calculs.js?v=4.16.4"></script>
+  <script src="assets/js/verifs.js?v=4.16.4"></script>
+  <script src="assets/js/modules/dashboard.js?v=4.16.4"></script>
+  <script src="assets/js/modules/structures.js?v=4.16.4"></script>
+  <script src="assets/js/modules/dotation.js?v=4.16.4"></script>
+  <script src="assets/js/modules/equipe.js?v=4.16.4"></script>
+  <script src="assets/js/modules/besoins.js?v=4.16.4"></script>
+  <script src="assets/js/modules/hpc.js?v=4.16.4"></script>
+  <script src="assets/js/modules/etab.js?v=4.16.4"></script>
+  <script src="assets/js/modules/enseignants.js?v=4.16.4"></script>
+  <script src="assets/js/modules/repartition.js?v=4.16.4"></script>
+  <script src="assets/js/modules/pilotage.js?v=4.16.4"></script>
+  <script src="assets/js/modules/edt.js?v=4.16.4"></script>
+  <script src="assets/js/modules/historique.js?v=4.16.4"></script>
+  <script src="assets/js/modules/missions.js?v=4.16.4"></script>
+  <script src="assets/js/modules/instances.js?v=4.16.4"></script>
+  <script src="assets/js/app.js?v=4.16.4"></script>
+  <script src="assets/js/tutorial.js?v=4.16.4"></script>
 
   <!-- Modale génération groupée de barrettes (Sprint 18) -->
   <div class="modal-overlay" id="modalGenBarrettes" role="dialog" aria-modal="true">
@@ -1110,6 +1110,23 @@
       <div class="modal-footer">
         <button class="btn-secondary" id="modalGenBarrettesCancel">Annuler</button>
         <button class="btn-primary" id="modalGenBarrettesSave">⚡ Générer les barrettes sélectionnées</button>
+      </div>
+    </div>
+  </div>
+  <!-- Modale de confirmation générique (remplace les confirm() natifs) -->
+  <div class="modal-overlay" id="confirmGeneric" role="dialog" aria-modal="true">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 id="confirmGenericTitle">Confirmer</h2>
+        <button class="modal-close" id="confirmGenericCancel">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-msg" id="confirmGenericMsg"></p>
+        <p class="confirm-sub" id="confirmGenericSub"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="confirmGenericAnnuler">Annuler</button>
+        <button class="btn-danger" id="confirmGenericOk">Confirmer</button>
       </div>
     </div>
   </div>

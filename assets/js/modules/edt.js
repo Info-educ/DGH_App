@@ -438,10 +438,16 @@ const DGHEdt = (() => {
   }
 
   function deleteBarrette(id) {
-    if (!confirm('Supprimer cette barrette ?')) return;
-    DGHData.deleteBarrette(id);
-    _renderBarrettes();
-    app.toast('Barrette supprimée.', 'info');
+    app.confirmAction({
+      titre:    'Supprimer cette barrette ?',
+      message:  'Cette action est irréversible.',
+      labelOk:  'Supprimer',
+      callback: () => {
+        DGHData.deleteBarrette(id);
+        _renderBarrettes();
+        app.toast('Barrette supprimée.', 'info');
+      }
+    });
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -537,10 +543,16 @@ const DGHEdt = (() => {
   }
 
   function deleteCoInterv(id) {
-    if (!confirm('Supprimer cette co-intervention ?')) return;
-    DGHData.deleteCoIntervention(id);
-    _renderCoInterv();
-    app.toast('Co-intervention supprimée.', 'info');
+    app.confirmAction({
+      titre:    'Supprimer cette co-intervention ?',
+      message:  'Cette action est irréversible.',
+      labelOk:  'Supprimer',
+      callback: () => {
+        DGHData.deleteCoIntervention(id);
+        _renderCoInterv();
+        app.toast('Co-intervention supprimée.', 'info');
+      }
+    });
   }
 
   // ── Contraintes libres : formulaire + actions ──────────────────────
@@ -613,10 +625,16 @@ const DGHEdt = (() => {
   }
 
   function deleteClibre(id) {
-    if (!confirm('Supprimer cette contrainte libre ?')) return;
-    DGHData.deleteContrainteLibre(id);
-    _renderIndispos();
-    app.toast('Contrainte libre supprimée.', 'info');
+    app.confirmAction({
+      titre:    'Supprimer cette contrainte libre ?',
+      message:  'Cette action est irréversible.',
+      labelOk:  'Supprimer',
+      callback: () => {
+        DGHData.deleteContrainteLibre(id);
+        _renderIndispos();
+        app.toast('Contrainte libre supprimée.', 'info');
+      }
+    });
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -943,10 +961,16 @@ const DGHEdt = (() => {
   }
 
   function deleteSalleEdt(id) {
-    if (!confirm('Supprimer cette salle ?')) return;
-    DGHData.deleteSalle(id);
-    _renderContraintesEtab();
-    app.toast('Salle supprimée.', 'info');
+    app.confirmAction({
+      titre:    'Supprimer cette salle ?',
+      message:  'Cette action est irréversible.',
+      labelOk:  'Supprimer',
+      callback: () => {
+        DGHData.deleteSalle(id);
+        _renderContraintesEtab();
+        app.toast('Salle supprimée.', 'info');
+      }
+    });
   }
 
   // ── Actions organisation semaine ───────────────────────────────────

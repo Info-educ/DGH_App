@@ -789,7 +789,7 @@ const DGHPilotage = (() => {
       const affRows = modsAffiches.map(mod => {
         const tInfo     = TYPES_MOD[mod.type] || { label: mod.type, css: '', short: mod.type };
         const aff       = (mod.affectations || []).find(a => a.ensId === ens.id);
-        const th        = aff ? aff.typeHeure : (mod.forcage || mod.typeHeure || 'hsa');
+        const th        = aff ? (aff.forcage || aff.typeHeure || 'hsa') : (mod.forcage || mod.typeHeure || 'hsa');
         const autoAff   = reparti && autoByMod[mod.id] ? autoByMod[mod.id].has(ens.id) : false;
         const affecte   = aff ? aff.affecte !== false : autoAff;
         const hParSemaine = mod.heuresParGroupe || 0;
@@ -926,7 +926,7 @@ const DGHPilotage = (() => {
     if (!Array.isArray(mod.affectations)) mod.affectations = [];
     let aff = mod.affectations.find(a => a.ensId === ensId);
     if (!aff) {
-      aff = { ensId, affecte: false, typeHeure: 'hsa' };
+      aff = { ensId, affecte: false, forcage: 'hsa' };
       mod.affectations.push(aff);
     }
     aff[field] = value;
@@ -1224,11 +1224,19 @@ const DGHPilotage = (() => {
 
   function confirmDeleteScenario(id) {
     const scen = DGHData.getScenario(id);
-    if (!scen || !confirm('Supprimer "' + scen.nom + '" ?')) return;
-    if (_scenEditId === id) _scenEditId = null;
-    DGHData.deleteScenario(id);
-    renderPilotage();
-    if (typeof app !== 'undefined' && app.toast) app.toast('Scénario supprimé.', 'info');
+    if (!scen) return;
+    app.confirmAction({
+      titre:    'Supprimer ce scénario ?',
+      message:  '« ' + scen.nom + ' »',
+      sub:      'Cette action est irréversible.',
+      labelOk:  'Supprimer',
+      callback: () => {
+        if (_scenEditId === id) _scenEditId = null;
+        DGHData.deleteScenario(id);
+        renderPilotage();
+        if (typeof app !== 'undefined' && app.toast) app.toast('Scénario supprimé.', 'info');
+      }
+    });
   }
 
   function setActif(id) {

@@ -462,10 +462,16 @@ const DGHStructures = (() => {
   }
 
   function deleteGroupe(id) {
-    if (!confirm('Supprimer ce groupe ?')) return;
-    DGHData.deleteGroupe(id);
-    renderGroupes();
-    app.toast('Groupe supprimé.', 'info');
+    app.confirmAction({
+      titre:    'Supprimer ce groupe ?',
+      message:  'Cette action est irréversible.',
+      labelOk:  'Supprimer',
+      callback: () => {
+        DGHData.deleteGroupe(id);
+        renderGroupes();
+        app.toast('Groupe supprimé.', 'info');
+      }
+    });
   }
 
   return {
