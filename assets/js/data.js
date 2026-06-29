@@ -1,5 +1,5 @@
 /**
- * DGH App — Couche données v4.16.4
+ * DGH App — Couche données v4.17.0
  * SEUL fichier qui touche localStorage
  *
  * v3.0.0 — Sprint 5 : enveloppe HP/HSA, groupesCours, heuresPedaComp, sélection classes
@@ -17,7 +17,7 @@
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '4.16.4';
+  const VERSION = '4.17.0';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   const TYPES_SALLE = [

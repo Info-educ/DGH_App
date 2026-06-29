@@ -5,6 +5,42 @@ Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF
 
 ---
 
+## v4.17.0 — Saisie rapide : en-têtes figés, filtre discipline, correction décocher (2026-06-29)
+
+### UX — Saisie rapide (Répartition des services)
+
+- **En-têtes toujours visibles en scroll** : la ligne niveaux (6e, 5e…) et la ligne
+  des classes sont désormais `position: sticky` avec `top: 0` et `top: 37px`
+  respectivement. La colonne enseignant (déjà sticky à gauche) est maintenue.
+  Le wrap reçoit `max-height: 420px; overflow-y: auto` pour délimiter la zone de
+  défilement sans déborder dans la page.
+
+- **Filtre discipline par défaut** : seuls les enseignants rattachés à la discipline
+  sélectionnée sont affichés. Les enseignants hors-discipline qui ont **déjà une
+  affectation existante** sur cette discipline restent toujours visibles (sécurité
+  contre la perte d'affectation invisible). Un bouton « ▼ Voir tous les enseignants
+  (N autres) » permet d'afficher les autres ponctuellement ; il se remet à masqué
+  lors d'un changement de discipline (`_showAutres` réinitialisé dans
+  `selectDiscipline()`).
+
+- **Correction du "voyant bleu persistant"** : après décocher une case pour un
+  enseignant hors-discipline, `renderRepartition()` recalcule `nbAff` depuis la
+  couche data après suppression. La position de scroll (`scrollLeft`, `scrollTop`)
+  est mémorisée avant le re-render et restaurée après sur `#repRapidWrap`, ce qui
+  rend le changement visuellement immédiat sans perdre la position dans le tableau.
+
+- **Indicateur visuel des cellules cochées** : nouvelle classe `.rep-rapid-cell-checked`
+  (fond légèrement teinté en accent) pour mieux distinguer les cases cochées des
+  cases vides, indépendamment de la couleur de la checkbox.
+
+### Architecture
+- `_showAutres` ajouté à l'état du module (reset à `false` au changement de disc).
+- `toggleAutres()` nouvelle fonction publique, câblée sur `data-action="rep-rapid-toggle-autres"` dans `app.js`.
+- `toggleEnsClasse()` préserve le scroll avant/après `renderRepartition()`.
+- CSS : remplacement du bloc `.rep-rapid-*` — tous les `z-index` revus pour la combinaison sticky gauche × sticky top.
+
+---
+
 ## v4.16.4 — Accessibilité lecteurs d'écran : h1 unique + aria-hidden (2026-06-28)
 
 ### Accessibilité (WCAG 1.3.1, 4.1.2)

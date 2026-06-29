@@ -4341,11 +4341,11 @@ td.col-grille {
 .rep-mode-btn-rapide.active { background: var(--c-amber-bg); color: var(--c-amber); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
 /* ── SAISIE RAPIDE : matrice discipline × classe × enseignant ── */
-.rep-rapid-wrap { overflow-x: auto; border: 1.5px solid var(--c-border); border-radius: 10px; margin-bottom: 14px; }
+.rep-rapid-wrap { overflow-x: auto; overflow-y: auto; max-height: 420px; border: 1.5px solid var(--c-border); border-radius: 10px; margin-bottom: 8px; }
 .rep-rapid-hint { margin-top: 0; margin-bottom: 8px; }
 .rep-rapid-legend { margin-top: 6px; }
 .rep-rapid-table { border-collapse: separate; border-spacing: 0; font-size: .82rem; width: 100%; min-width: 400px; }
-/* Ligne enseignant : 1ère colonne sticky */
+/* Colonne enseignant : sticky gauche */
 .rep-rapid-td-ens {
   position: sticky; left: 0; z-index: 2;
   background: var(--c-surface2);
@@ -4364,17 +4364,18 @@ td.col-grille {
   color: var(--c-text-muted);
   text-transform: uppercase;
   letter-spacing: .05em;
-  border-bottom: 2px solid var(--c-border2);
-  z-index: 3;
+  z-index: 4;
 }
-.rep-rapid-tr-niv .rep-rapid-td-ens { background: var(--c-surface3); z-index: 3; }
-.rep-rapid-tr-cls .rep-rapid-td-ens { background: var(--c-surface2); z-index: 2; border-bottom: 2px solid var(--c-border); }
+/* En-têtes sticky : ligne niveaux (top:0) et ligne classes (top: hauteur ligne niveaux) */
+.rep-rapid-tr-niv th { position: sticky; top: 0; z-index: 3; background: var(--c-surface3); border-bottom: 1px solid var(--c-border); }
+.rep-rapid-tr-niv .rep-rapid-td-ens { z-index: 4; }
+.rep-rapid-tr-cls th { position: sticky; top: 37px; z-index: 3; background: var(--c-surface2); border-bottom: 2px solid var(--c-border); }
+.rep-rapid-tr-cls .rep-rapid-td-ens { z-index: 4; }
+.rep-rapid-th-cls-corner { border-right: 2px solid var(--c-border2); }
 /* En-têtes niveaux */
 .rep-rapid-th-niv {
   text-align: center;
   padding: .4rem .5rem .25rem;
-  background: var(--c-surface3);
-  border-bottom: 1px solid var(--c-border);
   border-right: 1px solid var(--c-border2);
 }
 /* En-têtes classes */
@@ -4384,24 +4385,25 @@ td.col-grille {
   font-size: .73rem;
   font-weight: 700;
   color: var(--c-text-muted);
-  background: var(--c-surface2);
-  border-bottom: 2px solid var(--c-border);
   white-space: nowrap;
   min-width: 64px;
 }
-/* Cellules données */
+/* Lignes enseignants */
 .rep-rapid-tr { border-bottom: 1px solid var(--c-border); }
 .rep-rapid-tr:last-child { border-bottom: none; }
 .rep-rapid-tr:hover .rep-rapid-td-ens { background: var(--c-surface3) !important; }
 .rep-rapid-tr:hover td { background: var(--c-surface2); }
 .rep-rapid-tr-autre .rep-rapid-td-ens { opacity: .75; }
+/* Cellules données */
 .rep-rapid-cell {
   text-align: center;
   vertical-align: middle;
   padding: .3rem .2rem;
   border-bottom: 1px solid var(--c-border);
+  transition: background .12s;
 }
 .rep-rapid-cell.rep-rapid-partage { background: #fff9f0; }
+.rep-rapid-cell.rep-rapid-cell-checked { background: color-mix(in srgb, var(--c-accent) 8%, transparent); }
 .rep-rapid-chk-lbl {
   display: flex;
   flex-direction: column;
@@ -4411,7 +4413,7 @@ td.col-grille {
 }
 .rep-rapid-chk { width: 15px; height: 15px; cursor: pointer; accent-color: var(--c-accent); }
 .rep-rapid-h { font-size: .68rem; color: var(--c-accent); display: block; }
-/* Bouton info enseignant */
+/* Info enseignant */
 .rep-rapid-ens-nom { font-size: .83rem; }
 .rep-rapid-nbcls {
   margin-left: .5rem;
@@ -4444,6 +4446,20 @@ td.col-grille {
   flex-shrink: 0;
   vertical-align: middle;
 }
+/* Bouton "Voir tous les enseignants" */
+.rep-rapid-autres-wrap { margin-bottom: 8px; }
+.rep-rapid-btn-autres {
+  font-family: inherit;
+  font-size: .78rem;
+  color: var(--c-text-muted);
+  background: var(--c-surface2);
+  border: 1px dashed var(--c-border2);
+  border-radius: 6px;
+  padding: .3rem .75rem;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.rep-rapid-btn-autres:hover { background: var(--c-surface3); color: var(--c-text); }
 
 .rep-saisie { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r); padding: 16px; margin-bottom: 22px; }
 .rep-saisie-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }

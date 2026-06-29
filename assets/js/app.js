@@ -1,5 +1,5 @@
 /**
- * DGH App — Contrôleur principal v4.16.4
+ * DGH App — Contrôleur principal v4.17.0
  * Noyau : init, navigation, délégation événements globaux, utilitaires.
  *
  * ARCHITECTURE :
@@ -281,6 +281,7 @@ const app = (() => {
       // ── Répartition de service ──
       if (action === 'rep-mode')              { DGHRepartition.setMode(actionBtn.dataset.mode);  return; }
       if (action === 'rep-del-aff')           { DGHRepartition.deleteAff(actionBtn.dataset.id);  return; }
+      if (action === 'rep-rapid-toggle-autres'){ DGHRepartition.toggleAutres();                   return; }
       // ── Salles & Heure bleue (modale établissement, v4.8.0) ──
       if (action === 'salle-add')             { DGHEdt.startAddSalleEdt();                          return; }
       if (action === 'salle-edit')            { DGHEdt.editSalleEdt(id);                            return; }
