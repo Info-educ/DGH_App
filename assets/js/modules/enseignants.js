@@ -1108,19 +1108,10 @@ const DGHEnseignants = (() => {
       .replace(/[-_]+/g, ' ')
       .replace(/\s+/g, ' ').trim();
   }
-  const _LANGUES = ['anglais','espagnol','allemand','italien','portugais','arabe','chinois','japonais','russe','neerlandais'];
-  const _LV_RE   = /^lv\d/;
   function _discMatch(a, b) {
     const na = _normDisc(a); const nb = _normDisc(b);
     if (!na || !nb) return false;
-    if (na === nb) return true;
-    if (na.includes(nb) || nb.includes(na)) return true;
-    const aIsLangue = _LANGUES.some(l => na === l);
-    const bIsLangue = _LANGUES.some(l => nb === l);
-    const aIsLV = _LV_RE.test(na);
-    const bIsLV = _LV_RE.test(nb);
-    if ((aIsLangue && bIsLV) || (bIsLangue && aIsLV)) return true;
-    return false;
+    return na === nb || na.includes(nb) || nb.includes(na);
   }
   function _normalizeGrade(raw) {
     const r = (raw||'').toLowerCase();

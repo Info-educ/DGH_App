@@ -26,16 +26,10 @@ const DGHData = (() => {
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
-  const _LANGUES = ['anglais','espagnol','allemand','italien','portugais','arabe','chinois','japonais','russe','neerlandais'];
-  const _LV_RE   = /^lv\d/;
   function _discMatch(a, b) {
     const na = _normDisc(a); const nb = _normDisc(b);
     if (!na || !nb) return false;
-    if (na === nb) return true;
-    if (na.includes(nb) || nb.includes(na)) return true;
-    const aL = _LANGUES.some(l => na === l), bL = _LANGUES.some(l => nb === l);
-    if ((aL && _LV_RE.test(nb)) || (bL && _LV_RE.test(na))) return true;
-    return false;
+    return na === nb || na.includes(nb) || nb.includes(na);
   }
 
   const TYPES_SALLE = [

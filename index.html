@@ -776,7 +776,7 @@
       <div class="modal-header"><h2 id="modalDiscTitle">Ajouter une discipline</h2><button class="modal-close" id="modalDiscClose">✕</button></div>
       <div class="modal-body">
         <input type="hidden" id="modalDiscId" />
-        <div class="form-group"><label for="inputDiscNom">Nom <span class="form-required">*</span></label><input type="text" id="inputDiscNom" placeholder="ex. Français, Mathématiques…" maxlength="60" /><span class="form-hint">Utilisez le nom exact de la grille MEN pour activer le besoin théorique.</span></div>
+        <div class="form-group"><label for="inputDiscNom">Nom <span class="form-required">*</span></label><input type="text" id="inputDiscNom" placeholder="ex. Français, Mathématiques…" maxlength="60" /><span class="form-hint">Utilisez le nom exact de la grille MEN pour activer le besoin théorique. <strong>Langues vivantes :</strong> indiquez le rang ET la langue — ex. <em>LV1 Anglais</em>, <em>LV2 Espagnol</em>, <em>LV1 Allemand</em> — pour que les enseignants soient automatiquement reconnus en répartition de service.</span></div>
         <div class="form-group"><label for="inputDiscCouleur">Couleur</label><div class="color-picker-row"><input type="color" id="inputDiscCouleur" value="#2d6a4f" class="color-input" /><span class="color-hint" id="colorHint">#2d6a4f</span></div></div>
       </div>
       <div class="modal-footer"><button class="btn-secondary" id="modalDiscCancel">Annuler</button><button class="btn-primary" id="modalDiscSave">Enregistrer</button></div>
@@ -922,7 +922,7 @@
           <label>Discipline(s) enseignée(s)</label>
           <div id="ensDiscSelects" class="ens-disc-selects-wrap"></div>
           <button type="button" class="btn-link ens-disc-add-btn" id="btnEnsDiscAjouter" data-action="ens-disc-ajouter">+ Ajouter une discipline</button>
-          <span class="form-hint">Choisissez la langue ou la matière (ex. Anglais, Espagnol) — pas le rang LV1/LV2 : un angliciste apparaîtra automatiquement sur LV1 <em>et</em> LV2 Anglais.</span>
+          <span class="form-hint"><strong>Langues vivantes :</strong> saisir la langue seule — <em>Anglais</em>, <em>Espagnol</em>, <em>Allemand</em>… L'enseignant apparaîtra automatiquement sur toutes les disciplines qui contiennent ce mot (<em>LV1 Anglais</em>, <em>LV2 Anglais</em>…).</span>
         </div>
         <div class="form-row-2">
           <div class="form-group">
