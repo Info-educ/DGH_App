@@ -382,7 +382,7 @@ const DGHRepartition = (() => {
         + '<span class="rep-saisie-hint rep-rapid-hint">Cochez les classes de chaque enseignant. '
           + 'Les heures se calculent automatiquement depuis la grille MEN.</span>'
       + '</div>'
-      + '<div class="rep-rapid-wrap" id="repRapidWrap">'
+      + '<div class="rep-rapid-outer"><div class="rep-rapid-wrap" id="repRapidWrap">'
         + '<table class="rep-rapid-table">'
           + '<thead>'
             + '<tr class="rep-rapid-tr-niv"><th class="rep-rapid-td-ens rep-rapid-th-corner">Enseignant</th>' + thNivGroups + '</tr>'
@@ -390,7 +390,7 @@ const DGHRepartition = (() => {
           + '</thead>'
           + '<tbody>' + rows + '</tbody>'
         + '</table>'
-      + '</div>'
+      + '</div></div>'
       + (btnAutres ? '<div class="rep-rapid-autres-wrap">' + btnAutres + '</div>' : '')
       + '<p class="rep-saisie-hint rep-rapid-legend">'
         + '<span class="rep-rapid-dot" style="background:#6b6860;display:inline-block;vertical-align:middle"></span> enseignant de la discipline'

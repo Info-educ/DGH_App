@@ -4341,7 +4341,9 @@ td.col-grille {
 .rep-mode-btn-rapide.active { background: var(--c-amber-bg); color: var(--c-amber); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
 /* ── SAISIE RAPIDE : matrice discipline × classe × enseignant ── */
-.rep-rapid-wrap { overflow-x: auto; overflow-y: auto; max-height: 420px; border: 1.5px solid var(--c-border); border-radius: 10px; margin-bottom: 8px; }
+/* Conteneur : border + coins arrondis sur un wrapper externe, scroll sur le wrapper interne */
+.rep-rapid-outer { border: 1.5px solid var(--c-border); border-radius: 10px; overflow: hidden; margin-bottom: 8px; }
+.rep-rapid-wrap  { overflow-x: auto; overflow-y: auto; max-height: 400px; }
 .rep-rapid-hint { margin-top: 0; margin-bottom: 8px; }
 .rep-rapid-legend { margin-top: 6px; }
 .rep-rapid-table { border-collapse: separate; border-spacing: 0; font-size: .82rem; width: 100%; min-width: 400px; }
@@ -4349,7 +4351,7 @@ td.col-grille {
 .rep-rapid-td-ens {
   position: sticky; left: 0; z-index: 2;
   background: var(--c-surface2);
-  padding: .4rem .75rem;
+  padding: .45rem .75rem;
   font-weight: 600;
   white-space: nowrap;
   border-right: 2px solid var(--c-border2);
@@ -4366,27 +4368,27 @@ td.col-grille {
   letter-spacing: .05em;
   z-index: 4;
 }
-/* En-têtes sticky : ligne niveaux (top:0) et ligne classes (top: hauteur ligne niveaux) */
+/* En-têtes sticky : ligne niveaux (top:0) et ligne classes (top: hauteur ligne niveaux ~34px) */
 .rep-rapid-tr-niv th { position: sticky; top: 0; z-index: 3; background: var(--c-surface3); border-bottom: 1px solid var(--c-border); }
 .rep-rapid-tr-niv .rep-rapid-td-ens { z-index: 4; }
-.rep-rapid-tr-cls th { position: sticky; top: 37px; z-index: 3; background: var(--c-surface2); border-bottom: 2px solid var(--c-border); }
+.rep-rapid-tr-cls th { position: sticky; top: 34px; z-index: 3; background: var(--c-surface2); border-bottom: 2px solid var(--c-border); }
 .rep-rapid-tr-cls .rep-rapid-td-ens { z-index: 4; }
 .rep-rapid-th-cls-corner { border-right: 2px solid var(--c-border2); }
 /* En-têtes niveaux */
 .rep-rapid-th-niv {
   text-align: center;
-  padding: .4rem .5rem .25rem;
+  padding: .35rem .5rem .25rem;
   border-right: 1px solid var(--c-border2);
 }
 /* En-têtes classes */
 .rep-rapid-th-cls {
   text-align: center;
-  padding: .3rem .4rem .4rem;
+  padding: .35rem .5rem;
   font-size: .73rem;
   font-weight: 700;
   color: var(--c-text-muted);
   white-space: nowrap;
-  min-width: 64px;
+  min-width: 56px;
 }
 /* Lignes enseignants */
 .rep-rapid-tr { border-bottom: 1px solid var(--c-border); }
@@ -4394,11 +4396,11 @@ td.col-grille {
 .rep-rapid-tr:hover .rep-rapid-td-ens { background: var(--c-surface3) !important; }
 .rep-rapid-tr:hover td { background: var(--c-surface2); }
 .rep-rapid-tr-autre .rep-rapid-td-ens { opacity: .75; }
-/* Cellules données */
+/* Cellules données : assez hautes pour que la checkbox + le "1h" respirent */
 .rep-rapid-cell {
   text-align: center;
   vertical-align: middle;
-  padding: .3rem .2rem;
+  padding: .5rem .35rem;
   border-bottom: 1px solid var(--c-border);
   transition: background .12s;
 }
@@ -4408,11 +4410,13 @@ td.col-grille {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   cursor: pointer;
+  min-height: 34px;
+  justify-content: center;
 }
-.rep-rapid-chk { width: 15px; height: 15px; cursor: pointer; accent-color: var(--c-accent); }
-.rep-rapid-h { font-size: .68rem; color: var(--c-accent); display: block; }
+.rep-rapid-chk { width: 16px; height: 16px; cursor: pointer; accent-color: var(--c-accent); flex-shrink: 0; }
+.rep-rapid-h { font-size: .68rem; color: var(--c-accent); display: block; line-height: 1; }
 /* Info enseignant */
 .rep-rapid-ens-nom { font-size: .83rem; }
 .rep-rapid-nbcls {
