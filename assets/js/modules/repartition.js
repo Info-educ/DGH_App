@@ -46,12 +46,24 @@ const DGHRepartition = (() => {
       .replace(/\s+/g, ' ').trim();
   }
 
-  // Matching souple bidirectionnel : "Anglais" matche "LV1", "LV2 - Anglais", "LV2 Anglais"
+  // Langues vivantes : tout prof de langue matche toutes les disciplines LV (LV1, LV2, LV3…)
+  const _LANGUES = ['anglais','espagnol','allemand','italien','portugais','arabe','chinois','japonais','russe','neerlandais'];
+  const _LV_RE   = /^lv\d/; // "lv1", "lv2", "lv3"…
+
   function _discMatch(a, b) {
     const na = _normDisc(a);
     const nb = _normDisc(b);
     if (!na || !nb) return false;
-    return na === nb || na.includes(nb) || nb.includes(na);
+    if (na === nb) return true;
+    // Inclusion bidirectionnelle (ex. "lv2 espagnol" contient "espagnol")
+    if (na.includes(nb) || nb.includes(na)) return true;
+    // Table LV : une langue matche toute discipline LV et vice-versa
+    const aIsLangue = _LANGUES.some(l => na === l);
+    const bIsLangue = _LANGUES.some(l => nb === l);
+    const aIsLV = _LV_RE.test(na);
+    const bIsLV = _LV_RE.test(nb);
+    if ((aIsLangue && bIsLV) || (bIsLangue && aIsLV)) return true;
+    return false;
   }
 
   function _ensADiscipline(ens, discNom) {
