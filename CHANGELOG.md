@@ -3,6 +3,19 @@
 Toutes les modifications notables sont documentées ici.  
 Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF`
 
+## [4.18.0] — Sprint 15
+
+### Ajouté
+- **Répartition de services — intégration du scénario actif** : la vue Répartition intègre désormais les modificateurs du scénario actif, exactement comme les modules Besoins et Pilotage.
+  - **Bandeau scénario actif** en tête de vue (nom du scénario, nombre de modificateurs).
+  - **Mode « Par discipline »** : chaque ligne classe × discipline affiche la référence simulée (grille MEN + delta scénario) à côté des heures affectées. Le delta est signalé `+Xh⚡` et la couleur de cohérence (vert/orange/rouge) est calculée sur la référence simulée.
+  - **Mode saisie rapide** : les cellules dont le scénario apporte un delta sont légèrement colorées en ambre ; les cellules cochées affichent le delta simulé `/Yh⚡` sous les heures affectées ; les cellules vides avec delta affichent un indicateur discret `+Xh⚡`.
+  - Sans scénario actif, le comportement est identique à la version précédente (référence grille MEN pure).
+
+### Technique
+- Nouvelle fonction privée `_deltaScenarioParCase(modificateurs, disciplineId, divisionId)` dans `repartition.js` : calcule le delta heures d'un scénario pour un couple (division, discipline) précis, en gérant les types `dedoublement`, `co-enseignement`, `groupe-effectif-reduit`, `groupes-besoins`, `autre`.
+- Nouvelles classes CSS : `.rep-cell-scen`, `.rep-scen-icon/mods/info`, `.rep-rapid-cell-scen`, `.rep-rapid-scen`, `.rep-rapid-scen-hint`.
+
 ---
 
 ## v4.17.0 — Saisie rapide : en-têtes figés, filtre discipline, correction décocher (2026-06-29)

@@ -1,5 +1,11 @@
 /**
- * DGH App — Module Répartition de service (v4.2 — Sprint 12)
+ * DGH App — Module Répartition de service (v4.3 — Sprint 15)
+ *
+ * v4.3 : Intégration du scénario actif dans la répartition.
+ *   - Bandeau scénario actif en tête de vue.
+ *   - Chaque ligne classe × discipline affiche la référence simulée
+ *     (grille MEN + delta scénario sur cette classe précise).
+ *   - Mode saisie rapide : delta scénario visible dans les cellules.
  *
  * Affecte les enseignants aux classes par discipline (classe × discipline → enseignant),
  * désigne les professeurs principaux, et alimente automatiquement :
@@ -61,6 +67,32 @@ const DGHRepartition = (() => {
     return Array.isArray(ens.disciplines) && ens.disciplines.some(d => _discMatch(d.discNom, discNom));
   }
 
+  /**
+   * Calcule le delta heures apporté par le scénario actif pour un couple
+   * (disciplineId, divisionId) précis. Parcourt tous les modificateurs pédagogiques
+   * dont classeIds inclut divisionId et dont disciplineId correspond.
+   * @returns {number} delta en heures (0 si aucun modificateur)
+   */
+  function _deltaScenarioParCase(modificateurs, disciplineId, divisionId) {
+    if (!Array.isArray(modificateurs) || modificateurs.length === 0) return 0;
+    const MODS_PEDAGOGIQUES = ['dedoublement','co-enseignement','groupe-effectif-reduit','groupes-besoins','autre'];
+    let delta = 0;
+    modificateurs.forEach(mod => {
+      if (!MODS_PEDAGOGIQUES.includes(mod.type)) return;
+      if (mod.disciplineId !== disciplineId) return;
+      if (!Array.isArray(mod.classeIds) || !mod.classeIds.includes(divisionId)) return;
+      if (mod.type === 'groupes-besoins') {
+        // groupes-besoins : coût = heuresParGroupe × ceil(nbClasses/2), réparti uniformément
+        const nbClasses = mod.classeIds.length;
+        const nbGroupes = Math.max(1, Math.ceil(nbClasses / 2));
+        delta += Math.round((mod.heuresParGroupe || 0) * nbGroupes / nbClasses * 2) / 2;
+      } else {
+        delta += mod.heuresParGroupe || 0;
+      }
+    });
+    return Math.round(delta * 2) / 2;
+  }
+
   // ══════════════════════════════════════════════════════════════════
   // RENDU PRINCIPAL
   // ══════════════════════════════════════════════════════════════════
@@ -87,7 +119,12 @@ const DGHRepartition = (() => {
       const nbCouv    = new Set(affs.map(a => a.divisionId)).size;
       const nbPP      = divisions.filter(d => d.ppEnsId).length;
 
+      // ── Scénario actif ────────────────────────────────────────────
+      const scen = DGHData.getScenarioActif();
+      const mods = scen ? (scen.modificateurs || []) : [];
+
       let html = ''
+        + (scen ? _htmlBandeauScenario(scen) : '')
         + '<div class="rep-intro">Étape de mai/juin : une fois la ventilation votée et vos postes connus, '
         + 'placez les enseignants sur les classes. Les heures de service et le pilotage se recalculent automatiquement. '
         + 'Cette étape est facultative — les scénarios fonctionnent sans elle.</div>'
@@ -102,9 +139,9 @@ const DGHRepartition = (() => {
           + '<button class="rep-mode-btn rep-mode-btn-rapide' + (_mode==='rapide'?' active':'') + '" data-action="rep-mode" data-mode="rapide" title="Tableau enseignants × classes">&#9889; Saisie rapide</button>'
         + '</div>'
         + '<div class="rep-saisie">' + (_mode==='discipline'
-            ? _htmlSaisieDiscipline(divisions, disciplines, enseignants)
+            ? _htmlSaisieDiscipline(divisions, disciplines, enseignants, mods)
             : _mode==='rapide'
-              ? _htmlSaisieRapide(divisions, disciplines, enseignants)
+              ? _htmlSaisieRapide(divisions, disciplines, enseignants, mods)
               : _htmlSaisieEnseignant(divisions, disciplines, enseignants)) + '</div>'
         + _htmlGrille(data, divisions, disciplines, enseignants)
         + _htmlControles(data);
@@ -121,6 +158,18 @@ const DGHRepartition = (() => {
       + '<span class="rep-kpi-lbl">' + lbl + '</span></div>';
   }
 
+  /** Bandeau scénario actif, même style que besoins.js */
+  function _htmlBandeauScenario(scen) {
+    const nbMods = (scen.modificateurs || []).length;
+    return '<div class="scen-actif-banner">'
+      + '<span class="rep-scen-icon">⚡</span>'
+      + '<span class="scen-actif-label">Scénario actif :</span>'
+      + '<span class="scen-actif-nom">' + _esc(scen.nom || 'Sans nom') + '</span>'
+      + '<span class="rep-scen-mods font-mono">' + nbMods + ' modificateur' + (nbMods > 1 ? 's' : '') + '</span>'
+      + '<span class="rep-scen-info">— les références ci-dessous intègrent ses modificateurs par classe.</span>'
+    + '</div>';
+  }
+
   function _htmlPrerequis(nbDiv, nbDisc, nbEns) {
     const manque = [];
     if (nbDiv === 0)  manque.push('<li>vos <strong>divisions</strong> (module Structures)</li>');
@@ -134,7 +183,7 @@ const DGHRepartition = (() => {
   // ══════════════════════════════════════════════════════════════════
   // SAISIE — PAR DISCIPLINE
   // ══════════════════════════════════════════════════════════════════
-  function _htmlSaisieDiscipline(divisions, disciplines, enseignants) {
+  function _htmlSaisieDiscipline(divisions, disciplines, enseignants, mods) {
     const disc = disciplines.find(d => d.id === _selDiscId) || disciplines[0];
 
     const discOpts = disciplines.map(d =>
@@ -146,7 +195,7 @@ const DGHRepartition = (() => {
     divisions.forEach(div => { (parNiv[div.niveau] = parNiv[div.niveau] || []).push(div); });
 
     const blocs = NIVEAUX_ORD.filter(n => parNiv[n] && parNiv[n].length).map(niv => {
-      const rows = parNiv[niv].map(div => _htmlLigneClasseDisc(div, disc, enseignants)).join('');
+      const rows = parNiv[niv].map(div => _htmlLigneClasseDisc(div, disc, enseignants, mods)).join('');
       return '<div class="rep-niv-bloc"><div class="rep-niv-label"><span class="niveau-badge niveau-'
         + niv.toLowerCase().replace(/[^a-z0-9]/g,'') + '">' + niv + '</span></div>' + rows + '</div>';
     }).join('');
@@ -159,21 +208,30 @@ const DGHRepartition = (() => {
       + '<div class="rep-classes-list">' + blocs + '</div>';
   }
 
-  function _htmlLigneClasseDisc(div, disc, enseignants) {
-    const cell  = DGHData.getAffectationsCell(div.id, disc.id);
-    const hMEN  = Calculs.heuresGrille(div.niveau, disc.nom);
-    const tags  = cell.map(a => _htmlAffTag(a, enseignants)).join('');
-    const somme = Math.round(cell.reduce((s,a)=>s+(a.heures||0),0)*2)/2;
-    const ecart = hMEN > 0 ? Math.round((somme - hMEN)*2)/2 : null;
-    const ecartCls = ecart === null ? '' : ecart === 0 ? 'rep-ok' : ecart > 0 ? 'rep-sur' : 'rep-sous';
-    const ecartTxt = hMEN > 0
-      ? '<span class="rep-cell-grille font-mono ' + ecartCls + '">' + somme + ' / ' + hMEN + ' h</span>'
-      : (somme > 0 ? '<span class="rep-cell-grille font-mono">' + somme + ' h</span>' : '');
+  function _htmlLigneClasseDisc(div, disc, enseignants, mods) {
+    const cell   = DGHData.getAffectationsCell(div.id, disc.id);
+    const hMEN   = Calculs.heuresGrille(div.niveau, disc.nom);
+    const delta  = _deltaScenarioParCase(mods, disc.id, div.id);
+    const hRef   = hMEN > 0 ? Math.round((hMEN + delta) * 2) / 2 : 0;
+    const tags   = cell.map(a => _htmlAffTag(a, enseignants)).join('');
+    const somme  = Math.round(cell.reduce((s,a)=>s+(a.heures||0),0)*2)/2;
+
+    let indicateurHtml = '';
+    if (hMEN > 0) {
+      const ecart    = Math.round((somme - hRef) * 2) / 2;
+      const ecartCls = ecart === 0 ? 'rep-ok' : ecart > 0 ? 'rep-sur' : 'rep-sous';
+      const refLabel = delta !== 0
+        ? somme + ' / ' + hRef + ' h <span class="rep-cell-scen font-mono" title="Grille MEN ' + hMEN + 'h + scénario +'+ delta +'h">+' + delta + 'h⚡</span>'
+        : somme + ' / ' + hRef + ' h';
+      indicateurHtml = '<span class="rep-cell-grille font-mono ' + ecartCls + '">' + refLabel + '</span>';
+    } else if (somme > 0) {
+      indicateurHtml = '<span class="rep-cell-grille font-mono">' + somme + ' h</span>';
+    }
 
     return '<div class="rep-classe-row">'
       + '<span class="rep-classe-nom">' + _esc(div.nom) + '</span>'
       + '<div class="rep-classe-affs">' + (tags || '<span class="rep-cell-vide">—</span>') + '</div>'
-      + ecartTxt
+      + indicateurHtml
       + '<select class="rep-add-select" data-action="rep-add" data-division-id="' + div.id + '" data-discipline-id="' + disc.id + '">'
         + _optsAjoutEns(enseignants, disc.nom)
       + '</select>'
@@ -289,7 +347,7 @@ const DGHRepartition = (() => {
    * Colonne enseignant sticky en scroll horizontal.
    * Par défaut : seuls les enseignants de la discipline sont affichés.
    */
-  function _htmlSaisieRapide(divisions, disciplines, enseignants) {
+  function _htmlSaisieRapide(divisions, disciplines, enseignants, mods) {
     const disc = disciplines.find(d => d.id === _selDiscId) || disciplines[0];
 
     const discOpts = disciplines.map(d =>
@@ -351,16 +409,28 @@ const DGHRepartition = (() => {
         const checked = !!mienne;
         // partage = une autre affectation existe sur cette case (pas celle de cet ens)
         const partage = !checked && cell.length > 0;
-        return '<td class="rep-rapid-cell' + (partage ? ' rep-rapid-partage' : '') + (checked ? ' rep-rapid-cell-checked' : '') + '">'
-          + '<label class="rep-rapid-chk-lbl" title="' + _esc(div.nom) + (partage ? ' — partagée' : '') + '">'
+        const delta   = _deltaScenarioParCase(mods, disc.id, div.id);
+        const hMEN    = Calculs.heuresGrille(div.niveau, disc.nom);
+        const hRef    = hMEN > 0 ? Math.round((hMEN + delta) * 2) / 2 : 0;
+        // Dans la cellule cochée : heures affectées + référence simulée si scénario actif
+        let innerLabel = '';
+        if (checked && mienne) {
+          innerLabel = '<span class="rep-rapid-h font-mono">' + (mienne.heures||0) + 'h</span>';
+          if (delta !== 0 && hRef > 0) {
+            innerLabel += '<span class="rep-rapid-scen font-mono" title="Référence simulée : grille MEN ' + hMEN + 'h + scénario +'+ delta +'h">/' + hRef + 'h⚡</span>';
+          }
+        } else if (!checked && delta !== 0 && hRef > 0) {
+          // Case vide mais scénario apporte un delta : indicateur discret
+          innerLabel = '<span class="rep-rapid-scen-hint font-mono" title="Référence simulée : grille MEN ' + hMEN + 'h + scénario +'+ delta +'h">+' + delta + 'h⚡</span>';
+        }
+        return '<td class="rep-rapid-cell' + (partage ? ' rep-rapid-partage' : '') + (checked ? ' rep-rapid-cell-checked' : '') + (delta !== 0 ? ' rep-rapid-cell-scen' : '') + '">'
+          + '<label class="rep-rapid-chk-lbl" title="' + _esc(div.nom) + (partage ? ' — partagée' : '') + (delta !== 0 ? ' — scénario +' + delta + 'h' : '') + '">'
             + '<input type="checkbox" class="rep-rapid-chk" data-action="rep-toggle-ens-classe"'
               + ' data-ens-id="' + ens.id + '"'
               + ' data-division-id="' + div.id + '"'
               + ' data-discipline-id="' + disc.id + '"'
               + (checked ? ' checked' : '') + '>'
-            + (checked && mienne
-                ? '<span class="rep-rapid-h font-mono">' + (mienne.heures||0) + 'h</span>'
-                : '')
+            + innerLabel
           + '</label>'
         + '</td>';
       }).join('');

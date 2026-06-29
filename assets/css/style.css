@@ -4521,6 +4521,19 @@ td.col-grille {
 .rep-cell-grille.rep-ok   { color: var(--c-green); background: var(--c-green-bg); }
 .rep-cell-grille.rep-sur  { color: var(--c-amber); background: var(--c-amber-bg); }
 .rep-cell-grille.rep-sous { color: var(--c-red);   background: var(--c-red-bg); }
+/* Delta scénario inline dans .rep-cell-grille */
+.rep-cell-scen { font-size: .75em; color: var(--c-amber); margin-left: .3rem; vertical-align: middle; }
+
+/* Scénario actif — bandeau répartition */
+.rep-scen-icon  { font-size: .9rem; }
+.rep-scen-mods  { font-size: .78rem; background: var(--c-accent); color: #fff; border-radius: 99px; padding: 1px 7px; }
+.rep-scen-info  { font-size: .82rem; color: var(--c-text-muted); }
+
+/* Saisie rapide — indicateurs scénario dans les cellules */
+.rep-rapid-cell-scen { background: color-mix(in srgb, var(--c-amber) 5%, transparent); }
+.rep-rapid-cell-scen.rep-rapid-cell-checked { background: color-mix(in srgb, var(--c-accent) 10%, var(--c-amber) 5%); }
+.rep-rapid-scen { font-size: .62rem; color: var(--c-amber); display: block; line-height: 1; }
+.rep-rapid-scen-hint { font-size: .58rem; color: var(--c-amber); opacity: .7; display: block; line-height: 1; }
 
 .rep-aff-tag { display: inline-flex; align-items: center; gap: 3px; background: var(--c-accent-light);
   border: 1px solid var(--c-accent); border-radius: 14px; padding: 2px 4px 2px 10px; font-size: 12.5px; }

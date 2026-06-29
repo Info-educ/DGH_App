@@ -1,5 +1,5 @@
 /**
- * DGH App — Moteur de calcul v4.17.0
+ * DGH App — Moteur de calcul v4.18.0
  * Fonctions pures : zéro DOM, zéro localStorage
  *
  * v3.0.0 — Sprint 5 :
