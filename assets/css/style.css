@@ -4464,6 +4464,22 @@ td.col-grille {
   transition: background .15s, color .15s;
 }
 .rep-rapid-btn-autres:hover { background: var(--c-surface3); color: var(--c-text); }
+/* Bouton retirer discipline (visible uniquement si ens dans disc mais 0 affectation) */
+.rep-rapid-retirer {
+  margin-left: .4rem;
+  font-size: .65rem;
+  color: var(--c-text-dim);
+  background: none;
+  border: 1px solid var(--c-border2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  cursor: pointer;
+  opacity: .6;
+  transition: opacity .15s, color .15s, border-color .15s;
+  vertical-align: middle;
+  font-family: inherit;
+}
+.rep-rapid-retirer:hover { opacity: 1; color: var(--c-danger, #c0392b); border-color: var(--c-danger, #c0392b); }
 
 .rep-saisie { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r); padding: 16px; margin-bottom: 22px; }
 .rep-saisie-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }

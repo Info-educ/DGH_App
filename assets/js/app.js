@@ -282,6 +282,7 @@ const app = (() => {
       if (action === 'rep-mode')              { DGHRepartition.setMode(actionBtn.dataset.mode);  return; }
       if (action === 'rep-del-aff')           { DGHRepartition.deleteAff(actionBtn.dataset.id);  return; }
       if (action === 'rep-rapid-toggle-autres'){ DGHRepartition.toggleAutres();                   return; }
+      if (action === 'rep-rapid-retirer-disc') { DGHRepartition.retirerDisc(actionBtn);            return; }
       // ── Salles & Heure bleue (modale établissement, v4.8.0) ──
       if (action === 'salle-add')             { DGHEdt.startAddSalleEdt();                          return; }
       if (action === 'salle-edit')            { DGHEdt.editSalleEdt(id);                            return; }

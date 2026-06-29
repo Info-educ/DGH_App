@@ -352,15 +352,23 @@ const DGHRepartition = (() => {
       ).length;
 
       // Indicateur discipline : dot coloré si enseignant de la discipline, "?" sinon
+      // + bouton ✕ pour retirer la discipline si ens est dans ensDisc mais sans aucune affectation
       const dotHtml = isDisc
         ? '<span class="rep-rapid-dot" style="background:' + _esc(disc.couleur||'#6b6860') + '"></span>'
         : '<span class="rep-rapid-dot-autre" title="N\'enseigne pas ' + _esc(disc.nom) + ' — affectation inhabituelle">?</span>';
+
+      const retirerBtn = (isDisc && nbAff === 0)
+        ? '<button class="rep-rapid-retirer" data-action="rep-rapid-retirer-disc"'
+            + ' data-ens-id="' + ens.id + '" data-discipline-id="' + disc.id + '"'
+            + ' title="Retirer ' + _esc(disc.nom) + ' de la fiche de cet enseignant">✕</button>'
+        : '';
 
       return '<tr class="rep-rapid-tr' + (!isDisc ? ' rep-rapid-tr-autre' : '') + '">'
         + '<td class="rep-rapid-td-ens">'
           + dotHtml
           + '<span class="rep-rapid-ens-nom">' + _esc(_nomEns(ens)) + '</span>'
           + (nbAff > 0 ? '<span class="rep-rapid-nbcls font-mono">' + nbAff + ' cl.</span>' : '')
+          + retirerBtn
         + '</td>'
         + cells
       + '</tr>';
@@ -485,6 +493,18 @@ const DGHRepartition = (() => {
   function setMode(mode)        { _mode = (mode === 'enseignant' ? 'enseignant' : mode === 'rapide' ? 'rapide' : 'discipline'); renderRepartition(); }
   function selectDiscipline(el) { _selDiscId = el.value; _showAutres = false; renderRepartition(); }
   function selectEnseignant(el) { _selEnsId  = el.value; renderRepartition(); }
+  function retirerDisc(btn) {
+    const ensId      = btn.dataset.ensId;
+    const discId     = btn.dataset.disciplineId;
+    const ens  = DGHData.getEnseignant(ensId);
+    const disc = DGHData.getDiscipline(discId);
+    if (!ens || !disc) return;
+    const discs = (Array.isArray(ens.disciplines) ? ens.disciplines : [])
+      .filter(d => d.discNom !== disc.nom);
+    DGHData.updateEnseignant(ensId, { disciplines: discs });
+    renderRepartition();
+  }
+
   function toggleAutres()       { _showAutres = !_showAutres; renderRepartition(); }
 
   function addFromSelect(el) {
@@ -602,7 +622,7 @@ const DGHRepartition = (() => {
     renderRepartition,
     setMode, selectDiscipline, selectEnseignant,
     addFromSelect, toggleEnsClasse, setHeures, deleteAff, addDiscToEns, setPP, toutColonne,
-    toggleAutres
+    toggleAutres, retirerDisc
   };
 
 })();
