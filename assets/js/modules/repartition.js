@@ -26,7 +26,7 @@ const DGHRepartition = (() => {
   const NIVEAUX_ORD = ['6e','5e','4e','3e','SEGPA','ULIS','UPE2A'];
 
   // ── État ──────────────────────────────────────────────────────────
-  let _mode        = 'discipline'; // 'discipline' | 'enseignant' | 'rapide'
+  let _mode        = 'rapide'; // 'rapide' | 'discipline' | 'hsa'
   let _selDiscId   = null;
   let _selEnsId    = null;
   let _showAutres  = false;        // saisie rapide : afficher les enseignants hors-discipline
@@ -134,15 +134,16 @@ const DGHRepartition = (() => {
           + _kpi(nbPP + ' / ' + divisions.length, 'professeurs principaux désignés')
         + '</div>'
         + '<div class="rep-mode-toggle">'
+          + '<button class="rep-mode-btn rep-mode-btn-rapide' + (_mode==='rapide'?' active':'') + '" data-action="rep-mode" data-mode="rapide" title="Tableau enseignants × classes">⚡ Saisie rapide</button>'
           + '<button class="rep-mode-btn' + (_mode==='discipline'?' active':'') + '" data-action="rep-mode" data-mode="discipline">Par discipline</button>'
-          + '<button class="rep-mode-btn' + (_mode==='enseignant'?' active':'') + '" data-action="rep-mode" data-mode="enseignant">Par enseignant</button>'
-          + '<button class="rep-mode-btn rep-mode-btn-rapide' + (_mode==='rapide'?' active':'') + '" data-action="rep-mode" data-mode="rapide" title="Tableau enseignants × classes">&#9889; Saisie rapide</button>'
+          + '<button class="rep-mode-btn rep-mode-btn-hsa' + (_mode==='hsa'?' active':'') + '" data-action="rep-mode" data-mode="hsa">📋 Répartition HSA</button>'
         + '</div>'
-        + '<div class="rep-saisie">' + (_mode==='discipline'
-            ? _htmlSaisieDiscipline(divisions, disciplines, enseignants, mods)
-            : _mode==='rapide'
-              ? _htmlSaisieRapide(divisions, disciplines, enseignants, mods)
-              : _htmlSaisieEnseignant(divisions, disciplines, enseignants)) + '</div>'
+        + '<div class="rep-saisie">' + (_mode==='rapide'
+            ? _htmlSaisieRapide(divisions, disciplines, enseignants, mods)
+            : _mode==='discipline'
+              ? _htmlSaisieDiscipline(divisions, disciplines, enseignants, mods)
+              : _htmlRepartitionHSA(divisions, disciplines, enseignants, mods, scen))
+        + '</div>'
         + _htmlGrille(data, divisions, disciplines, enseignants)
         + _htmlControles(data);
 
@@ -460,7 +461,8 @@ const DGHRepartition = (() => {
           + retirerBtn
         + '</td>'
         + cells
-      + '</tr>';
+      + '</tr>'
+      + (nbAff > 0 ? _htmlRecapEns(ens, disc, allDivs, mods) : '');
     }).join('');
 
     // Bouton pour afficher/masquer les enseignants hors discipline non affectés
@@ -579,7 +581,7 @@ const DGHRepartition = (() => {
   // ══════════════════════════════════════════════════════════════════
   // ACTIONS (appelées via délégation app.js)
   // ══════════════════════════════════════════════════════════════════
-  function setMode(mode)        { _mode = (mode === 'enseignant' ? 'enseignant' : mode === 'rapide' ? 'rapide' : 'discipline'); renderRepartition(); }
+  function setMode(mode)        { _mode = (mode === 'discipline' ? 'discipline' : mode === 'hsa' ? 'hsa' : 'rapide'); renderRepartition(); }
   function selectDiscipline(el) { _selDiscId = el.value; _showAutres = false; renderRepartition(); }
   function selectEnseignant(el) { _selEnsId  = el.value; renderRepartition(); }
   function retirerDisc(btn) {
@@ -705,6 +707,153 @@ const DGHRepartition = (() => {
     const divisionId = el.dataset.divisionId;
     DGHData.setProfesseurPrincipal(divisionId, el.value || null);
     renderRepartition();
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // LIGNE RÉCAP — service enseignant sous la ligne saisie rapide
+  // ══════════════════════════════════════════════════════════════════
+  /**
+   * Génère une ligne <tr> de récapitulatif de service pour un enseignant
+   * dans la saisie rapide, affichée sous sa ligne de cases à cocher.
+   * S'affiche uniquement si l'enseignant a ≥1 affectation.
+   */
+  function _htmlRecapEns(ens, disc, allDivs, mods) {
+    const hpcs = DGHData.getHeuresPedaComp();
+
+    // Heures de scénario attribuées à cet enseignant sur cette discipline
+    const hsaAbsorbees = DGHData.getHsaAbsorbees();
+    const data         = DGHData.getAnnee();
+    const scen         = DGHData.getScenarioActif();
+    const modsActifs   = scen ? (scen.modificateurs || []) : mods;
+
+    // Delta scénario total sur cette discipline
+    let deltaDisc = 0;
+    const MODS_PED = ['dedoublement','co-enseignement','groupe-effectif-reduit','groupes-besoins','autre'];
+    modsActifs.forEach(mod => {
+      if (!MODS_PED.includes(mod.type)) return;
+      if (mod.disciplineId !== disc.id) return;
+      deltaDisc += mod.heuresParGroupe || 0;
+    });
+    deltaDisc = Math.round(deltaDisc * 2) / 2;
+
+    // Attribution scénario pour cette discipline
+    let hScen = 0;
+    if (deltaDisc > 0) {
+      const manuel = hsaAbsorbees[disc.id] ? (hsaAbsorbees[disc.id].profs || {}) : {};
+      const attrib = Calculs.attribuerHSAScenario(
+        DGHData.getEnseignants(), disc.id, disc.nom, deltaDisc, manuel
+      );
+      hScen = attrib[ens.id] || 0;
+    }
+
+    const sv = Calculs.serviceTotalAvecScenario(ens, hpcs, hScen);
+
+    const orsLabel = sv.ors > 0 ? sv.ors + 'h ORS' : 'sans ORS';
+    const hpLabel  = sv.hpTotal + 'h HP';
+    const hsaLabel = sv.hsaTotal > 0 ? sv.hsaTotal + 'h HSA' : '';
+    const scenLabel = hScen > 0 ? '+' + hScen + 'h ⚡' : '';
+    const totLabel = sv.totalGeneral + 'h total';
+
+    const statCls = sv.statutORS === 'hsa' ? 'rep-recap-hsa'
+      : sv.statutORS === 'sous-service' ? 'rep-recap-sous'
+      : 'rep-recap-ok';
+
+    const colCount = allDivs.length + 1; // +1 pour la colonne enseignant
+    return '<tr class="rep-rapid-recap-row">'
+      + '<td class="rep-rapid-td-ens rep-rapid-recap-ens" colspan="' + colCount + '">'
+        + '<span class="rep-recap-label font-mono">' + _esc(orsLabel) + '</span>'
+        + '<span class="rep-recap-sep">|</span>'
+        + '<span class="rep-recap-hp font-mono">' + hpLabel + '</span>'
+        + (hsaLabel ? '<span class="rep-recap-sep">+</span><span class="rep-recap-hsa font-mono">' + hsaLabel + '</span>' : '')
+        + (scenLabel ? '<span class="rep-recap-sep">dont</span><span class="rep-recap-scen font-mono">' + scenLabel + '</span>' : '')
+        + '<span class="rep-recap-sep">→</span>'
+        + '<span class="rep-recap-tot font-mono ' + statCls + '">' + totLabel + '</span>'
+      + '</td>'
+    + '</tr>';
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // ONGLET RÉPARTITION DES HSA
+  // ══════════════════════════════════════════════════════════════════
+  function _htmlRepartitionHSA(divisions, disciplines, enseignants, mods, scen) {
+    const hpcs      = DGHData.getHeuresPedaComp();
+    const data      = DGHData.getAnnee();
+    const hsaAbs    = DGHData.getHsaAbsorbees();
+    const modsActifs = scen ? (scen.modificateurs || []) : mods;
+
+    if (!scen) {
+      return '<div class="rep-hsa-empty">'
+        + '<div class="rep-hsa-empty-icon">📋</div>'
+        + '<p>Aucun scénario actif.</p>'
+        + '<p class="rep-saisie-hint">Activez un scénario dans l\'onglet Pilotage pour voir la répartition des HSA.</p>'
+        + '</div>';
+    }
+
+    const bilan = Calculs.bilanEquipeAvecScenario(enseignants, hpcs, data, modsActifs, hsaAbs);
+    const rows  = bilan.rows.filter(r => r.hsaTotal > 0 || r.hScen > 0);
+
+    if (rows.length === 0) {
+      return '<div class="rep-hsa-empty">'
+        + '<div class="rep-hsa-empty-icon">✅</div>'
+        + '<p>Aucune HSA à répartir avec le scénario actif.</p>'
+        + '</div>';
+    }
+
+    const thead = '<thead><tr>'
+      + '<th class="rep-hsa-th-ens">Enseignant</th>'
+      + '<th class="rep-hsa-th-r">ORS</th>'
+      + '<th class="rep-hsa-th-r">Apport</th>'
+      + '<th class="rep-hsa-th-r">HP</th>'
+      + '<th class="rep-hsa-th-r">HSA discipl.</th>'
+      + '<th class="rep-hsa-th-r">HSA scén. ⚡</th>'
+      + '<th class="rep-hsa-th-r">HPC HSA</th>'
+      + '<th class="rep-hsa-th-r font-mono rep-hsa-th-total">Total HSA</th>'
+      + '<th class="rep-hsa-th-r">Détail</th>'
+      + '</tr></thead>';
+
+    const tbody = rows.map(r => {
+      const detailLines = (r.detailHSA || []).map(d =>
+        '<li>' + _esc(d.source) + ' — ' + _esc(d.nom) + ' : ' + d.heures + 'h</li>'
+      ).join('');
+      const detailHtml = detailLines
+        ? '<ul class="rep-hsa-detail">' + detailLines + '</ul>'
+        : '<span class="rep-hsa-na">—</span>';
+
+      return '<tr class="rep-hsa-row">'
+        + '<td class="rep-hsa-td-ens">'
+          + '<span class="rep-hsa-nom">' + _esc(r.nom) + ' ' + _esc(r.prenom) + '</span>'
+          + '<span class="rep-hsa-grade font-mono">' + _esc(r.grade || '') + '</span>'
+        + '</td>'
+        + '<td class="rep-hsa-td-r font-mono">' + (r.ors > 0 ? r.ors + 'h' : '—') + '</td>'
+        + '<td class="rep-hsa-td-r font-mono">' + r.apportPoste + 'h</td>'
+        + '<td class="rep-hsa-td-r font-mono">' + r.hpTotal + 'h</td>'
+        + '<td class="rep-hsa-td-r font-mono">' + (r.hsaAuto > 0 ? r.hsaAuto + 'h' : '—') + '</td>'
+        + '<td class="rep-hsa-td-r font-mono rep-hsa-scen">' + (r.hsaScen > 0 ? '+' + r.hsaScen + 'h' : '—') + '</td>'
+        + '<td class="rep-hsa-td-r font-mono">' + (r.hsaForce > 0 ? r.hsaForce + 'h' : '—') + '</td>'
+        + '<td class="rep-hsa-td-r font-mono rep-hsa-total">' + r.hsaTotal + 'h</td>'
+        + '<td class="rep-hsa-td-detail">' + detailHtml + '</td>'
+      + '</tr>';
+    }).join('');
+
+    const totalHSA = Math.round(rows.reduce((s, r) => s + r.hsaTotal, 0) * 2) / 2;
+    const totalScen = Math.round(rows.reduce((s, r) => s + (r.hsaScen || 0), 0) * 2) / 2;
+
+    return '<div class="rep-hsa-banner scen-actif-banner">'
+        + '<span>⚡ Scénario : <strong>' + _esc(scen.nom || 'Sans nom') + '</strong></span>'
+        + '<span class="rep-hsa-banner-kpi font-mono">' + totalHSA + 'h HSA total dont ' + totalScen + 'h issues du scénario</span>'
+        + '<span class="rep-scen-info">— ajustez ligne par ligne dans l\'onglet Besoins & Apports</span>'
+      + '</div>'
+      + '<div class="rep-hsa-table-wrap">'
+        + '<table class="rep-hsa-table">' + thead + '<tbody>' + tbody + '</tbody>'
+          + '<tfoot><tr>'
+            + '<td colspan="7" class="rep-hsa-th-ens">TOTAL</td>'
+            + '<td class="rep-hsa-td-r font-mono rep-hsa-total">' + totalHSA + 'h</td>'
+            + '<td></td>'
+          + '</tr></tfoot>'
+        + '</table>'
+      + '</div>'
+      + '<p class="rep-saisie-hint" style="margin-top:.75rem">Répartition auto par ordre décroissant d\'ORS. '
+        + 'Ajustez les heures par enseignant dans <strong>Besoins &amp; Apports → HSA absorbées</strong>.</p>';
   }
 
   return {

@@ -39,12 +39,30 @@ const DGHEquipe = (() => {
   function renderEquipe() {
     const enseignants = DGHData.getEnseignants();
     const hpcs        = DGHData.getHeuresPedaComp();
-    const bilan       = Calculs.bilanEquipe(enseignants, hpcs);
+    const scen        = DGHData.getScenarioActif();
+    const mods        = scen ? (scen.modificateurs || []) : [];
+    const hsaAbs      = DGHData.getHsaAbsorbees();
+    const bilan       = mods.length > 0
+      ? Calculs.bilanEquipeAvecScenario(enseignants, hpcs, DGHData.getAnnee(), mods, hsaAbs)
+      : Calculs.bilanEquipe(enseignants, hpcs);
     const bilanDot    = Calculs.bilanDotation(DGHData.getAnnee());
 
+    _renderBandeauScen(scen);
     _renderKPI(bilan, bilanDot);
     _renderStatutStrip(bilan);
-    _renderTable(bilan);
+    _renderTable(bilan, !!scen);
+  }
+
+  function _renderBandeauScen(scen) {
+    const el = document.getElementById('eq-scen-banner');
+    if (!el) return;
+    if (scen) {
+      el.classList.remove('is-hidden');
+      el.innerHTML = '<span class="eq-scen-icon">⚡</span> Scénario actif <strong>'
+        + _esc(scen.nom || 'Sans nom') + '</strong> — les heures de dédoublements et co-enseignements sont intégrées dans les services ci-dessous.';
+    } else {
+      el.classList.add('is-hidden');
+    }
   }
 
   // ── KPI ─────────────────────────────────────────────────────────────
@@ -96,7 +114,7 @@ const DGHEquipe = (() => {
   }
 
   // ── TABLEAU ─────────────────────────────────────────────────────────
-  function _renderTable(bilan) {
+  function _renderTable(bilan, hasScen) {
     const wrap = document.getElementById('eq-table-wrap');
     if (!wrap) return;
 
@@ -117,6 +135,7 @@ const DGHEquipe = (() => {
       + '<th class="eq-num">Seuil HP</th>'
       + '<th class="eq-num">HP</th>'
       + '<th class="eq-num">HSA</th>'
+      + (hasScen ? '<th class="eq-num eq-col-scen" title="HSA issues du scénario actif">⚡ Scénario</th>' : '')
       + '<th class="eq-hide-sm">Répartition</th>'
       + '<th></th>'
       + '</tr></thead><tbody>';
@@ -164,6 +183,7 @@ const DGHEquipe = (() => {
         + '<td class="eq-num">' + seuilCell + '</td>'
         + '<td class="eq-num"><span class="eq-hp-val">' + _h(r.hpTotal) + ' h</span></td>'
         + '<td class="eq-num">' + hsaCell + '</td>'
+        + (hasScen ? '<td class="eq-num eq-col-scen">' + (r.hsaScen > 0 ? '<span class="eq-hsa-scen font-mono">+' + _h(r.hsaScen) + ' h</span>' : '<span class="eq-hsa-zero">—</span>') + '</td>' : '')
         + '<td class="eq-hide-sm">' + bar + '</td>'
         + '<td class="eq-num eq-row-actions">'
           + '<button class="eq-action-btn" data-action="edit-ens" data-id="' + r.id + '" title="Modifier">✎</button>'
@@ -178,6 +198,7 @@ const DGHEquipe = (() => {
       + '<td class="eq-num"></td>'
       + '<td class="eq-num"><span class="eq-hp-val">' + _h(bilan.totalHP) + ' h</span></td>'
       + '<td class="eq-num"><span class="eq-hsa-val">' + _h(bilan.totalHSA) + ' h</span></td>'
+      + (hasScen ? '<td class="eq-num eq-col-scen"></td>' : '')
       + '<td class="eq-hide-sm" colspan="2"></td>'
       + '</tr></tfoot></table>';
 

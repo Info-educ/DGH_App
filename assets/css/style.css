@@ -4484,7 +4484,61 @@ td.col-grille {
   transition: background .15s, color .15s;
 }
 .rep-rapid-btn-autres:hover { background: var(--c-surface3); color: var(--c-text); }
-/* Bouton retirer discipline (visible uniquement si ens dans disc mais 0 affectation) */
+/* Bouton onglet HSA */
+.rep-mode-btn-hsa { color: var(--c-amber); }
+.rep-mode-btn-hsa:hover { color: var(--c-amber); background: var(--c-amber-bg); }
+.rep-mode-btn-hsa.active { background: var(--c-amber-bg); color: var(--c-amber); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+/* ── Ligne récap enseignant (saisie rapide) ──────────────────── */
+.rep-rapid-recap-row { background: var(--c-surface2); }
+.rep-rapid-recap-ens {
+  padding: .3rem .75rem .35rem 1.5rem !important;
+  font-size: .75rem;
+  border-bottom: 2px solid var(--c-border2);
+  display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
+}
+.rep-recap-label { color: var(--c-text-muted); }
+.rep-recap-sep   { color: var(--c-text-dim); margin: 0 .15rem; }
+.rep-recap-hp    { color: var(--c-accent); font-weight: 600; }
+.rep-recap-hsa   { color: var(--c-amber); font-weight: 600; }
+.rep-recap-scen  { color: var(--c-amber); }
+.rep-recap-tot   { font-weight: 700; }
+.rep-recap-ok    { color: var(--c-green); }
+.rep-recap-hsa   { color: var(--c-amber); }
+.rep-recap-sous  { color: var(--c-red); }
+
+/* ── Onglet Répartition des HSA ─────────────────────────────── */
+.rep-hsa-empty { text-align: center; padding: 3rem 1rem; color: var(--c-text-muted); }
+.rep-hsa-empty-icon { font-size: 2.5rem; margin-bottom: .75rem; opacity: .5; }
+.rep-hsa-banner { margin-bottom: 1rem; }
+.rep-hsa-banner-kpi { font-size: .82rem; background: var(--c-amber-bg); color: var(--c-amber); border-radius: 99px; padding: 1px 8px; font-weight: 600; }
+.rep-hsa-table-wrap { overflow-x: auto; border: 1.5px solid var(--c-border); border-radius: 8px; }
+.rep-hsa-table { border-collapse: collapse; width: 100%; font-size: .83rem; }
+.rep-hsa-table thead tr { background: var(--c-surface2); border-bottom: 2px solid var(--c-border); }
+.rep-hsa-table th { padding: .5rem .75rem; text-align: right; font-size: .75rem; font-weight: 700; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.rep-hsa-th-ens { text-align: left !important; min-width: 160px; }
+.rep-hsa-th-r   { text-align: right; }
+.rep-hsa-th-total { color: var(--c-amber) !important; }
+.rep-hsa-row { border-bottom: 1px solid var(--c-border); }
+.rep-hsa-row:last-child { border-bottom: none; }
+.rep-hsa-row:hover { background: var(--c-surface2); }
+.rep-hsa-td-ens { padding: .55rem .75rem; }
+.rep-hsa-td-r   { padding: .55rem .75rem; text-align: right; }
+.rep-hsa-td-detail { padding: .4rem .75rem; }
+.rep-hsa-nom  { font-weight: 600; font-size: .88rem; display: block; }
+.rep-hsa-grade { font-size: .7rem; color: var(--c-text-muted); display: block; }
+.rep-hsa-scen { color: var(--c-amber); font-weight: 600; }
+.rep-hsa-total { color: var(--c-amber); font-weight: 700; }
+.rep-hsa-na   { color: var(--c-text-dim); }
+.rep-hsa-detail { list-style: none; padding: 0; margin: 0; font-size: .73rem; color: var(--c-text-muted); }
+.rep-hsa-detail li { margin-bottom: 2px; }
+.rep-hsa-table tfoot tr { background: var(--c-surface2); border-top: 2px solid var(--c-border); }
+.rep-hsa-table tfoot td { padding: .5rem .75rem; font-weight: 700; font-size: .83rem; }
+
+/* ── Équipe — colonne scénario ───────────────────────────────── */
+.eq-col-scen { background: color-mix(in srgb, var(--c-amber) 5%, transparent); }
+.eq-hsa-scen { color: var(--c-amber); font-weight: 600; font-size: .82rem; }
+.eq-scen-icon { margin-right: .3rem; }
 .rep-rapid-retirer {
   margin-left: .4rem;
   font-size: .65rem;

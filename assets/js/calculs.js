@@ -1,5 +1,5 @@
 /**
- * DGH App — Moteur de calcul v4.18.0
+ * DGH App — Moteur de calcul v4.19.0
  * Fonctions pures : zéro DOM, zéro localStorage
  *
  * v3.0.0 — Sprint 5 :
@@ -503,6 +503,64 @@ const Calculs = (() => {
     };
   }
 
+
+/**
+ * Attribue les heures HSA de scénario (dédoublements, co-enseignement, etc.)
+ * aux enseignants d'une discipline, par ordre décroissant d'ORS (le plus fort
+ * ORS absorbe en premier), en heures entières ou demi-heures uniquement.
+ *
+ * Retourne un objet { [ensId]: heures } représentant les heures de scénario
+ * attribuées à chaque enseignant — utilisable comme point de départ pour
+ * l'onglet "Répartition des HSA".
+ *
+ * Si hsaAbsorbees[disciplineId].profs est déjà renseigné (ajustement manuel),
+ * on retourne directement ces valeurs sans recalculer.
+ *
+ * @param {Array}  enseignants   - DGHData.getEnseignants()
+ * @param {string} disciplineId  - identifiant de la discipline
+ * @param {string} discNom       - nom de la discipline (pour matcher ens.disciplines)
+ * @param {number} hsaTotal      - total heures HSA à absorber (depuis bilanScenario)
+ * @param {Object} manuelProfs   - { [ensId]: heures } overrides manuels éventuels
+ * @returns {{ [ensId]: number }}
+ */
+function attribuerHSAScenario(enseignants, disciplineId, discNom, hsaTotal, manuelProfs) {
+  // Override manuel : si déjà saisi, on l'utilise directement
+  if (manuelProfs && Object.keys(manuelProfs).length > 0) {
+    return Object.assign({}, manuelProfs);
+  }
+  if (!hsaTotal || hsaTotal <= 0) return {};
+
+  // Filtrer les enseignants de cette discipline
+  const profsDisc = (enseignants || []).filter(ens =>
+    Array.isArray(ens.disciplines) && ens.disciplines.some(d =>
+      (d.discNom || '').toLowerCase().trim() === (discNom || '').toLowerCase().trim()
+    )
+  );
+  if (profsDisc.length === 0) return {};
+
+  // Trier par ORS décroissant (le plus fort ORS absorbe en premier)
+  const tries = profsDisc.slice().sort((a, b) => {
+    const oa = getORS(a.grade, a.orsManuel);
+    const ob = getORS(b.grade, b.orsManuel);
+    return ob - oa; // décroissant
+  });
+
+  const result = {};
+  let restant = Math.round(hsaTotal * 2) / 2;
+
+  tries.forEach(ens => {
+    if (restant <= 0) return;
+    // Attribuer en heures entières ou demi-heures
+    const aAttribuer = Math.min(restant, Math.round(restant)); // au plus ce qui reste
+    const attrib = Math.round(aAttribuer * 2) / 2; // arrondi demi-heure
+    if (attrib > 0) {
+      result[ens.id] = attrib;
+      restant = Math.round((restant - attrib) * 2) / 2;
+    }
+  });
+
+  return result;
+}
 
 /**
  * Calcule le coût total d'un scénario appliqué sur les données réelles.
@@ -1317,11 +1375,144 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
     return { 1: p1, 2: p2, 3: p3, 4: p4 };
   }
 
+  /**
+   * Calcule le service complet d'un enseignant en intégrant les heures du scénario actif.
+   * Les heures de scénario attribuées à cet enseignant s'ajoutent à l'apport-poste,
+   * basculent en HSA si ça dépasse l'ORS, exactement comme les heures de discipline.
+   *
+   * @param {Object} ens       - fiche enseignant
+   * @param {Array}  hpcs      - DGHData.getHeuresPedaComp()
+   * @param {number} hScen     - heures de scénario attribuées à cet enseignant (toutes disciplines)
+   * @returns {Object} même structure que serviceTotalEnseignant + { hScen }
+   */
+  function serviceTotalAvecScenario(ens, hpcs, hScen) {
+    const base = serviceTotalEnseignant(ens, hpcs);
+    const hs   = Math.round((parseFloat(hScen) || 0) * 2) / 2;
+    if (hs <= 0) return Object.assign({}, base, { hScen: 0 });
+
+    const cap        = plafondHP(ens);
+    const seuil      = cap.plafond;
+    const sansSeuil  = seuil === 0;
+    const newApport  = Math.round((base.apportPoste + hs) * 2) / 2;
+
+    let hpTotal, hsaScen;
+    if (sansSeuil) {
+      hpTotal  = newApport;
+      hsaScen  = 0;
+    } else {
+      hpTotal  = Math.min(newApport, seuil);
+      hsaScen  = Math.max(0, Math.round((newApport - seuil) * 2) / 2);
+    }
+    hpTotal = Math.round(hpTotal * 2) / 2;
+
+    const hsaTotal    = Math.round((base.hsaAuto + base.hsaForce + hsaScen) * 2) / 2;
+    const totalGeneral = Math.round((hpTotal + hsaTotal) * 2) / 2;
+    const ecartORS    = sansSeuil ? null : Math.round((newApport - seuil) * 2) / 2;
+    const statutORS   = sansSeuil ? 'sans-ors' : ecartORS > 0 ? 'hsa' : ecartORS < 0 ? 'sous-service' : 'equilibre';
+
+    const detailHSA = base.detailHSA.slice();
+    if (hsaScen > 0) detailHSA.unshift({ source: 'Scénario', nom: 'Dédoublements / co-enseignement', heures: hsaScen });
+
+    return Object.assign({}, base, {
+      apportPoste: newApport,
+      hpTotal, hsaScen, hsaTotal,
+      totalGeneral, ecartORS, statutORS, detailHSA,
+      hScen: hs
+    });
+  }
+
+  /**
+   * Version de bilanEquipe intégrant les heures de scénario.
+   * @param {Array}  enseignants
+   * @param {Array}  hpcs
+   * @param {Object} anneeData       - pour bilanScenario
+   * @param {Array}  modificateurs   - scen.modificateurs ([] si pas de scénario)
+   * @param {Object} hsaAbsorbees    - DGHData.getHsaAbsorbees() pour overrides manuels
+   */
+  function bilanEquipeAvecScenario(enseignants, hpcs, anneeData, modificateurs, hsaAbsorbees) {
+    const mods  = modificateurs || [];
+    const list  = Array.isArray(enseignants) ? enseignants : [];
+    const habs  = hsaAbsorbees || {};
+
+    // Calculer le delta HSA par discipline depuis le scénario
+    const bScen = mods.length > 0 ? bilanScenario(anneeData, mods) : null;
+    // deltaHSAParDisc : { disciplineId: heures_hsa_scenario }
+    const deltaParDisc = {};
+    if (bScen) {
+      (bScen.detailParMod || []).forEach(d => {
+        if (d.disciplineId) {
+          deltaParDisc[d.disciplineId] = Math.round(((deltaParDisc[d.disciplineId] || 0) + (d.hsa || 0) + (d.hp || 0)) * 2) / 2;
+        }
+      });
+    }
+
+    // Attribuer les HSA scénario à chaque enseignant par discipline
+    // hsaScenParEns : { ensId: total_heures_scen }
+    const hsaScenParEns = {};
+    const attribParDisc = {}; // { disciplineId: { ensId: h } } — pour l'onglet HSA
+
+    Object.entries(deltaParDisc).forEach(([discId, hsaTot]) => {
+      const disc = (anneeData.disciplines || []).find(d => d.id === discId);
+      if (!disc) return;
+      const manuel = habs[discId] ? (habs[discId].profs || {}) : {};
+      const attrib = attribuerHSAScenario(list, discId, disc.nom, hsaTot, manuel);
+      attribParDisc[discId] = attrib;
+      Object.entries(attrib).forEach(([ensId, h]) => {
+        hsaScenParEns[ensId] = Math.round(((hsaScenParEns[ensId] || 0) + h) * 2) / 2;
+      });
+    });
+
+    let totalHP = 0, totalHSA = 0, totalGeneral = 0;
+    const parStatut = {};
+    const rows = list.map(ens => {
+      const hScen = hsaScenParEns[ens.id] || 0;
+      const sv    = serviceTotalAvecScenario(ens, hpcs || [], hScen);
+      totalHP      += sv.hpTotal;
+      totalHSA     += sv.hsaTotal;
+      totalGeneral += sv.totalGeneral;
+      const st = ens.statut || 'titulaire';
+      if (!parStatut[st]) parStatut[st] = { statut: st, nb: 0, hp: 0, hsa: 0 };
+      parStatut[st].nb++;
+      parStatut[st].hp  += sv.hpTotal;
+      parStatut[st].hsa += sv.hsaTotal;
+      return {
+        id: ens.id, nom: ens.nom || '', prenom: ens.prenom || '',
+        grade: ens.grade || '', statut: st,
+        disciplinePrincipale: ens.disciplinePrincipale || '',
+        ors: sv.ors, plafondSource: sv.plafondSource,
+        apportPoste: sv.apportPoste,
+        hpTotal: sv.hpTotal, hsaAuto: sv.hsaAuto, hsaForce: sv.hsaForce,
+        hsaScen: sv.hsaScen || 0, hsaTotal: sv.hsaTotal,
+        totalGeneral: sv.totalGeneral,
+        ecartORS: sv.ecartORS, statutORS: sv.statutORS,
+        detailHSA: sv.detailHSA, motifORS: ens.motifORS || '',
+        hScen
+      };
+    }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+
+    Object.values(parStatut).forEach(s => {
+      s.hp  = Math.round(s.hp  * 2) / 2;
+      s.hsa = Math.round(s.hsa * 2) / 2;
+    });
+
+    return {
+      nbEns: list.length,
+      totalHP:      Math.round(totalHP      * 2) / 2,
+      totalHSA:     Math.round(totalHSA     * 2) / 2,
+      totalGeneral: Math.round(totalGeneral * 2) / 2,
+      parStatut: Object.values(parStatut),
+      attribParDisc,
+      deltaParDisc,
+      rows
+    };
+  }
+
   return {
     GRILLES_MEN,
     getORS, plafondHP, calcHeuresEnseignant, detailEnseignant, bilanEnseignants, bilanParDiscipline,
     resumeStructures, bilanDotation, besoinsParDiscipline,
     suggererRepartition, bilanHPC, genererAlertes, serviceTotalEnseignant, bilanEquipe,
+    bilanEquipeAvecScenario, attribuerHSAScenario, serviceTotalAvecScenario,
     bilanBesoinsApports,
     bilanScenario, comparerScenarios, comparatifDisciplines,
     syntheseCA, dialogueGestion, recapServices,

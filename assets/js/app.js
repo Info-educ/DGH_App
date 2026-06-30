@@ -1,5 +1,5 @@
 /**
- * DGH App — Contrôleur principal v4.18.0
+ * DGH App — Contrôleur principal v4.19.0
  * Noyau : init, navigation, délégation événements globaux, utilitaires.
  *
  * ARCHITECTURE :
