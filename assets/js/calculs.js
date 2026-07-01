@@ -1,5 +1,5 @@
 /**
- * DGH App — Moteur de calcul v4.21.0
+ * DGH App — Moteur de calcul v4.22.0
  * Fonctions pures : zéro DOM, zéro localStorage
  *
  * v3.0.0 — Sprint 5 :
@@ -11,6 +11,10 @@
  * v4.21.0 — besoinsParDiscipline : coût d'un groupe de cours = heures × nbGroupes
  *   (nombre de groupes physiques réels, distinct du nombre de classes cochées ;
  *   permet de représenter un groupe partagé inter-niveaux, ex. LV2 4e/3e groupée).
+ * v4.22.0 — controlesRepartition : corrige un bug qui empêchait toute détection
+ *   de couverture pour les disciplines de langue (comparaison brute au nom au
+ *   lieu du rang LV) ; ajoute une vérification dédiée par groupe de cours
+ *   partagé (volume réel du groupe, pas la grille MEN classe par classe).
  */
 
 const Calculs = (() => {
@@ -931,7 +935,8 @@ function grilleRepartition(anneeData) {
       affId: a.id,
       ensId: a.ensId,
       nom:   ens ? ((ens.nom || '') + (ens.prenom ? ' ' + ens.prenom.charAt(0) + '.' : '')).trim() : '?',
-      heures: a.heures || 0
+      heures: a.heures || 0,
+      groupeCoursId: a.groupeCoursId || null
     });
   });
   return { divisions, disciplines, cells };
@@ -950,12 +955,32 @@ function controlesRepartition(anneeData) {
   const discById = {};
   disciplines.forEach(d => { discById[d.id] = d; });
 
-  // Couverture par (division, discipline obligatoire de la grille) :
-  // une discipline est "attendue" sur un niveau si la grille MEN lui donne des heures.
+  // Groupes de cours réellement partagés (nbGroupes < nb classes cochées,
+  // ex. LV2 4e/3e regroupée) : une seule vérification par groupe, sur son
+  // volume réel — pas une vérification par classe membre (v4.22).
+  const divisionDansGroupePartage = {}; // divisionId → { gc, disciplineId }
+  const groupesPartagesParDisc    = {}; // disciplineId → [gc, …]
+  (anneeData.repartition || []).forEach(rep => {
+    (rep.groupesCours || []).forEach(gc => {
+      const classesIds = gc.classesIds || [];
+      const nbGroupes  = Math.max(1, gc.nbGroupes || classesIds.length || 1);
+      if (nbGroupes >= classesIds.length) return; // groupe ordinaire (1 classe = 1 groupe) : hors périmètre
+      classesIds.forEach(divId => { divisionDansGroupePartage[divId] = { gc, disciplineId: rep.disciplineId }; });
+      if (!groupesPartagesParDisc[rep.disciplineId]) groupesPartagesParDisc[rep.disciplineId] = [];
+      groupesPartagesParDisc[rep.disciplineId].push(gc);
+    });
+  });
+
+  // Couverture par (division, discipline obligatoire de la grille) — utilise
+  // heuresGrille() (résout LV1/LV2/LV3 via rangLV) au lieu d'un accès brut à
+  // GRILLES_MEN[niveau][nom], qui ne matchait jamais les disciplines de
+  // langue nommées par leur langue (« Allemand », pas « LV2 ») — v4.22 fix.
+  // Les classes couvertes par un groupe partagé sont vérifiées séparément.
   divisions.forEach(div => {
-    const grille = GRILLES_MEN[div.niveau] || {};
     disciplines.forEach(disc => {
-      const hMEN = grille[disc.nom] || 0;
+      const gp = divisionDansGroupePartage[div.id];
+      if (gp && gp.disciplineId === disc.id) return; // vérifié au niveau groupe ci-dessous
+      const hMEN = heuresGrille(div.niveau, disc);
       if (hMEN <= 0) return; // discipline non attendue à ce niveau
       const cell = affs.filter(a => a.divisionId === div.id && a.disciplineId === disc.id);
       const somme = Math.round(cell.reduce((s,a)=>s+(a.heures||0),0)*2)/2;
@@ -971,6 +996,29 @@ function controlesRepartition(anneeData) {
       out.push({ severite:'info', ref:div.id, message: div.nom + ' : aucun professeur principal désigné.' });
     }
   });
+
+  // Vérification des groupes de cours partagés — une fois par groupe, sur
+  // le volume réel du groupe (gc.heures), pas sur la grille MEN standard.
+  Object.keys(groupesPartagesParDisc).forEach(discId => {
+    const disc = discById[discId]; if (!disc) return;
+    groupesPartagesParDisc[discId].forEach(gc => {
+      const cell    = affs.filter(a => a.groupeCoursId === gc.id);
+      const somme   = Math.round(cell.reduce((s,a)=>s+(a.heures||0),0)*2)/2;
+      const attendu = gc.heures || 0;
+      const classesLabel = (gc.classesIds || [])
+        .map(id => { const d = divisions.find(x => x.id === id); return d ? d.nom : '?'; })
+        .join('/') || (gc.nom || 'groupe');
+      const premiereDiv = (gc.classesIds || [])[0];
+      if (cell.length === 0) {
+        out.push({ severite:'warning', ref: premiereDiv,
+          message: 'Groupe « ' + (gc.nom||'?') + ' » (' + classesLabel + ') — ' + disc.nom + ' : aucun enseignant affecté (' + attendu + 'h attendues).' });
+      } else if (Math.abs(somme - attendu) >= 0.5) {
+        out.push({ severite:'info', ref: premiereDiv,
+          message: 'Groupe « ' + (gc.nom||'?') + ' » (' + classesLabel + ') — ' + disc.nom + ' : ' + somme + 'h affectées pour ' + attendu + 'h attendues (écart ' + (somme>attendu?'+':'') + Math.round((somme-attendu)*2)/2 + 'h).' });
+      }
+    });
+  });
+
   return out;
 }
 

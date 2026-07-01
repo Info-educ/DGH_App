@@ -283,6 +283,7 @@ const app = (() => {
       // ── Répartition de service ──
       if (action === 'rep-mode')              { DGHRepartition.setMode(actionBtn.dataset.mode);  return; }
       if (action === 'rep-del-aff')           { DGHRepartition.deleteAff(actionBtn.dataset.id);  return; }
+      if (action === 'rep-del-aff-groupe')    { DGHRepartition.deleteAffGroupe(actionBtn);        return; }
       if (action === 'rep-rapid-toggle-autres'){ DGHRepartition.toggleAutres();                   return; }
       if (action === 'rep-rapid-retirer-disc') { DGHRepartition.retirerDisc(actionBtn);            return; }
       // ── Salles & Heure bleue (modale établissement, v4.8.0) ──
@@ -475,10 +476,12 @@ const app = (() => {
       if (ra === 'rep-sel-disc')         { DGHRepartition.selectDiscipline(e.target); return; }
       if (ra === 'rep-sel-ens')          { DGHRepartition.selectEnseignant(e.target); return; }
       if (ra === 'rep-add')              { DGHRepartition.addFromSelect(e.target);    return; }
+      if (ra === 'rep-add-groupe')       { DGHRepartition.addToGroupe(e.target);      return; }
       if (ra === 'rep-add-disc-ens')     { DGHRepartition.addDiscToEns(e.target);     return; }
       if (ra === 'rep-toggle-ens-classe'){ DGHRepartition.toggleEnsClasse(e.target);  return; }
       if (ra === 'rep-rapid-tout-col')   { DGHRepartition.toutColonne(e.target);       return; }
       if (ra === 'rep-aff-h')            { DGHRepartition.setHeures(e.target);        return; }
+      if (ra === 'rep-aff-h-groupe')     { DGHRepartition.setHeuresGroupe(e.target);  return; }
       if (ra === 'rep-set-pp')           { DGHRepartition.setPP(e.target);            return; }
     }
   }

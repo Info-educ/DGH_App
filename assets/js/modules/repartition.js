@@ -1,11 +1,16 @@
 /**
- * DGH App — Module Répartition de service (v4.3 — Sprint 15)
+ * DGH App — Module Répartition de service (v4.22 — groupes de cours partagés)
  *
  * v4.3 : Intégration du scénario actif dans la répartition.
  *   - Bandeau scénario actif en tête de vue.
  *   - Chaque ligne classe × discipline affiche la référence simulée
  *     (grille MEN + delta scénario sur cette classe précise).
  *   - Mode saisie rapide : delta scénario visible dans les cellules.
+ * v4.22 : Groupes de cours partagés (Dotation DGH) reportés ici — un
+ *   enseignant affecté à un groupe partagé (ex. LV2 4e/3e regroupée) l'est
+ *   en une seule opération pour toutes les classes du groupe, sans jamais
+ *   compter ses heures deux fois. « Par discipline » : ligne de groupe
+ *   dédiée. « Saisie rapide » : cases liées avec indicateur 🔗.
  *
  * Affecte les enseignants aux classes par discipline (classe × discipline → enseignant),
  * désigne les professeurs principaux, et alimente automatiquement :
@@ -175,9 +180,19 @@ const DGHRepartition = (() => {
       '<option value="' + d.id + '"' + (d.id === disc.id ? ' selected' : '') + '>' + _esc(d.nom) + '</option>'
     ).join('');
 
-    // Classes groupées par niveau
+    // Groupes de cours partagés de cette discipline (v4.22) — ex. LV2 4e/3e
+    // regroupée faute d'effectif. Ils sortent de la liste classe par classe
+    // et s'affichent en une seule ligne « groupe » au-dessus.
+    const repDisc = DGHData.getRepartition().find(r => r.disciplineId === disc.id);
+    const groupesPartages = ((repDisc && repDisc.groupesCours) || []).filter(gc => gc.groupePartage);
+    const divsGroupees = new Set(groupesPartages.flatMap(gc => gc.classesIds || []));
+    const blocGroupes = groupesPartages.length
+      ? '<div class="rep-groupes-bloc">' + groupesPartages.map(gc => _htmlLigneGroupePartage(gc, disc, enseignants)).join('') + '</div>'
+      : '';
+
+    // Classes groupées par niveau (hors classes déjà couvertes par un groupe partagé)
     const parNiv = {};
-    divisions.forEach(div => { (parNiv[div.niveau] = parNiv[div.niveau] || []).push(div); });
+    divisions.forEach(div => { if (!divsGroupees.has(div.id)) (parNiv[div.niveau] = parNiv[div.niveau] || []).push(div); });
 
     const blocs = NIVEAUX_ORD.filter(n => parNiv[n] && parNiv[n].length).map(niv => {
       const rows = parNiv[niv].map(div => _htmlLigneClasseDisc(div, disc, enseignants, mods)).join('');
@@ -190,7 +205,54 @@ const DGHRepartition = (() => {
         + '<select class="rep-disc-select" id="repDiscSelect" data-action="rep-sel-disc">' + discOpts + '</select>'
         + '<span class="rep-saisie-hint">Choisissez l\'enseignant de chaque classe. Les heures se pré-remplissent depuis la grille MEN — ajustez si besoin.</span>'
       + '</div>'
+      + blocGroupes
       + '<div class="rep-classes-list">' + blocs + '</div>';
+  }
+
+  // ── Ligne « groupe de cours partagé » (v4.22) ───────────────────────
+  // Une seule ligne pour tout le groupe (ex. 4èmeD + 3èmeD Allemand) :
+  // affecter un enseignant ici crée une affectation « porteuse » (heures
+  // réelles) sur la première classe du groupe et des affectations « reflet »
+  // à 0h sur les autres (couverture + professeur principal possible sur
+  // chacune), sans jamais compter les heures deux fois.
+  function _htmlLigneGroupePartage(gc, disc, enseignants) {
+    const affsGroupe = DGHData.getAffectationsGroupe(gc.id);
+    // Un même enseignant a 1 ligne « porteuse » + N lignes « reflet » (0h) :
+    // dédupliquer par enseignant, en gardant celle qui porte les heures.
+    const parEns = {};
+    affsGroupe.forEach(a => {
+      if (!parEns[a.ensId] || (a.heures||0) > (parEns[a.ensId].heures||0)) parEns[a.ensId] = a;
+    });
+    const tags   = Object.values(parEns).map(a => _htmlAffTagGroupe(a, enseignants, gc)).join('');
+    const somme  = Math.round(Object.values(parEns).reduce((s,a)=>s+(a.heures||0),0)*2)/2;
+    const attendu = gc.heures || 0;
+    const ecart   = Math.round((somme - attendu) * 2) / 2;
+    const ecartCls = ecart === 0 ? 'rep-ok' : ecart > 0 ? 'rep-sur' : 'rep-sous';
+    const classesLabel = (gc.classesNoms && gc.classesNoms.length) ? gc.classesNoms.join(' + ') : '—';
+
+    return '<div class="rep-classe-row rep-groupe-row">'
+      + '<span class="rep-classe-nom">'
+        + '<span class="gc-partage-badge" title="Groupe partagé — ' + _esc(classesLabel) + ' : les heures ne sont comptées qu\u2019une seule fois">\u26a1 groupe</span> '
+        + _esc(gc.nom || 'Groupe de cours')
+        + '<span class="rep-groupe-classes">' + _esc(classesLabel) + '</span>'
+      + '</span>'
+      + '<div class="rep-classe-affs">' + (tags || '<span class="rep-cell-vide">—</span>') + '</div>'
+      + '<span class="rep-cell-grille font-mono ' + ecartCls + '">' + somme + ' / ' + attendu + ' h</span>'
+      + '<select class="rep-add-select" data-action="rep-add-groupe" data-groupe-id="' + gc.id + '" data-discipline-id="' + disc.id + '" data-classes="' + (gc.classesIds||[]).join(',') + '">'
+        + _optsAjoutEns(enseignants, disc.nom)
+      + '</select>'
+    + '</div>';
+  }
+
+  function _htmlAffTagGroupe(a, enseignants, gc) {
+    const ens = enseignants.find(e => e.id === a.ensId);
+    return '<span class="rep-aff-tag">'
+      + '<span class="rep-aff-nom">' + _esc(_nomCourt(ens)) + '</span>'
+      + '<input class="rep-aff-h font-mono" type="number" min="0" max="40" step="0.5" value="' + (a.heures||0) + '" '
+        + 'data-action="rep-aff-h-groupe" data-groupe-id="' + gc.id + '" data-ens-id="' + a.ensId + '" title="Heures de cet enseignant sur ce groupe partagé" />'
+      + '<span class="rep-aff-hsuffix">h</span>'
+      + '<button class="rep-aff-x" data-action="rep-del-aff-groupe" data-groupe-id="' + gc.id + '" data-ens-id="' + a.ensId + '" title="Retirer">✕</button>'
+    + '</span>';
   }
 
   function _htmlLigneClasseDisc(div, disc, enseignants, mods) {
@@ -373,6 +435,10 @@ const DGHRepartition = (() => {
     const nivsOrd = NIVEAUX_ORD.filter(n => parNiv[n] && parNiv[n].length);
     const allDivs = nivsOrd.flatMap(n => parNiv[n]);
 
+    // Groupes de cours partagés (v4.22) : classes dont la case doit se cocher/décocher
+    // en bloc (une seule affectation porteuse d'heures, les autres à 0h).
+    const gpMap = DGHData.getGroupesPartagesDivisionMap();
+
     // En-tête niveau (colspan par niveau) — sticky top row 1
     const thNivGroups = nivsOrd.map(n =>
       '<th colspan="' + parNiv[n].length + '" class="rep-rapid-th-niv">'
@@ -397,10 +463,17 @@ const DGHRepartition = (() => {
         const delta   = _deltaScenarioParCase(mods, disc.id, div.id);
         const hMEN    = Calculs.heuresGrille(div.niveau, disc);
         const hRef    = hMEN > 0 ? Math.round((hMEN + delta) * 2) / 2 : 0;
+        const gp      = gpMap[div.id];
+        const enGroupe = !!(gp && gp.disciplineId === disc.id);
         // Dans la cellule cochée : heures affectées + référence simulée si scénario actif
         let innerLabel = '';
         if (checked && mienne) {
-          innerLabel = '<span class="rep-rapid-h font-mono">' + (mienne.heures||0) + 'h</span>';
+          if (enGroupe && (mienne.heures||0) === 0) {
+            // Case « reflet » du groupe (couverture seule, heures comptées ailleurs)
+            innerLabel = '<span class="rep-rapid-h rep-rapid-h-reflet font-mono" title="Groupe partagé — heures comptées sur une autre classe du groupe">\u{1F517}</span>';
+          } else {
+            innerLabel = '<span class="rep-rapid-h font-mono">' + (mienne.heures||0) + 'h</span>';
+          }
           if (delta !== 0 && hRef > 0) {
             innerLabel += '<span class="rep-rapid-scen font-mono" title="Référence simulée : grille MEN ' + hMEN + 'h + scénario +'+ delta +'h">/' + hRef + 'h⚡</span>';
           }
@@ -408,8 +481,12 @@ const DGHRepartition = (() => {
           // Case vide mais scénario apporte un delta : indicateur discret
           innerLabel = '<span class="rep-rapid-scen-hint font-mono" title="Référence simulée : grille MEN ' + hMEN + 'h + scénario +'+ delta +'h">+' + delta + 'h⚡</span>';
         }
-        return '<td class="rep-rapid-cell' + (partage ? ' rep-rapid-partage' : '') + (checked ? ' rep-rapid-cell-checked' : '') + (delta !== 0 ? ' rep-rapid-cell-scen' : '') + '">'
-          + '<label class="rep-rapid-chk-lbl" title="' + _esc(div.nom) + (partage ? ' — partagée' : '') + (delta !== 0 ? ' — scénario +' + delta + 'h' : '') + '">'
+        const titreGroupe = enGroupe
+          ? ' — groupe partagé avec ' + ((gp.gc.classesNoms||[]).filter(n => n !== div.nom).join(', ') || 'd\u2019autres classes')
+          : '';
+        return '<td class="rep-rapid-cell' + (partage ? ' rep-rapid-partage' : '') + (checked ? ' rep-rapid-cell-checked' : '') + (delta !== 0 ? ' rep-rapid-cell-scen' : '') + (enGroupe ? ' rep-rapid-cell-groupe' : '') + '">'
+          + '<label class="rep-rapid-chk-lbl" title="' + _esc(div.nom) + (partage ? ' — partagée' : '') + (delta !== 0 ? ' — scénario +' + delta + 'h' : '') + _esc(titreGroupe) + '">'
+            + (enGroupe ? '<span class="rep-rapid-groupe-tag" title="Classe rattachée à un groupe partagé">\u26a1</span>' : '')
             + '<input type="checkbox" class="rep-rapid-chk" data-action="rep-toggle-ens-classe"'
               + ' data-ens-id="' + ens.id + '"'
               + ' data-division-id="' + div.id + '"'
@@ -514,9 +591,12 @@ const DGHRepartition = (() => {
         const list = (g.cells[div.id] && g.cells[div.id][d.id]) || [];
         if (list.length === 0) return '<td class="rep-grille-cell rep-grille-empty">·</td>';
         const resp = ppDiscIds.has(d.id);
-        const inner = list.map(x =>
-          '<span class="rep-grille-ens">' + _esc(x.nom) + '<span class="rep-grille-h font-mono">' + x.heures + 'h</span></span>'
-        ).join('');
+        const inner = list.map(x => {
+          const heureLabel = x.groupeCoursId && x.heures === 0
+            ? '<span class="rep-grille-h font-mono" title="Groupe partagé — heures comptées sur une autre classe du groupe">\u{1F517}</span>'
+            : '<span class="rep-grille-h font-mono">' + x.heures + 'h</span>';
+          return '<span class="rep-grille-ens">' + _esc(x.nom) + heureLabel + '</span>';
+        }).join('');
         return '<td class="rep-grille-cell' + (resp ? ' rep-grille-resp' : '') + '">'
           + (resp ? '<span class="rep-grille-star" title="Professeur principal — responsable sur sa discipline">★</span>' : '')
           + inner + '</td>';
@@ -599,6 +679,39 @@ const DGHRepartition = (() => {
     renderRepartition();
   }
 
+  // ── Groupes de cours partagés (v4.22) ───────────────────────────────
+  function addToGroupe(el) {
+    const ensId = el.value;
+    if (!ensId) return;
+    const groupeId     = el.dataset.groupeId;
+    const disciplineId = el.dataset.disciplineId;
+    const classesIds   = (el.dataset.classes || '').split(',').filter(Boolean);
+    const disc = DGHData.getDiscipline(disciplineId);
+    if (!disc || classesIds.length === 0) return;
+    const deja = DGHData.getAffectationsGroupe(groupeId).some(a => a.ensId === ensId);
+    if (deja) { app.toast('Cet enseignant est déjà affecté à ce groupe.', 'warning'); return; }
+    const rep = DGHData.getRepartition().find(r => r.disciplineId === disciplineId);
+    const gc  = rep && (rep.groupesCours || []).find(g => g.id === groupeId);
+    const heures = gc ? gc.heures : 0;
+    DGHData.addAffectationGroupe(disciplineId, groupeId, ensId, classesIds, heures);
+    renderRepartition();
+  }
+
+  function setHeuresGroupe(el) {
+    const groupeId = el.dataset.groupeId;
+    const ensId    = el.dataset.ensId;
+    const h        = parseFloat(el.value);
+    DGHData.setHeuresGroupe(groupeId, ensId, isNaN(h) ? 0 : h);
+    renderRepartition();
+  }
+
+  function deleteAffGroupe(btn) {
+    const groupeId = btn.dataset.groupeId;
+    const ensId    = btn.dataset.ensId;
+    DGHData.deleteAffectationGroupe(groupeId, ensId);
+    renderRepartition();
+  }
+
   function toggleEnsClasse(el) {
     const ensId        = el.dataset.ensId;
     const divisionId   = el.dataset.divisionId;
@@ -612,7 +725,19 @@ const DGHRepartition = (() => {
     const scrollLeft = wrap ? wrap.scrollLeft : 0;
     const scrollTop  = wrap ? wrap.scrollTop  : 0;
 
-    if (el.checked) {
+    // Groupe de cours partagé (v4.22) : cocher/décocher agit sur TOUTES les
+    // classes du groupe d'un coup (une seule affectation porteuse d'heures,
+    // les autres à 0h) — jamais de double-comptage, jamais d'oubli.
+    const gpMap = DGHData.getGroupesPartagesDivisionMap();
+    const gp = gpMap[divisionId];
+    if (gp && gp.disciplineId === disciplineId) {
+      if (el.checked) {
+        const deja = DGHData.getAffectationsGroupe(gp.gc.id).some(a => a.ensId === ensId);
+        if (!deja) DGHData.addAffectationGroupe(disciplineId, gp.gc.id, ensId, gp.gc.classesIds, gp.gc.heures);
+      } else {
+        DGHData.deleteAffectationGroupe(gp.gc.id, ensId);
+      }
+    } else if (el.checked) {
       let h = Calculs.heuresGrille(div.niveau, disc);
       if (h <= 0) h = 1;
       DGHData.addAffectation({ divisionId, disciplineId, ensId, heures: h });
@@ -847,7 +972,8 @@ const DGHRepartition = (() => {
     renderRepartition,
     setMode, selectDiscipline, selectEnseignant,
     addFromSelect, toggleEnsClasse, setHeures, deleteAff, addDiscToEns, setPP, toutColonne,
-    toggleAutres, retirerDisc
+    toggleAutres, retirerDisc,
+    addToGroupe, setHeuresGroupe, deleteAffGroupe
   };
 
 })();

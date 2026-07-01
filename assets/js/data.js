@@ -17,12 +17,19 @@
  *           réels qui pilote le besoin (cas des groupes partagés inter-niveaux,
  *           ex. Allemand LV2 4e/3e regroupé faute d'effectif suffisant).
  *           Défaut = nb classes cochées (comportement antérieur inchangé).
+ * v4.22.0 — groupeCoursId sur affectation : reporte les groupes de cours
+ *           partagés (v4.21) dans Répartir les services. Un enseignant
+ *           affecté à un groupe partagé porte les heures réelles sur une
+ *           seule classe et des affectations à 0h (couverture/PP) sur les
+ *           autres — jamais de double-comptage. Ajout addAffectationGroupe,
+ *           setHeuresGroupe, deleteAffectationGroupe, getAffectationsGroupe,
+ *           getGroupesPartagesDivisionMap.
  */
 
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '4.21.0';
+  const VERSION = '4.22.0';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   // Matching souple discipline (identique à repartition.js et enseignants.js)
@@ -530,6 +537,13 @@ const DGHData = (() => {
     });
   }
 
+  // v4.22 : groupeCoursId sur affectation — null par défaut (non lié à un groupe partagé).
+  function _migrateV422GroupeCoursId(ann) {
+    (ann.affectations || []).forEach(a => {
+      if (a.groupeCoursId === undefined) a.groupeCoursId = null;
+    });
+  }
+
   function _migrate() {
     if (!_data._meta) _data._meta = {};
     if (_data.annees) {
@@ -544,6 +558,7 @@ const DGHData = (() => {
         _migrateDiscDoublons(ann);
         _migrateV420LanguesVivantes(ann);
         _migrateV421NbGroupesGC(ann);
+        _migrateV422GroupeCoursId(ann);
       });
     }
     _migrateV34Etab();
@@ -1599,7 +1614,8 @@ const DGHData = (() => {
       divisionId:   fields.divisionId   || null,
       disciplineId: fields.disciplineId || null,
       ensId:        fields.ensId        || null,
-      heures:       parseFloat(fields.heures) || 0
+      heures:       parseFloat(fields.heures) || 0,
+      groupeCoursId: fields.groupeCoursId || null
     };
     if (!aff.divisionId || !aff.disciplineId || !aff.ensId) return null;
     ann.affectations.push(aff);
@@ -1632,6 +1648,73 @@ const DGHData = (() => {
     _recomputeHeuresFromAffectations(ensId);
     save();
     return true;
+  }
+
+  // ── GROUPES DE COURS PARTAGÉS — affectations liées (v4.22) ─────────
+  // Un groupe de cours « partagé » (nbGroupes < nb classes cochées, ex. LV2
+  // 4e/3e regroupée) doit apparaître comme UNE seule affectation de service,
+  // pas une par classe (sinon double-comptage des heures). On matérialise
+  // cela avec plusieurs lignes affectations[] classiques (une par classe du
+  // groupe, pour la couverture/PP de chacune), toutes tagguées du même
+  // groupeCoursId, mais une seule — la « porteuse » — porte les heures
+  // réelles ; les autres restent à 0h. Aucune autre partie du code (EDT,
+  // dashboard, pilotage, recompute) n'a besoin d'être modifiée : elle
+  // continue de lire affectations[] classe par classe comme avant.
+
+  /** Carte divisionId → { gc, disciplineId } pour tous les GC réellement partagés de l'année. */
+  function getGroupesPartagesDivisionMap(annee) {
+    const rep = getRepartition(annee); // enrichi (nbGroupes, groupePartage, classesIds…)
+    const map = {};
+    rep.forEach(r => {
+      (r.groupesCours || []).forEach(gc => {
+        if (!gc.groupePartage) return;
+        (gc.classesIds || []).forEach(divId => { map[divId] = { gc, disciplineId: r.disciplineId }; });
+      });
+    });
+    return map;
+  }
+
+  /**
+   * Affecte un enseignant à un groupe de cours partagé : heures réelles sur
+   * la première classe du groupe, 0h (couverture seule) sur les autres.
+   */
+  function addAffectationGroupe(disciplineId, groupeCoursId, ensId, classesIds, heures) {
+    const ids = Array.isArray(classesIds) ? classesIds.filter(Boolean) : [];
+    if (ids.length === 0 || !ensId || !disciplineId) return null;
+    const h = parseFloat(heures) || 0;
+    const created = [];
+    ids.forEach((divisionId, i) => {
+      const aff = addAffectation({ divisionId, disciplineId, ensId, heures: i === 0 ? h : 0, groupeCoursId });
+      if (aff) created.push(aff);
+    });
+    return created;
+  }
+
+  /** Modifie les heures réelles portées par un enseignant sur un groupe de cours partagé. */
+  function setHeuresGroupe(groupeCoursId, ensId, heures) {
+    const ann = getAnnee();
+    const affsGroupe = (ann.affectations || []).filter(a => a.groupeCoursId === groupeCoursId && a.ensId === ensId);
+    if (affsGroupe.length === 0) return false;
+    const porteuse = affsGroupe.find(a => a.heures > 0) || affsGroupe[0];
+    porteuse.heures = parseFloat(heures) || 0;
+    affsGroupe.forEach(a => { if (a !== porteuse) a.heures = 0; });
+    _recomputeHeuresFromAffectations(ensId);
+    save();
+    return true;
+  }
+
+  /** Retire un enseignant d'un groupe de cours partagé (toutes les classes du groupe). */
+  function deleteAffectationGroupe(groupeCoursId, ensId) {
+    const ann = getAnnee();
+    const before = (ann.affectations || []).length;
+    ann.affectations = (ann.affectations || []).filter(a => !(a.groupeCoursId === groupeCoursId && a.ensId === ensId));
+    if (ann.affectations.length < before) { _recomputeHeuresFromAffectations(ensId); save(); return true; }
+    return false;
+  }
+
+  /** Toutes les affectations (porteuse + reflets à 0h) d'un groupe de cours partagé. */
+  function getAffectationsGroupe(groupeCoursId, annee) {
+    return getAffectations(annee).filter(a => a.groupeCoursId === groupeCoursId);
   }
 
   /**
@@ -1880,6 +1963,7 @@ const DGHData = (() => {
     getGroupes,getGroupe,addGroupe,updateGroupe,deleteGroupe,
     getAffectations,getAffectationsCell,getAffectationsEnseignant,
     addAffectation,updateAffectation,deleteAffectation,
+    addAffectationGroupe,setHeuresGroupe,deleteAffectationGroupe,getAffectationsGroupe,getGroupesPartagesDivisionMap,
     setProfesseurPrincipal,disciplinePiloteeParAffectation,
     getContraintesEDT,
     getGrilleIndispo,setGrilleIndispo,getGrilleHeureBleue,setGrilleHeureBleue,

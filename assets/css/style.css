@@ -4415,6 +4415,10 @@ td.col-grille {
 }
 .rep-rapid-chk { width: 16px; height: 16px; cursor: pointer; accent-color: var(--c-accent); flex-shrink: 0; }
 .rep-rapid-h { font-size: .68rem; color: var(--c-accent); display: block; line-height: 1; }
+.rep-rapid-h-reflet { font-size: .78rem; opacity: .7; }
+.rep-rapid-cell-groupe { position: relative; }
+.rep-rapid-cell-groupe.rep-rapid-cell-checked { background: color-mix(in srgb, var(--c-amber) 12%, var(--c-accent) 8%); }
+.rep-rapid-groupe-tag { font-size: .6rem; line-height: 1; color: var(--c-amber); }
 /* Info enseignant */
 .rep-rapid-ens-nom { font-size: .83rem; }
 .rep-rapid-nbcls {
@@ -4556,6 +4560,11 @@ td.col-grille {
 .rep-cell-grille.rep-sous { color: var(--c-red);   background: var(--c-red-bg); }
 /* Delta scénario inline dans .rep-cell-grille */
 .rep-cell-scen { font-size: .75em; color: var(--c-amber); margin-left: .3rem; vertical-align: middle; }
+
+/* Groupes de cours partagés — ligne dédiée en mode « Par discipline » (v4.22) */
+.rep-groupes-bloc { margin-bottom: 16px; }
+.rep-groupe-row { border-color: var(--c-amber); background: var(--c-amber-bg); }
+.rep-groupe-classes { display: block; font-size: .72rem; font-weight: 400; color: var(--c-text-muted); }
 
 /* Scénario actif — bandeau répartition */
 .rep-scen-icon  { font-size: .9rem; }
