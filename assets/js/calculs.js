@@ -1,5 +1,5 @@
 /**
- * DGH App — Moteur de calcul v4.22.2
+ * DGH App — Moteur de calcul v4.22.3
  * Fonctions pures : zéro DOM, zéro localStorage
  *
  * v3.0.0 — Sprint 5 :
@@ -29,12 +29,23 @@
  *   groupe germanistes sur une seule classe), le besoin théorique de TOUTE
  *   la discipline basculait sur la somme des groupes définis, et les
  *   classes non couvertes par un groupe disparaissaient silencieusement du
- *   budget (leur besoin MEN n'était plus compté nulle part). Remplacé par
- *   une couverture mixte, division par division : les classes couvertes
- *   par un groupe comptent au volume réel du groupe (heuresGroupesReel),
- *   les classes non couvertes retombent automatiquement sur la grille MEN
- *   standard (besoinResiduelMEN), sans qu'aucun groupe supplémentaire ne
- *   soit nécessaire pour les disciplines à classe entière (ex. Anglais).
+ *   budget (leur besoin MEN n'était plus compté nulle part). Tentative de
+ *   correctif : couverture mixte division par division (résidu grille MEN
+ *   pour les classes non couvertes) — ANNULÉE en v4.22.3 (hypothèse fausse,
+ *   cf. ci-dessous).
+ * v4.22.3 — controlesRepartition + besoinsParDiscipline : la v4.22.2 partait
+ *   de l'hypothèse que toute classe d'un niveau doit recevoir une discipline
+ *   de langue, sauf oubli de créer son groupe (d'où le résidu grille MEN
+ *   pour les classes non couvertes). En réalité une LV2/LV3 peut n'être
+ *   proposée que dans une poignée de classes précises d'un établissement
+ *   (ex. Allemand uniquement en 6eC/6eD) — les autres classes ne l'offrent
+ *   pas du tout et ne doivent générer ni alerte ni besoin résiduel. Retour
+ *   à la règle tout-ou-rien par discipline (comme avant la v4.22.2), mais
+ *   appliquée cette fois de façon cohérente aux DEUX fonctions : dès qu'un
+ *   groupe existe pour une discipline, seules les classes listées dans un
+ *   groupe sont attendues (v4.22.1 le faisait déjà pour les classes
+ *   couvertes, mais laissait encore les classes non listées retomber à
+ *   tort sur la grille MEN standard — corrigé ici).
  */
 
 
@@ -280,29 +291,19 @@ const Calculs = (() => {
         }, 0) * 2
       ) / 2;
       const hasGroupes = gcs.length > 0;
-      // Couverture mixte (v4.22.2) : les divisions couvertes par un groupe de
-      // cours comptent au volume réel du groupe (heuresGroupesReel) ; toute
-      // division NON couverte reste sur la grille MEN standard, comme si la
-      // discipline n'avait aucun groupe. Avant : dès qu'un seul groupe était
-      // créé, la discipline entière basculait sur les groupes et les classes
-      // non couvertes disparaissaient silencieusement du besoin (ex. créer un
-      // groupe germanistes en 6eA faisait perdre le besoin MEN de 6eB, alors
-      // que 6eB n'a simplement pas encore de groupe défini).
-      const divisionsCouvertes = new Set();
-      gcs.forEach(g => (g.classesIds||[]).forEach(id => divisionsCouvertes.add(id)));
-      let besoinResiduelMEN = 0;
-      (structures||[]).forEach(div => {
-        if (divisionsCouvertes.has(div.id)) return; // couverte par un groupe : comptée dans heuresGroupesReel
-        const hMEN = heuresGrille(div.niveau, disc);
-        const hOverride = grillesOverride[disc.nom] && grillesOverride[disc.nom][div.niveau] !== undefined
-          ? grillesOverride[disc.nom][div.niveau] : hMEN;
-        besoinResiduelMEN += hOverride;
-      });
-      besoinResiduelMEN = Math.round(besoinResiduelMEN * 2) / 2;
-      const besoinTheorique = Math.round((heuresGroupesReel + besoinResiduelMEN) * 2) / 2;
+      // Besoin affiché : une discipline gérée par groupes (LV2/LV3 optionnelle,
+      // ex. Allemand proposé dans 2 classes seulement) est optionnelle/partielle
+      // par nature — son besoin est exclusivement la somme des groupes définis
+      // (heuresGroupesReel). Les classes non listées dans un groupe ne
+      // l'offrent pas et ne comptent pour rien, pas pour la grille MEN pleine
+      // classe (v4.22.3 — annule le « résidu grille MEN » de la v4.22.2, qui
+      // partait de l'hypothèse erronée que toute classe du niveau devait
+      // recevoir la discipline sauf oubli de groupe). Cohérent avec
+      // controlesRepartition, qui applique la même règle tout-ou-rien.
+      const besoinTheorique = hasGroupes ? heuresGroupesReel : besoinMEN;
       return {
         disciplineId: disc.id, nom: disc.nom, couleur: disc.couleur,
-        besoinTheorique, besoinMEN, besoinResiduelMEN, hPoste, hsa, total,
+        besoinTheorique, besoinMEN, hPoste, hsa, total,
         heuresGroupes: Math.round(heuresGroupesBrut*2)/2,
         heuresGroupesReel,
         hasGroupes,
@@ -994,34 +995,37 @@ function controlesRepartition(anneeData) {
   const discById = {};
   disciplines.forEach(d => { discById[d.id] = d; });
 
-  // Divisions couvertes par un groupe de cours (LV2/LV3, bilangue, groupe
-  // de besoin…) : dès qu'une discipline est organisée en groupes pour une
-  // classe — que ce groupe soit partagé avec d'autres classes ou propre à
-  // elle seule (1 classe = 1 groupe, ex. germanistes de 6eA) — l'attendu
-  // n'est plus la grille MEN pleine classe mais le volume réel du groupe.
-  // Une seule vérification par groupe, sur gc.heures — pas une vérification
-  // par classe membre contre la grille (v4.22.1 fix : les groupes non
-  // partagés tombaient à tort dans le contrôle grille standard).
-  const divisionDansGroupe = {}; // divisionId → { gc, disciplineId }
+  // Disciplines gérées par groupes de cours (LV2/LV3, bilangue, groupe de
+  // besoin…) : dès qu'UN SEUL groupe existe pour une discipline, celle-ci
+  // est considérée optionnelle/partielle — elle ne s'applique qu'aux
+  // classes explicitement listées dans un de ses groupes. Les autres
+  // classes du même niveau ne l'offrent pas du tout (0h attendu, aucune
+  // alerte), même si la grille MEN standard leur assignerait des heures
+  // (ex. Allemand LV2 proposé seulement en 6eC/6eD : les 10 autres classes
+  // ne doivent générer aucune alerte, pas un rattrapage sur la grille —
+  // v4.22.3 fix, corrige la v4.22.1 qui ne dispensait du contrôle grille
+  // que les classes listées, laissant les classes non concernées retomber
+  // à tort sur l'horaire MEN plein niveau).
+  const disciplinesAvecGroupes = new Set();
   const groupesParDisc     = {}; // disciplineId → [gc, …]
   (anneeData.repartition || []).forEach(rep => {
-    (rep.groupesCours || []).forEach(gc => {
-      const classesIds = gc.classesIds || [];
-      classesIds.forEach(divId => { divisionDansGroupe[divId] = { gc, disciplineId: rep.disciplineId }; });
-      if (!groupesParDisc[rep.disciplineId]) groupesParDisc[rep.disciplineId] = [];
-      groupesParDisc[rep.disciplineId].push(gc);
-    });
+    const gcs = rep.groupesCours || [];
+    if (gcs.length === 0) return;
+    disciplinesAvecGroupes.add(rep.disciplineId);
+    if (!groupesParDisc[rep.disciplineId]) groupesParDisc[rep.disciplineId] = [];
+    groupesParDisc[rep.disciplineId].push(...gcs);
   });
 
   // Couverture par (division, discipline obligatoire de la grille) — utilise
   // heuresGrille() (résout LV1/LV2/LV3 via rangLV) au lieu d'un accès brut à
   // GRILLES_MEN[niveau][nom], qui ne matchait jamais les disciplines de
   // langue nommées par leur langue (« Allemand », pas « LV2 ») — v4.22 fix.
-  // Les classes couvertes par un groupe de cours sont vérifiées séparément.
+  // Une discipline gérée par groupes (cf. ci-dessus) est entièrement
+  // exclue de ce contrôle grille : elle est vérifiée uniquement au niveau
+  // groupe ci-dessous, quelle que soit la classe.
   divisions.forEach(div => {
     disciplines.forEach(disc => {
-      const gp = divisionDansGroupe[div.id];
-      if (gp && gp.disciplineId === disc.id) return; // vérifié au niveau groupe ci-dessous
+      if (disciplinesAvecGroupes.has(disc.id)) return; // géré exclusivement par groupe
       const hMEN = heuresGrille(div.niveau, disc);
       if (hMEN <= 0) return; // discipline non attendue à ce niveau
       const cell = affs.filter(a => a.divisionId === div.id && a.disciplineId === disc.id);

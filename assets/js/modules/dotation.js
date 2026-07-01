@@ -87,7 +87,7 @@ const DGHDotation = (() => {
         + '</tr></thead><tbody>';
 
       disciplines.forEach(disc => {
-        const b      = besoinsMap[disc.id] || { besoinTheorique:0, besoinMEN:0, besoinResiduelMEN:0, hPoste:0, hsa:0, total:0, ecart:0, groupesCours:[], heuresGroupes:0, heuresGroupesReel:0, hasGroupes:false, grilleLignes:{} };
+        const b      = besoinsMap[disc.id] || { besoinTheorique:0, besoinMEN:0, hPoste:0, hsa:0, total:0, ecart:0, groupesCours:[], heuresGroupes:0, heuresGroupesReel:0, hasGroupes:false, grilleLignes:{} };
         const pctBar = bilan.enveloppe > 0 ? Math.min(100, Math.round((b.total / bilan.enveloppe)*100)) : 0;
         const ecartCls = b.ecart > 0 ? 'dot-ecart-over' : b.ecart < 0 ? 'dot-ecart-under' : 'dot-ecart-ok';
         const nbGC   = (b.groupesCours||[]).length;
@@ -121,9 +121,8 @@ const DGHDotation = (() => {
           + (nbGC > 0 ? '<span class="gc-count-badge">' + nbGC + ' groupe' + (nbGC>1?'s':'') + '</span>' : '') + '</td>'
           + colsCells
           + '<td class="col-num dot-theorique">' + (b.hasGroupes
-            ? (b.besoinTheorique||0) + ' h <span class="dot-besoin-gc-tag" title="' + (b.groupesCours||[]).map(gc=>(gc.nom||'?')+'\u00a0: '+(gc.heures||0)+'h\u00d7'+(gc.classesIds&&gc.classesIds.length>0?gc.classesIds.length:1)).join(' | ') + '">GC</span>'
-            + '<br><small class="dot-besoin-men-hint">' + b.heuresGroupesReel + '\u00a0h groupes'
-              + (b.besoinResiduelMEN > 0 ? ' + ' + b.besoinResiduelMEN + '\u00a0h grille (classes non couvertes)' : '') + '</small>'
+            ? (b.heuresGroupesReel||b.heuresGroupes) + ' h <span class="dot-besoin-gc-tag" title="' + (b.groupesCours||[]).map(gc=>(gc.nom||'?')+'\u00a0: '+(gc.heures||0)+'h\u00d7'+(gc.classesIds&&gc.classesIds.length>0?gc.classesIds.length:1)).join(' | ') + '">GC</span>'
+            + (b.besoinMEN > 0 ? '<br><small class="dot-besoin-men-hint">MEN\u00a0: ' + b.besoinMEN + ' h</small>' : '')
             : (b.besoinTheorique > 0 ? b.besoinTheorique + ' h' : '<span class="no-tag">\u2014</span>')) + '</td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hp" data-disc-id="' + disc.id + '" data-field="hPoste" value="' + b.hPoste + '" min="0" step="0.5" /></td>'
           + '<td class="col-num"><input type="number" class="dot-input-h dot-input-hsa" data-disc-id="' + disc.id + '" data-field="hsa" value="' + b.hsa + '" min="0" step="0.5" /></td>'

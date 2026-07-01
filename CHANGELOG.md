@@ -3,6 +3,18 @@
 Toutes les modifications notables sont documentées ici.  
 Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF`
 
+## [4.22.3] — Langues optionnelles proposées dans quelques classes seulement (annule la v4.22.2)
+
+### Corrigé
+- **La v4.22.2 corrigeait le mauvais problème.** Elle partait du principe que toute classe d'un niveau doit recevoir une discipline de langue, et ajoutait un « résidu grille MEN » pour les classes non couvertes par un groupe — en pensant qu'il s'agissait d'un oubli de créer leur groupe. En réalité, une LV2/LV3 peut n'être proposée que dans quelques classes précises d'un établissement (ex. Allemand uniquement en 6eC et 6eD, aucune autre classe ne le propose, à aucun niveau). Avec la v4.22.2, ces classes non concernées se voyaient réclamer l'horaire MEN complet de la langue, alors qu'elles ne l'offrent tout simplement pas.
+- **Retour à la règle tout-ou-rien par discipline**, mais cette fois appliquée de façon cohérente partout : dès qu'un groupe de cours existe pour une discipline, celle-ci est considérée optionnelle/partielle — seules les classes explicitement listées dans un de ses groupes sont attendues (`controlesRepartition` et `besoinsParDiscipline` désormais alignés). Les autres classes ne l'offrent pas et ne génèrent ni alerte ni besoin. Une discipline sans aucun groupe (Anglais, Mathématiques…) continue de suivre la grille MEN pour toutes les classes du niveau, sans changement.
+
+### Technique
+- `calculs.js` : `controlesRepartition()` — le contrôle grille MEN par (division, discipline) est désormais sauté pour toute discipline possédant au moins un groupe de cours (`disciplinesAvecGroupes`), et non plus seulement pour les classes explicitement listées dans un groupe. `besoinsParDiscipline()` — retour à `besoinTheorique = hasGroupes ? heuresGroupesReel : besoinMEN` (annule le `besoinResiduelMEN` de la v4.22.2).
+- `dotation.js` : affichage du besoin théorique revenu à l'état d'avant la v4.22.2 (badge GC + hint MEN informatif, sans mention de résidu).
+
+---
+
 ## [4.22.2] — Dotation DGH : couverture mixte groupe / grille MEN (fin du tout-ou-rien)
 
 ### Corrigé
