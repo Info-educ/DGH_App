@@ -29,7 +29,7 @@
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '4.22.0';
+  const VERSION = '4.22.1';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   // Matching souple discipline (identique à repartition.js et enseignants.js)

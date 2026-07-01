@@ -1,5 +1,5 @@
 /**
- * DGH App — Moteur de calcul v4.22.0
+ * DGH App — Moteur de calcul v4.22.1
  * Fonctions pures : zéro DOM, zéro localStorage
  *
  * v3.0.0 — Sprint 5 :
@@ -15,7 +15,17 @@
  *   de couverture pour les disciplines de langue (comparaison brute au nom au
  *   lieu du rang LV) ; ajoute une vérification dédiée par groupe de cours
  *   partagé (volume réel du groupe, pas la grille MEN classe par classe).
+ * v4.22.1 — controlesRepartition : la vérification par groupe de cours
+ *   (introduite en v4.22.0) ne s'appliquait qu'aux groupes partagés entre
+ *   plusieurs classes (nbGroupes < nb classes cochées). Un groupe ordinaire
+ *   (1 classe = 1 groupe, ex. germanistes d'une seule division) retombait
+ *   donc à tort dans le contrôle grille MEN pleine classe, réclamant un
+ *   enseignant pour l'intégralité de l'horaire du niveau au lieu du volume
+ *   réel du groupe. Toute discipline organisée en groupes de cours dans
+ *   Dotation DGH — partagée ou non — est désormais vérifiée uniquement sur
+ *   le volume réel du groupe.
  */
+
 
 const Calculs = (() => {
 
@@ -955,19 +965,22 @@ function controlesRepartition(anneeData) {
   const discById = {};
   disciplines.forEach(d => { discById[d.id] = d; });
 
-  // Groupes de cours réellement partagés (nbGroupes < nb classes cochées,
-  // ex. LV2 4e/3e regroupée) : une seule vérification par groupe, sur son
-  // volume réel — pas une vérification par classe membre (v4.22).
-  const divisionDansGroupePartage = {}; // divisionId → { gc, disciplineId }
-  const groupesPartagesParDisc    = {}; // disciplineId → [gc, …]
+  // Divisions couvertes par un groupe de cours (LV2/LV3, bilangue, groupe
+  // de besoin…) : dès qu'une discipline est organisée en groupes pour une
+  // classe — que ce groupe soit partagé avec d'autres classes ou propre à
+  // elle seule (1 classe = 1 groupe, ex. germanistes de 6eA) — l'attendu
+  // n'est plus la grille MEN pleine classe mais le volume réel du groupe.
+  // Une seule vérification par groupe, sur gc.heures — pas une vérification
+  // par classe membre contre la grille (v4.22.1 fix : les groupes non
+  // partagés tombaient à tort dans le contrôle grille standard).
+  const divisionDansGroupe = {}; // divisionId → { gc, disciplineId }
+  const groupesParDisc     = {}; // disciplineId → [gc, …]
   (anneeData.repartition || []).forEach(rep => {
     (rep.groupesCours || []).forEach(gc => {
       const classesIds = gc.classesIds || [];
-      const nbGroupes  = Math.max(1, gc.nbGroupes || classesIds.length || 1);
-      if (nbGroupes >= classesIds.length) return; // groupe ordinaire (1 classe = 1 groupe) : hors périmètre
-      classesIds.forEach(divId => { divisionDansGroupePartage[divId] = { gc, disciplineId: rep.disciplineId }; });
-      if (!groupesPartagesParDisc[rep.disciplineId]) groupesPartagesParDisc[rep.disciplineId] = [];
-      groupesPartagesParDisc[rep.disciplineId].push(gc);
+      classesIds.forEach(divId => { divisionDansGroupe[divId] = { gc, disciplineId: rep.disciplineId }; });
+      if (!groupesParDisc[rep.disciplineId]) groupesParDisc[rep.disciplineId] = [];
+      groupesParDisc[rep.disciplineId].push(gc);
     });
   });
 
@@ -975,10 +988,10 @@ function controlesRepartition(anneeData) {
   // heuresGrille() (résout LV1/LV2/LV3 via rangLV) au lieu d'un accès brut à
   // GRILLES_MEN[niveau][nom], qui ne matchait jamais les disciplines de
   // langue nommées par leur langue (« Allemand », pas « LV2 ») — v4.22 fix.
-  // Les classes couvertes par un groupe partagé sont vérifiées séparément.
+  // Les classes couvertes par un groupe de cours sont vérifiées séparément.
   divisions.forEach(div => {
     disciplines.forEach(disc => {
-      const gp = divisionDansGroupePartage[div.id];
+      const gp = divisionDansGroupe[div.id];
       if (gp && gp.disciplineId === disc.id) return; // vérifié au niveau groupe ci-dessous
       const hMEN = heuresGrille(div.niveau, disc);
       if (hMEN <= 0) return; // discipline non attendue à ce niveau
@@ -997,11 +1010,12 @@ function controlesRepartition(anneeData) {
     }
   });
 
-  // Vérification des groupes de cours partagés — une fois par groupe, sur
-  // le volume réel du groupe (gc.heures), pas sur la grille MEN standard.
-  Object.keys(groupesPartagesParDisc).forEach(discId => {
+  // Vérification des groupes de cours — une fois par groupe, sur le volume
+  // réel du groupe (gc.heures), pas sur la grille MEN standard. S'applique
+  // à tout groupe déclaré dans Dotation DGH, partagé entre classes ou non.
+  Object.keys(groupesParDisc).forEach(discId => {
     const disc = discById[discId]; if (!disc) return;
-    groupesPartagesParDisc[discId].forEach(gc => {
+    groupesParDisc[discId].forEach(gc => {
       const cell    = affs.filter(a => a.groupeCoursId === gc.id);
       const somme   = Math.round(cell.reduce((s,a)=>s+(a.heures||0),0)*2)/2;
       const attendu = gc.heures || 0;

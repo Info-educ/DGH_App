@@ -3,6 +3,17 @@
 Toutes les modifications notables sont documentées ici.  
 Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF`
 
+## [4.22.1] — Répartition de service : fausse alerte sur les disciplines en groupes non partagés
+
+### Corrigé
+- **`controlesRepartition()` réclamait un enseignant pour l'intégralité de l'horaire MEN d'un niveau sur une discipline pourtant organisée en groupes** (ex. Allemand LV2 : un groupe de germanistes par classe, pas la classe entière). La vérification par groupe de cours introduite en v4.22.0 ne s'appliquait qu'aux groupes **partagés** entre plusieurs classes (`nbGroupes < nb classes cochées`, ex. LV2 4e/3e regroupée). Un groupe **ordinaire** (1 classe = 1 groupe, le cas le plus courant pour une LV2 optionnelle) n'était rattaché à aucune des deux vérifications : ni exclu du contrôle grille MEN pleine classe, ni couvert par le contrôle par groupe. Résultat : « 6eA — Allemand : aucun enseignant affecté (4h attendues) » sur chaque division, alors que le groupe réel (ex. 2h) était bien pourvu.
+- Toute discipline organisée en groupes de cours dans Dotation DGH — partagés entre classes ou non — est désormais vérifiée uniquement sur le volume réel du groupe (`gc.heures`), plus jamais sur la grille MEN pleine classe.
+
+### Technique
+- `calculs.js` : `controlesRepartition()` — `divisionDansGroupePartage` / `groupesPartagesParDisc` renommés `divisionDansGroupe` / `groupesParDisc` et ne filtrent plus sur `nbGroupes < classesIds.length` ; toute division listée dans `gc.classesIds` d'un groupe de cours de la discipline est exclue du contrôle grille et vérifiée exclusivement via la boucle groupe.
+
+---
+
 ## [4.20.0] — Langues vivantes : discipline = langue, rang LV = attribut
 
 ### Ajouté
