@@ -1,5 +1,5 @@
 /**
- * DGH App — Moteur de calcul v4.19.0
+ * DGH App — Moteur de calcul v4.21.0
  * Fonctions pures : zéro DOM, zéro localStorage
  *
  * v3.0.0 — Sprint 5 :
@@ -8,6 +8,9 @@
  *   - suggererRepartition : suggestion auto HP depuis besoin théorique
  *   - bilanHPC : résumé Heures Pédagogiques Complémentaires
  *   - resumeStructures : h théoriques MEN par niveau
+ * v4.21.0 — besoinsParDiscipline : coût d'un groupe de cours = heures × nbGroupes
+ *   (nombre de groupes physiques réels, distinct du nombre de classes cochées ;
+ *   permet de représenter un groupe partagé inter-niveaux, ex. LV2 4e/3e groupée).
  */
 
 const Calculs = (() => {
@@ -244,8 +247,11 @@ const Calculs = (() => {
       const heuresGroupesReel = Math.round(
         gcs.reduce((s,g) => {
           const nbClasses = (g.classesIds||[]).length;
-          // Si aucune classe sélectionnée, on prend 1 prof (coût minimal)
-          return s + (g.heures||0) * (nbClasses > 0 ? nbClasses : 1);
+          // nbGroupes = nombre de groupes physiques réels (peut être < nbClasses
+          // pour un groupe partagé/regroupé, ex. LV2 4e/3e groupée faute d'effectif).
+          // Défaut historique = nbClasses (comportement inchangé si non renseigné).
+          const nbGroupes = Math.max(1, g.nbGroupes || nbClasses || 1);
+          return s + (g.heures||0) * nbGroupes;
         }, 0) * 2
       ) / 2;
       const hasGroupes = gcs.length > 0;

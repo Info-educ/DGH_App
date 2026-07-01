@@ -143,13 +143,16 @@ const DGHDotation = (() => {
           b.groupesCours.forEach(gc => {
             const classesLabel = gc.classesNoms && gc.classesNoms.length > 0 ? gc.classesNoms.join(', ') : '\u2014';
             const rangEff = gc.rangLV || disc.rangLV || '';
+            const nbG = Math.max(1, gc.nbGroupes || (gc.classesIds&&gc.classesIds.length) || 1);
+            const coutReel = Math.round((gc.heures||0) * nbG * 2) / 2;
             html += '<div class="gc-subrow">'
               + '<span class="gc-arrow">\u2514</span>'
               + (rangEff ? '<span class="gc-rang-badge' + (gc.rangLV ? ' gc-rang-override' : '') + '" title="' + (gc.rangLV ? 'Rang propre à ce groupe' : 'Rang hérité de la discipline') + '">' + _esc(rangEff) + '</span>' : '')
               + '<span class="gc-nom"><strong>' + _esc(gc.nom||'\u2014') + '</strong></span>'
               + '<span class="gc-classes">' + _esc(classesLabel) + '</span>'
+              + (gc.groupePartage ? '<span class="gc-partage-badge" title="Regroupement : ' + nbG + ' groupe(s) réel(s) pour ' + (gc.classesIds&&gc.classesIds.length||0) + ' classe(s) cochée(s) — les heures ne sont comptées qu\u2019une fois par groupe">\u26a1 group\u00e9</span>' : '')
               + '<span class="gc-effectif">' + (gc.effectif||0) + ' \u00e9l\u00e8ves</span>'
-              + '<span class="gc-heures font-mono" style="font-weight:700">' + (gc.heures||0) + ' h/sem</span>'
+              + '<span class="gc-heures font-mono" style="font-weight:700" title="' + (gc.heures||0) + 'h \u00d7 ' + nbG + ' groupe(s) = ' + coutReel + 'h">' + coutReel + ' h/sem</span>'
               + '<span class="gc-actions">'
               + '<button class="btn-icon-sm" data-action="edit-gc" data-disc-id="' + disc.id + '" data-gc-id="' + gc.id + '" title="Modifier">\u270e</button>'
               + '<button class="btn-icon-sm btn-icon-danger" data-action="delete-gc" data-disc-id="' + disc.id + '" data-gc-id="' + gc.id + '" title="Supprimer">\u2715</button>'
@@ -399,10 +402,12 @@ const DGHDotation = (() => {
       _set('modalGCTitle', 'Modifier le groupe de cours');
       _setVal('inputGCNom', gc.nom); _setVal('inputGCHeures', gc.heures); _setVal('inputGCComment', gc.commentaire||'');
       _setVal('inputGCRangLV', gc.rangLV||'');
+      _setVal('inputGCNbGroupes', gc.nbGroupes || '');
       (gc.classesIds||[]).forEach(id => { const cb=classesDiv?.querySelector('[value="'+id+'"]'); if(cb) cb.checked=true; });
     } else {
       _set('modalGCTitle', 'Ajouter un groupe de cours pour ' + (disc ? disc.nom : ''));
       _setVal('inputGCNom',''); _setVal('inputGCHeures',''); _setVal('inputGCComment',''); _setVal('inputGCRangLV','');
+      _setVal('inputGCNbGroupes','');
     }
 
     updateGCEffectif();
@@ -417,6 +422,8 @@ const DGHDotation = (() => {
     const total   = checked.reduce((s,cb) => { const div=DGHData.getDivision(cb.value); return s+(div?div.effectif||0:0); }, 0);
     const efDiv   = document.getElementById('gcEffectifAuto');
     if (efDiv) efDiv.textContent = checked.length > 0 ? 'Effectif calculé : ' + total + ' élèves (' + checked.length + ' classe(s))' : '';
+    const nbGroupesInput = document.getElementById('inputGCNbGroupes');
+    if (nbGroupesInput) nbGroupesInput.placeholder = String(Math.max(1, checked.length || 1));
   }
 
   function closeModalGC() {
@@ -430,6 +437,7 @@ const DGHDotation = (() => {
     if (!nom) { app.toast('Le nom du groupe est requis','warning'); return; }
     const classesIds = Array.from(document.querySelectorAll('#gcClassesCheck .classe-check:checked')).map(cb=>cb.value);
     const fields = { nom, classesIds, heures: parseFloat(document.getElementById('inputGCHeures')?.value)||0,
+                      nbGroupes: parseInt(document.getElementById('inputGCNbGroupes')?.value, 10) || classesIds.length || 1,
                       rangLV: document.getElementById('inputGCRangLV')?.value||'',
                       commentaire: document.getElementById('inputGCComment')?.value||'' };
     if (gcId) { DGHData.updateGroupeCours(discId, gcId, fields); app.toast('Groupe mis à jour','success'); }

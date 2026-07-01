@@ -1187,6 +1187,7 @@ input::placeholder { color: var(--c-text-dim); }
 .disc-rang-badge { display:inline-flex; align-items:center; font-size:.62rem; font-weight:700; background:var(--c-surface3); color:var(--c-text-muted); border-radius:99px; padding:.05rem .45rem; margin-left:.4rem; font-family:'JetBrains Mono',monospace; }
 .gc-rang-badge { flex:0 0 auto; font-size:.62rem; font-weight:700; background:var(--c-surface3); color:var(--c-text-muted); border-radius:99px; padding:.05rem .45rem; font-family:'JetBrains Mono',monospace; }
 .gc-rang-badge.gc-rang-override { background:var(--c-amber-bg); color:var(--c-amber); }
+.gc-partage-badge { flex:0 0 auto; font-size:.62rem; font-weight:700; background:var(--c-amber-bg); color:var(--c-amber); border-radius:99px; padding:.05rem .5rem; }
 .gc-subrows-row > td { padding:0; background:var(--c-surface2); }
 .gc-subrows { padding:.5rem .75rem .5rem 2.5rem; display:flex; flex-direction:column; gap:.3rem; border-bottom:1px solid var(--c-border); }
 .gc-subrow { display:flex; align-items:center; gap:.75rem; font-size:.82rem; background:var(--c-surface); border:1px solid var(--c-border); border-radius:var(--r); padding:.4rem .75rem; }

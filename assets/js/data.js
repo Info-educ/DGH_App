@@ -12,12 +12,17 @@
  *                      frequence (hebdo/semaine-A/semaine-B) sur chaque slot de barrette
  * v4.9.6 — Sprint 19 : volumeBMP + motifORS sur enseignant (bascule auto HP→HSA :
  *                      HP jusqu'au seuil ORS/volume BMP, dépassement en HSA)
+ * v4.21.0 — nbGroupes sur groupe de cours : découple le nombre de classes
+ *           cochées (traçabilité/effectif) du nombre de groupes physiques
+ *           réels qui pilote le besoin (cas des groupes partagés inter-niveaux,
+ *           ex. Allemand LV2 4e/3e regroupé faute d'effectif suffisant).
+ *           Défaut = nb classes cochées (comportement antérieur inchangé).
  */
 
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '4.20.0';
+  const VERSION = '4.21.0';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   // Matching souple discipline (identique à repartition.js et enseignants.js)
@@ -513,6 +518,18 @@ const DGHData = (() => {
     }
   }
 
+  // v4.21 : nbGroupes sur groupe de cours — défaut = nb classes cochées
+  // (préserve le comportement antérieur pour tous les GC existants).
+  function _migrateV421NbGroupesGC(ann) {
+    (ann.repartition || []).forEach(rep => {
+      (rep.groupesCours || []).forEach(gc => {
+        if (typeof gc.nbGroupes !== 'number' || gc.nbGroupes < 1) {
+          gc.nbGroupes = Math.max(1, (gc.classesIds || []).length || 1);
+        }
+      });
+    });
+  }
+
   function _migrate() {
     if (!_data._meta) _data._meta = {};
     if (_data.annees) {
@@ -526,6 +543,7 @@ const DGHData = (() => {
         _migrateV48EDT(ann);
         _migrateDiscDoublons(ann);
         _migrateV420LanguesVivantes(ann);
+        _migrateV421NbGroupesGC(ann);
       });
     }
     _migrateV34Etab();
@@ -588,10 +606,13 @@ const DGHData = (() => {
 
   function _enrichGC(gc, ann) {
     const classes = (gc.classesIds||[]).map(id=>(ann.structures||[]).find(d=>d.id===id)).filter(Boolean);
+    const nbGroupes = Math.max(1, gc.nbGroupes || classes.length || 1);
     return {
       id: gc.id, nom: gc.nom||'', classesIds: gc.classesIds||[],
       classesNoms: classes.map(d=>d.nom),
       heures: gc.heures||0,
+      nbGroupes,
+      groupePartage: nbGroupes < classes.length, // regroupement (moins de groupes que de classes cochées)
       rangLV: gc.rangLV||'',
       effectif: classes.reduce((s,d)=>s+(d.effectif||0),0),
       commentaire: gc.commentaire||''
@@ -864,7 +885,9 @@ const DGHData = (() => {
     if (!Array.isArray(ligne.groupesCours)) ligne.groupesCours = [];
     const gc = { id: genId('gc'), nom: (fields.nom||'').trim(),
                  classesIds: Array.isArray(fields.classesIds)?fields.classesIds.slice():[],
-                 heures: parseFloat(fields.heures)||0, rangLV: fields.rangLV||'', commentaire: fields.commentaire||'' };
+                 heures: parseFloat(fields.heures)||0,
+                 nbGroupes: Math.max(1, parseInt(fields.nbGroupes,10) || (Array.isArray(fields.classesIds)?fields.classesIds.length:0) || 1),
+                 rangLV: fields.rangLV||'', commentaire: fields.commentaire||'' };
     ligne.groupesCours.push(gc); save(); return gc;
   }
 
@@ -875,6 +898,7 @@ const DGHData = (() => {
     if (fields.nom!==undefined)         gc.nom         = (fields.nom||'').trim();
     if (fields.classesIds!==undefined)  gc.classesIds  = Array.isArray(fields.classesIds)?fields.classesIds.slice():[];
     if (fields.heures!==undefined)      gc.heures      = parseFloat(fields.heures)||0;
+    if (fields.nbGroupes!==undefined)   gc.nbGroupes   = Math.max(1, parseInt(fields.nbGroupes,10)||1);
     if (fields.rangLV!==undefined)      gc.rangLV      = fields.rangLV||'';
     if (fields.commentaire!==undefined) gc.commentaire = fields.commentaire||'';
     save(); return true;
