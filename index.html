@@ -779,12 +779,22 @@
       <div class="modal-header"><h2 id="modalDiscTitle">Ajouter une discipline</h2><button class="modal-close" id="modalDiscClose">✕</button></div>
       <div class="modal-body">
         <input type="hidden" id="modalDiscId" />
-        <div class="form-group"><label for="inputDiscNom">Nom <span class="form-required">*</span></label><input type="text" id="inputDiscNom" placeholder="ex. Français, Mathématiques…" maxlength="60" /><span class="form-hint">Utilisez le nom exact de la grille MEN pour activer le besoin théorique. <strong>Langues vivantes :</strong> indiquez le rang ET la langue — ex. <em>LV1 Anglais</em>, <em>LV2 Espagnol</em>, <em>LV1 Allemand</em> — pour que les enseignants soient automatiquement reconnus en répartition de service.</span></div>
+        <div class="form-group"><label for="inputDiscNom">Nom <span class="form-required">*</span></label><input type="text" id="inputDiscNom" placeholder="ex. Français, Mathématiques, Anglais…" maxlength="60" /><span class="form-hint">Utilisez le nom exact de la grille MEN pour activer le besoin théorique.</span></div>
+        <div class="form-group"><label for="inputDiscRangLV">Rang (langues vivantes)</label>
+          <select id="inputDiscRangLV">
+            <option value="">— Sans objet / rang variable selon le groupe —</option>
+            <option value="LV1">LV1</option>
+            <option value="LV2">LV2</option>
+            <option value="LV3">LV3</option>
+          </select>
+          <span class="form-hint">Pour une langue (Anglais, Allemand, Espagnol…), choisissez son rang par défaut ici. Ça sert à retrouver automatiquement le volume horaire MEN (ex. LV1 = 4h en 6e). Si cette langue existe aux deux rangs selon les classes, laissez « Sans objet » et réglez le rang groupe par groupe dans « Ajouter un groupe de cours ».</span>
+        </div>
         <div class="form-group"><label for="inputDiscCouleur">Couleur</label><div class="color-picker-row"><input type="color" id="inputDiscCouleur" value="#2d6a4f" class="color-input" /><span class="color-hint" id="colorHint">#2d6a4f</span></div></div>
       </div>
       <div class="modal-footer"><button class="btn-secondary" id="modalDiscCancel">Annuler</button><button class="btn-primary" id="modalDiscSave">Enregistrer</button></div>
     </div>
   </div>
+
 
   <!-- ══ MODAL GROUPE DE COURS (sous-ligne discipline) ════════════ -->
   <div class="modal-overlay" id="modalGC" role="dialog" aria-modal="true">
@@ -793,7 +803,16 @@
       <div class="modal-body">
         <input type="hidden" id="modalGCDiscId" />
         <input type="hidden" id="modalGCId" />
-        <div class="form-group"><label for="inputGCNom">Nom du groupe <span class="form-required">*</span></label><input type="text" id="inputGCNom" placeholder="ex. LV2 Espagnol, LV2 Allemand, Groupe besoin Maths…" maxlength="80" /></div>
+        <div class="form-group"><label for="inputGCNom">Nom du groupe <span class="form-required">*</span></label><input type="text" id="inputGCNom" placeholder="ex. Groupe bilangue, Groupe besoin Maths…" maxlength="80" /></div>
+        <div class="form-group"><label for="inputGCRangLV">Rang LV de ce groupe</label>
+          <select id="inputGCRangLV">
+            <option value="">— Comme la discipline —</option>
+            <option value="LV1">LV1</option>
+            <option value="LV2">LV2</option>
+            <option value="LV3">LV3</option>
+          </select>
+          <span class="form-hint">À ne changer que si ce groupe précis déroge au rang par défaut de la discipline (ex. groupe bilangue en LV2 dans une discipline réglée sur LV1).</span>
+        </div>
         <div class="form-group">
           <div class="classes-label-row">
             <label>Classes concernées</label>
@@ -925,7 +944,7 @@
           <label>Discipline(s) enseignée(s)</label>
           <div id="ensDiscSelects" class="ens-disc-selects-wrap"></div>
           <button type="button" class="btn-link ens-disc-add-btn" id="btnEnsDiscAjouter" data-action="ens-disc-ajouter">+ Ajouter une discipline</button>
-          <span class="form-hint"><strong>Langues vivantes :</strong> saisir la langue seule — <em>Anglais</em>, <em>Espagnol</em>, <em>Allemand</em>… L'enseignant apparaîtra automatiquement sur toutes les disciplines qui contiennent ce mot (<em>LV1 Anglais</em>, <em>LV2 Anglais</em>…).</span>
+          <span class="form-hint"><strong>Langues vivantes :</strong> saisir la langue seule — <em>Anglais</em>, <em>Espagnol</em>, <em>Allemand</em>… Cela correspond directement au nom de la discipline dans Dotation DGH.</span>
         </div>
         <div class="form-row-2">
           <div class="form-group">

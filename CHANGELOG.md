@@ -3,6 +3,29 @@
 Toutes les modifications notables sont documentées ici.  
 Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF`
 
+## [4.20.0] — Langues vivantes : discipline = langue, rang LV = attribut
+
+### Ajouté
+- **Refonte des disciplines de langues vivantes.** Avant : les disciplines étaient nommées "LV1 Anglais", "LV2 Espagnol"… (rang et langue mélangés dans le nom, obligeant à re-taper les horaires MEN discipline par discipline). Après : une discipline = une langue (**Anglais**, **Allemand**, **Espagnol**…), avec un champ séparé **rang LV** (LV1/LV2/LV3) réglable :
+  - **Au niveau de la discipline** (modal "Modifier la discipline") : rang par défaut de la langue si elle n'existe qu'à un seul rang chez vous.
+  - **Au niveau du groupe de cours** (modal "Ajouter/Modifier un groupe de cours") : override possible pour les cas bilangues (ex. discipline Anglais réglée sur LV1, mais un groupe bilangue précis en LV2).
+  - Les horaires réglementaires MEN (4h/3h/3h/3h en LV1, 2,5h en LV2 selon le niveau) sont désormais **déduits automatiquement du rang** — plus besoin de ressaisir les grilles manuellement pour chaque discipline de langue. Ça se répercute partout : tableau Dotation DGH (colonnes MEN par niveau), référence simulée des cellules en Répartition de service (`heuresGrille` devient sensible au rang), suggestion automatique de H-Poste, "Dialogue de gestion" (l'écart MEN par niveau prend maintenant en compte les langues, ce qui était silencieusement ignoré auparavant — les totaux "heures dotées" par niveau seront donc plus élevés qu'avant si vous avez des LV).
+  - Badge visuel du rang sur chaque ligne discipline et chaque groupe de cours dans Dotation DGH.
+
+### Migration automatique (au premier chargement)
+- Toute discipline nommée "LV1 X" / "LV2 X" / "LV3 X" est renommée "X", avec `rangLV` réglé en conséquence. Les éventuels overrides de grille manuels associés sont migrés vers le nouveau nom.
+- Tout groupe de cours dont le nom porte lui-même un rang LV et désigne une langue **différente** de sa discipline conteneuse (ex. un groupe "LV1 Allemand" niché sous la discipline "LV1 Anglais") est **déplacé** vers la discipline de sa langue réelle — créée à la volée si elle n'existe pas encore.
+- Si cette réorganisation fait apparaître deux disciplines de langue distinctes désignant en réalité la même langue (ex. deux entrées "Allemand" séparées), elles sont **fusionnées** : H-Poste et HSA additionnés, groupes de cours regroupés, et toutes les références croisées (affectations, HPC, barrettes EDT, groupes, modificateurs de scénario, HSA absorbées) réassignées vers la discipline survivante. Rien n'est perdu.
+- Migration idempotente et non destructive pour les disciplines "normales" (jamais de fusion hors du périmètre langues vivantes).
+
+### Technique
+- `data.js` : `disc.rangLV` et `gc.rangLV` (nouveaux champs). `_extraireRangLangue()`, `_fusionnerDisciplines()`, `_migrateV420LanguesVivantes()`.
+- `calculs.js` : `heuresGrille(niveau, disc)` accepte désormais un objet discipline `{ nom, rangLV }` (rang prioritaire sur le nom) tout en restant compatible avec un appel par simple chaîne. `besoinsParDiscipline()`, `suggererRepartition()` et `dialogueGestion()` (calcul `hDotees`) utilisent ce lookup rang-aware au lieu d'un matching exact sur le nom.
+- `repartition.js` : les appels à `Calculs.heuresGrille()` passent désormais l'objet discipline complet plutôt que `disc.nom`.
+- `dotation.js` + `index.html` : sélecteur de rang LV sur les modals discipline et groupe de cours ; badges d'affichage ; hint de grille MEN rang-aware dans le modal groupe de cours.
+
+---
+
 ## [4.19.2] — Attribution HSA scénario : case par case (cohérence avec la saisie rapide)
 
 ### Corrigé

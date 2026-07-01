@@ -211,7 +211,7 @@ const Calculs = (() => {
       let total = 0;
       ['6e','5e','4e','3e'].forEach(niv => {
         if (!nbDivParNiveau[niv]) return; // niveau absent des structures
-        const hMEN = (GRILLES_MEN[niv]||{})[disc.nom] || 0;
+        const hMEN = heuresGrille(niv, disc);
         const hOverride = grillesOverride[disc.nom] && grillesOverride[disc.nom][niv] !== undefined
           ? grillesOverride[disc.nom][niv]
           : hMEN;
@@ -224,7 +224,7 @@ const Calculs = (() => {
     disciplines.forEach(disc => {
       grillesParDisc[disc.nom] = {};
       ['6e','5e','4e','3e'].forEach(niv => {
-        const hMEN = (GRILLES_MEN[niv]||{})[disc.nom];
+        const hMEN = heuresGrille(niv, disc) || undefined;
         const hOv  = grillesOverride[disc.nom] && grillesOverride[disc.nom][niv] !== undefined
           ? grillesOverride[disc.nom][niv] : null;
         grillesParDisc[disc.nom][niv] = { men: hMEN, valeur: hOv !== null ? hOv : hMEN, modifie: hOv !== null };
@@ -278,7 +278,7 @@ const Calculs = (() => {
     const totalBesoin = Object.values(besoinsMap).reduce((s,h)=>s+h, 0);
     if (totalBesoin === 0) return [];
     return disciplines.map(disc => {
-      const besoin    = besoinsMap[disc.nom] || 0;
+      const besoin    = besoinsMap[disc.rangLV && besoinsMap[disc.rangLV] !== undefined ? disc.rangLV : disc.nom] || 0;
       const suggested = totalBesoin > 0 ? Math.round((besoin / totalBesoin) * enveloppeHP * 2) / 2 : 0;
       return { disciplineId: disc.id, nom: disc.nom, suggested };
     });
@@ -817,9 +817,9 @@ function dialogueGestion(anneeData, etab) {
     const hMEN  = H_THEORIQUES_NIV[niv] || 0;
     const hMENTotal = Math.round(hMEN * nbDiv * 2) / 2;
     const totalDiv = (anneeData.structures || []).length;
-    const hDotees = totalDiv === 0 ? 0 : Object.entries(GRILLES_MEN[niv] || {}).reduce((s, [discNom]) => {
-      const disc = (anneeData.disciplines || []).find(d => d.nom === discNom);
-      if (!disc) return s;
+    const hDotees = totalDiv === 0 ? 0 : (anneeData.disciplines || []).reduce((s, disc) => {
+      const hMENDisc = heuresGrille(niv, disc);
+      if (hMENDisc <= 0) return s; // discipline non attendue à ce niveau
       const rep = (anneeData.repartition || []).find(r => r.disciplineId === disc.id);
       if (!rep) return s;
       return s + Math.round(((rep.hPoste || 0) + (rep.hsa || 0)) * (nbDiv / totalDiv) * 2) / 2;
@@ -865,9 +865,21 @@ function recapServices(anneeData, etab) {
  * ══════════════════════════════════════════════════════════════════
  */
 
-/** Heures réglementaires MEN pour un (niveau, discipline). 0 si hors grille. */
-function heuresGrille(niveau, discNom) {
-  return (GRILLES_MEN[niveau] && GRILLES_MEN[niveau][discNom]) || 0;
+/**
+ * Heures réglementaires MEN pour un (niveau, discipline). 0 si hors grille.
+ * @param {string} niveau
+ * @param {Object|string} disc - objet discipline { nom, rangLV } (rang prioritaire
+ *   sur le nom pour les langues : Anglais/rangLV='LV1' → grille LV1 du niveau),
+ *   ou simplement une chaîne (nom de discipline, compat rétro).
+ */
+function heuresGrille(niveau, disc) {
+  const g = GRILLES_MEN[niveau];
+  if (!g) return 0;
+  if (disc && typeof disc === 'object') {
+    if (disc.rangLV && g[disc.rangLV] !== undefined) return g[disc.rangLV];
+    return g[disc.nom] || 0;
+  }
+  return g[disc] || 0;
 }
 
 /** true si au moins une affectation existe (toute l'année). */

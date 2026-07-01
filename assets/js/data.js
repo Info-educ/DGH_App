@@ -1,5 +1,5 @@
 /**
- * DGH App — Couche données v4.19.0
+ * DGH App — Couche données v4.20.0
  * SEUL fichier qui touche localStorage
  *
  * v3.0.0 — Sprint 5 : enveloppe HP/HSA, groupesCours, heuresPedaComp, sélection classes
@@ -17,7 +17,7 @@
 const DGHData = (() => {
 
   const KEY     = 'dgh-app-data';
-  const VERSION = '4.19.2';
+  const VERSION = '4.20.0';
   const NIVEAUX = ['6e', '5e', '4e', '3e', 'SEGPA', 'ULIS', 'UPE2A'];
 
   // Matching souple discipline (identique à repartition.js et enseignants.js)
@@ -372,6 +372,147 @@ const DGHData = (() => {
     });
   }
 
+  // ── v4.20 — LANGUES VIVANTES : discipline = langue, rang LV = attribut ────
+  // Avant : disciplines nommées "LV1 Anglais", "LV2 Espagnol"… (rang + langue
+  // mélangés dans le nom). Après : disciplines nommées juste "Anglais",
+  // "Espagnol"…, avec un champ disc.rangLV ('LV1'/'LV2'/'LV3'/'') séparé.
+  // Chaque groupe de cours peut lui-même porter son propre rangLV (override
+  // pour les cas bilangues où une même langue existe aux deux rangs).
+  const _RE_LV_PREFIX = /^\s*LV\s*([1-3])\s*[-–—]?\s*/i;
+  const _RE_LV_SUFFIX = /\s*[-–—]?\s*LV\s*([1-3])\s*$/i;
+
+  /** Extrait { rang:'LV1'|'LV2'|'LV3'|null, langue } d'un nom libre. */
+  function _extraireRangLangue(nom) {
+    let s = String(nom || '').trim();
+    let rang = null;
+    let m = s.match(_RE_LV_PREFIX);
+    if (m) { rang = 'LV' + m[1]; s = s.slice(m[0].length).trim(); }
+    else {
+      m = s.match(_RE_LV_SUFFIX);
+      if (m) { rang = 'LV' + m[1]; s = s.slice(0, s.length - m[0].length).trim(); }
+    }
+    return { rang, langue: s };
+  }
+
+  /**
+   * Fusionne la discipline idAbsorbe dans idSurvivant : additionne hPoste/hsa,
+   * regroupe les groupesCours, réaffecte toutes les références croisées
+   * (affectations, HPC, barrettes EDT, groupes, scénarios, HSA absorbées),
+   * puis supprime idAbsorbe. Rien n'est perdu — tout est réassigné ou sommé.
+   */
+  function _fusionnerDisciplines(ann, idSurvivant, idAbsorbe) {
+    if (!idSurvivant || !idAbsorbe || idSurvivant === idAbsorbe) return;
+
+    const repS = ann.repartition.find(r => r.disciplineId === idSurvivant);
+    const repA = ann.repartition.find(r => r.disciplineId === idAbsorbe);
+    if (repA && repS) {
+      repS.hPoste = Math.round(((repS.hPoste||0) + (repA.hPoste||0)) * 2) / 2;
+      repS.hsa    = Math.round(((repS.hsa||0)    + (repA.hsa||0))    * 2) / 2;
+      if (!Array.isArray(repS.groupesCours)) repS.groupesCours = [];
+      repS.groupesCours = repS.groupesCours.concat(repA.groupesCours || []);
+    }
+    ann.repartition = ann.repartition.filter(r => r.disciplineId !== idAbsorbe);
+
+    (ann.affectations||[]).forEach(a => { if (a.disciplineId === idAbsorbe) a.disciplineId = idSurvivant; });
+    (ann.heuresPedaComp||[]).forEach(h => { if (h.disciplineId === idAbsorbe) h.disciplineId = idSurvivant; });
+    if (ann.contraintesEDT) {
+      (ann.contraintesEDT.barrettes||[]).forEach(b => {
+        b.disciplineIds = (b.disciplineIds||[]).map(did => did === idAbsorbe ? idSurvivant : did);
+        (b.slots||[]).forEach(s => { if (s.discId === idAbsorbe) s.discId = idSurvivant; });
+      });
+    }
+    if (Array.isArray(ann.groupes)) {
+      ann.groupes.forEach(g => { g.disciplineIds = (g.disciplineIds||[]).map(did => did === idAbsorbe ? idSurvivant : did); });
+    }
+    (ann.scenarios||[]).forEach(scen => {
+      (scen.modificateurs||[]).forEach(mod => { if (mod.disciplineId === idAbsorbe) mod.disciplineId = idSurvivant; });
+    });
+    if (ann.hsaAbsorbees && ann.hsaAbsorbees[idAbsorbe]) {
+      const habsA = ann.hsaAbsorbees[idAbsorbe];
+      if (!ann.hsaAbsorbees[idSurvivant]) {
+        ann.hsaAbsorbees[idSurvivant] = habsA;
+      } else {
+        const habsS = ann.hsaAbsorbees[idSurvivant];
+        habsS.total = Math.round(((habsS.total||0) + (habsA.total||0)) * 2) / 2;
+        Object.entries(habsA.profs||{}).forEach(([ensId,h]) => {
+          habsS.profs[ensId] = Math.round(((habsS.profs[ensId]||0) + (h||0)) * 2) / 2;
+        });
+      }
+      delete ann.hsaAbsorbees[idAbsorbe];
+    }
+    ann.disciplines = ann.disciplines.filter(d => d.id !== idAbsorbe);
+  }
+
+  function _migrateV420LanguesVivantes(ann) {
+    if (!Array.isArray(ann.disciplines) || ann.disciplines.length === 0) return;
+    if (!Array.isArray(ann.repartition)) ann.repartition = [];
+
+    // 1. Discipline top-level : "LV1 Anglais" → nom="Anglais", rangLV="LV1".
+    //    Idempotent : une fois migrée, disc.rangLV est déjà défini, on ne
+    //    retraite pas (et le nom ne contient plus de token LV de toute façon).
+    ann.disciplines.forEach(disc => {
+      if (disc.rangLV !== undefined) return;
+      const { rang, langue } = _extraireRangLangue(disc.nom);
+      if (rang && langue) {
+        const ancienNom = disc.nom;
+        disc.nom = langue;
+        disc.rangLV = rang;
+        // Migrer l'éventuel override de grille manuel associé à l'ancien nom
+        if (ann.grilles && ann.grilles[ancienNom] && !ann.grilles[langue]) {
+          ann.grilles[langue] = ann.grilles[ancienNom];
+          delete ann.grilles[ancienNom];
+        }
+      } else {
+        disc.rangLV = disc.rangLV || '';
+      }
+    });
+
+    // 2. Groupes de cours : ne traiter QUE ceux nichés sous une discipline de
+    //    langue détectée ci-dessus (disc.rangLV non vide) — les groupes des
+    //    autres disciplines (dédoublements Maths, etc.) ne sont pas concernés.
+    //    Si le nom du groupe porte lui-même un token LV et désigne une langue
+    //    différente de sa discipline conteneuse, on le déplace vers la bonne
+    //    discipline (création à la volée si besoin).
+    ann.repartition.slice().forEach(rep => {
+      const disc = ann.disciplines.find(d => d.id === rep.disciplineId);
+      if (!disc || !disc.rangLV) return;
+      (rep.groupesCours || []).slice().forEach(gc => {
+        if (gc.rangLV !== undefined) return; // déjà migré
+        const { rang, langue } = _extraireRangLangue(gc.nom);
+        if (!rang) { gc.rangLV = disc.rangLV || ''; return; }
+        gc.rangLV = rang;
+        if (langue && !_discMatch(langue, disc.nom)) {
+          let cible = ann.disciplines.find(d => d.rangLV && _discMatch(d.nom, langue));
+          if (!cible) {
+            cible = { id: genId('disc'), nom: langue, couleur: disc.couleur || '#6b6860', rangLV: rang };
+            ann.disciplines.push(cible);
+            ann.repartition.push({ disciplineId: cible.id, hPoste: 0, hsa: 0, commentaire: '', groupesCours: [] });
+          }
+          const repCible = ann.repartition.find(r => r.disciplineId === cible.id);
+          rep.groupesCours = (rep.groupesCours || []).filter(g => g.id !== gc.id);
+          if (!Array.isArray(repCible.groupesCours)) repCible.groupesCours = [];
+          repCible.groupesCours.push(gc);
+        }
+      });
+    });
+
+    // 3. Fusion des doublons résiduels : deux disciplines de langue distinctes
+    //    qui désignent en réalité la même langue (ex. deux entrées "Anglais"
+    //    créées séparément avant la migration). On ne fusionne jamais deux
+    //    disciplines "normales" (rangLV vide) entre elles — hors périmètre.
+    let i = 0;
+    while (i < ann.disciplines.length) {
+      const di = ann.disciplines[i];
+      if (!di.rangLV) { i++; continue; }
+      const jIdx = ann.disciplines.findIndex((dj, j) => j > i && dj.rangLV && _discMatch(dj.nom, di.nom));
+      if (jIdx > i) {
+        _fusionnerDisciplines(ann, di.id, ann.disciplines[jIdx].id);
+      } else {
+        i++;
+      }
+    }
+  }
+
   function _migrate() {
     if (!_data._meta) _data._meta = {};
     if (_data.annees) {
@@ -384,6 +525,7 @@ const DGHData = (() => {
         _migrateV42Affectations(ann);
         _migrateV48EDT(ann);
         _migrateDiscDoublons(ann);
+        _migrateV420LanguesVivantes(ann);
       });
     }
     _migrateV34Etab();
@@ -450,6 +592,7 @@ const DGHData = (() => {
       id: gc.id, nom: gc.nom||'', classesIds: gc.classesIds||[],
       classesNoms: classes.map(d=>d.nom),
       heures: gc.heures||0,
+      rangLV: gc.rangLV||'',
       effectif: classes.reduce((s,d)=>s+(d.effectif||0),0),
       commentaire: gc.commentaire||''
     };
@@ -643,7 +786,8 @@ const DGHData = (() => {
   // ── CRUD DISCIPLINES ─────────────────────────────────────────────
   function addDiscipline(fields) {
     const ann  = getAnnee();
-    const disc = { id: genId('disc'), nom: (fields.nom||'').trim(), couleur: fields.couleur||'#6b6860' };
+    const disc = { id: genId('disc'), nom: (fields.nom||'').trim(), couleur: fields.couleur||'#6b6860',
+                    rangLV: fields.rangLV || '' };
     ann.disciplines.push(disc);
     ann.repartition.push({ disciplineId: disc.id, hPoste: 0, hsa: 0, commentaire: '', groupesCours: [] });
     save(); return disc;
@@ -655,6 +799,7 @@ const DGHData = (() => {
     const disc = ann.disciplines[idx];
     if (fields.nom!==undefined)     disc.nom     = (fields.nom||'').trim();
     if (fields.couleur!==undefined) disc.couleur = fields.couleur;
+    if (fields.rangLV!==undefined)  disc.rangLV  = fields.rangLV || '';
     save(); return true;
   }
 
@@ -719,7 +864,7 @@ const DGHData = (() => {
     if (!Array.isArray(ligne.groupesCours)) ligne.groupesCours = [];
     const gc = { id: genId('gc'), nom: (fields.nom||'').trim(),
                  classesIds: Array.isArray(fields.classesIds)?fields.classesIds.slice():[],
-                 heures: parseFloat(fields.heures)||0, commentaire: fields.commentaire||'' };
+                 heures: parseFloat(fields.heures)||0, rangLV: fields.rangLV||'', commentaire: fields.commentaire||'' };
     ligne.groupesCours.push(gc); save(); return gc;
   }
 
@@ -730,6 +875,7 @@ const DGHData = (() => {
     if (fields.nom!==undefined)         gc.nom         = (fields.nom||'').trim();
     if (fields.classesIds!==undefined)  gc.classesIds  = Array.isArray(fields.classesIds)?fields.classesIds.slice():[];
     if (fields.heures!==undefined)      gc.heures      = parseFloat(fields.heures)||0;
+    if (fields.rangLV!==undefined)      gc.rangLV      = fields.rangLV||'';
     if (fields.commentaire!==undefined) gc.commentaire = fields.commentaire||'';
     save(); return true;
   }

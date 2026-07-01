@@ -195,7 +195,7 @@ const DGHRepartition = (() => {
 
   function _htmlLigneClasseDisc(div, disc, enseignants, mods) {
     const cell   = DGHData.getAffectationsCell(div.id, disc.id);
-    const hMEN   = Calculs.heuresGrille(div.niveau, disc.nom);
+    const hMEN   = Calculs.heuresGrille(div.niveau, disc);
     const delta  = _deltaScenarioParCase(mods, disc.id, div.id);
     const hRef   = hMEN > 0 ? Math.round((hMEN + delta) * 2) / 2 : 0;
     const tags   = cell.map(a => _htmlAffTag(a, enseignants)).join('');
@@ -395,7 +395,7 @@ const DGHRepartition = (() => {
         // partage = une autre affectation existe sur cette case (pas celle de cet ens)
         const partage = !checked && cell.length > 0;
         const delta   = _deltaScenarioParCase(mods, disc.id, div.id);
-        const hMEN    = Calculs.heuresGrille(div.niveau, disc.nom);
+        const hMEN    = Calculs.heuresGrille(div.niveau, disc);
         const hRef    = hMEN > 0 ? Math.round((hMEN + delta) * 2) / 2 : 0;
         // Dans la cellule cochée : heures affectées + référence simulée si scénario actif
         let innerLabel = '';
@@ -593,7 +593,7 @@ const DGHRepartition = (() => {
     // Éviter le doublon strict (même prof déjà sur ce couple)
     const deja = DGHData.getAffectationsCell(divisionId, disciplineId).some(a => a.ensId === ensId);
     if (deja) { app.toast('Cet enseignant est déjà affecté à cette classe pour cette discipline.', 'warning'); return; }
-    let h = Calculs.heuresGrille(div.niveau, disc.nom);
+    let h = Calculs.heuresGrille(div.niveau, disc);
     if (h <= 0) h = 1;
     DGHData.addAffectation({ divisionId, disciplineId, ensId, heures: h });
     renderRepartition();
@@ -613,7 +613,7 @@ const DGHRepartition = (() => {
     const scrollTop  = wrap ? wrap.scrollTop  : 0;
 
     if (el.checked) {
-      let h = Calculs.heuresGrille(div.niveau, disc.nom);
+      let h = Calculs.heuresGrille(div.niveau, disc);
       if (h <= 0) h = 1;
       DGHData.addAffectation({ divisionId, disciplineId, ensId, heures: h });
     } else {
@@ -678,7 +678,7 @@ const DGHRepartition = (() => {
       // Cocher ceux qui manquent
       ensDisc.forEach(ens => {
         if (!cell.some(a => a.ensId === ens.id)) {
-          let h = Calculs.heuresGrille(div.niveau, disc.nom);
+          let h = Calculs.heuresGrille(div.niveau, disc);
           if (h <= 0) h = 1;
           DGHData.addAffectation({ divisionId, disciplineId, ensId: ens.id, heures: h });
         }

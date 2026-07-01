@@ -117,6 +117,7 @@ const DGHDotation = (() => {
           + '<button class="btn-toggle-gc" data-disc-id="' + disc.id + '" title="Groupes de cours">\u25b6</button>'
           + '</td>'
           + '<td><span class="disc-color-dot" style="background:' + _esc(disc.couleur) + '"></span><strong class="div-nom">' + _esc(disc.nom) + '</strong>'
+          + (disc.rangLV ? '<span class="disc-rang-badge">' + _esc(disc.rangLV) + '</span>' : '')
           + (nbGC > 0 ? '<span class="gc-count-badge">' + nbGC + ' groupe' + (nbGC>1?'s':'') + '</span>' : '') + '</td>'
           + colsCells
           + '<td class="col-num dot-theorique">' + (b.hasGroupes
@@ -137,12 +138,14 @@ const DGHDotation = (() => {
         // Sous-lignes groupes de cours
         html += '<tr class="gc-subrows-row" id="gc-sub-' + disc.id + '" style="display:none"><td colspan="' + nbCols + '"><div class="gc-subrows">';
         if (b.groupesCours.length === 0) {
-          html += '<div class="gc-empty">Aucun groupe de cours \u2014 cliquez sur + pour en ajouter (ex. LV2 Espagnol, LV2 Allemand\u2026)</div>';
+          html += '<div class="gc-empty">Aucun groupe de cours \u2014 cliquez sur + pour en ajouter (ex. un groupe bilangue en LV2\u2026)</div>';
         } else {
           b.groupesCours.forEach(gc => {
             const classesLabel = gc.classesNoms && gc.classesNoms.length > 0 ? gc.classesNoms.join(', ') : '\u2014';
+            const rangEff = gc.rangLV || disc.rangLV || '';
             html += '<div class="gc-subrow">'
               + '<span class="gc-arrow">\u2514</span>'
+              + (rangEff ? '<span class="gc-rang-badge' + (gc.rangLV ? ' gc-rang-override' : '') + '" title="' + (gc.rangLV ? 'Rang propre à ce groupe' : 'Rang hérité de la discipline') + '">' + _esc(rangEff) + '</span>' : '')
               + '<span class="gc-nom"><strong>' + _esc(gc.nom||'\u2014') + '</strong></span>'
               + '<span class="gc-classes">' + _esc(classesLabel) + '</span>'
               + '<span class="gc-effectif">' + (gc.effectif||0) + ' \u00e9l\u00e8ves</span>'
@@ -288,10 +291,12 @@ const DGHDotation = (() => {
       const disc = DGHData.getDiscipline(id); if (!disc) return;
       _set('modalDiscTitle','Modifier la discipline'); _setVal('modalDiscId',id);
       _setVal('inputDiscNom',disc.nom); _setVal('inputDiscCouleur',disc.couleur||'#2d6a4f');
+      _setVal('inputDiscRangLV', disc.rangLV||'');
       _updateColorHint(disc.couleur||'#2d6a4f');
     } else {
       _set('modalDiscTitle','Ajouter une discipline'); _setVal('modalDiscId','');
-      _setVal('inputDiscNom',''); _setVal('inputDiscCouleur','#2d6a4f'); _updateColorHint('#2d6a4f');
+      _setVal('inputDiscNom',''); _setVal('inputDiscCouleur','#2d6a4f'); _setVal('inputDiscRangLV','');
+      _updateColorHint('#2d6a4f');
     }
     modal.classList.add('modal-open');
     setTimeout(()=>document.getElementById('inputDiscNom')?.focus(),60);
@@ -312,8 +317,9 @@ const DGHDotation = (() => {
     const nom = (document.getElementById('inputDiscNom')?.value||'').trim();
     if (!nom) { app.toast('Le nom est requis','warning'); return; }
     const couleur = document.getElementById('inputDiscCouleur')?.value||'#2d6a4f';
-    if (id) { DGHData.updateDiscipline(id,{nom,couleur}); app.toast('Discipline mise à jour','success'); }
-    else    { DGHData.addDiscipline({nom,couleur}); app.toast('Discipline \u00ab\u00a0'+nom+'\u00a0\u00bb ajoutée','success'); }
+    const rangLV  = document.getElementById('inputDiscRangLV')?.value||'';
+    if (id) { DGHData.updateDiscipline(id,{nom,couleur,rangLV}); app.toast('Discipline mise à jour','success'); }
+    else    { DGHData.addDiscipline({nom,couleur,rangLV}); app.toast('Discipline \u00ab\u00a0'+nom+'\u00a0\u00bb ajoutée','success'); }
     closeModalDisc(); renderDotation(); DGHDashboard.renderDashboard();
   }
 
@@ -381,20 +387,22 @@ const DGHDotation = (() => {
     if (hint && disc) {
       const grille = Calculs.GRILLES_MEN || {};
       const hParNiv = Object.entries(grille)
-        .filter(([,g]) => g[disc.nom])
-        .map(([niv,g]) => niv + ':' + g[disc.nom] + 'h')
+        .map(([niv,g]) => [niv, Calculs.heuresGrille(niv, disc)])
+        .filter(([,h]) => h > 0)
+        .map(([niv,h]) => niv + ':' + h + 'h')
         .join(', ');
-      hint.textContent = hParNiv ? 'Grille MEN : ' + hParNiv : '';
+      hint.textContent = hParNiv ? 'Grille MEN' + (disc.rangLV ? ' (' + disc.rangLV + ')' : '') + ' : ' + hParNiv : '';
     }
 
     if (gcId) {
       const gc = DGHData.getGroupeCours(discId, gcId); if (!gc) return;
       _set('modalGCTitle', 'Modifier le groupe de cours');
       _setVal('inputGCNom', gc.nom); _setVal('inputGCHeures', gc.heures); _setVal('inputGCComment', gc.commentaire||'');
+      _setVal('inputGCRangLV', gc.rangLV||'');
       (gc.classesIds||[]).forEach(id => { const cb=classesDiv?.querySelector('[value="'+id+'"]'); if(cb) cb.checked=true; });
     } else {
       _set('modalGCTitle', 'Ajouter un groupe de cours pour ' + (disc ? disc.nom : ''));
-      _setVal('inputGCNom',''); _setVal('inputGCHeures',''); _setVal('inputGCComment','');
+      _setVal('inputGCNom',''); _setVal('inputGCHeures',''); _setVal('inputGCComment',''); _setVal('inputGCRangLV','');
     }
 
     updateGCEffectif();
@@ -421,7 +429,9 @@ const DGHDotation = (() => {
     const nom    = (document.getElementById('inputGCNom')?.value||'').trim();
     if (!nom) { app.toast('Le nom du groupe est requis','warning'); return; }
     const classesIds = Array.from(document.querySelectorAll('#gcClassesCheck .classe-check:checked')).map(cb=>cb.value);
-    const fields = { nom, classesIds, heures: parseFloat(document.getElementById('inputGCHeures')?.value)||0, commentaire: document.getElementById('inputGCComment')?.value||'' };
+    const fields = { nom, classesIds, heures: parseFloat(document.getElementById('inputGCHeures')?.value)||0,
+                      rangLV: document.getElementById('inputGCRangLV')?.value||'',
+                      commentaire: document.getElementById('inputGCComment')?.value||'' };
     if (gcId) { DGHData.updateGroupeCours(discId, gcId, fields); app.toast('Groupe mis à jour','success'); }
     else      { DGHData.addGroupeCours(discId, fields); app.toast('Groupe \u00ab\u00a0'+nom+'\u00a0\u00bb ajouté','success'); }
     closeModalGC(); renderDotation();
