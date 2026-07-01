@@ -791,11 +791,21 @@ const DGHRepartition = (() => {
 
     const bilan = Calculs.bilanEquipeAvecScenario(enseignants, hpcs, data, modsActifs, hsaAbs);
     const rows  = bilan.rows.filter(r => r.hsaTotal > 0 || r.hScen > 0);
+    const nonRepartie = bilan.nonRepartieTotal || 0;
 
-    if (rows.length === 0) {
+    if (rows.length === 0 && nonRepartie <= 0) {
       return '<div class="rep-hsa-empty">'
         + '<div class="rep-hsa-empty-icon">✅</div>'
         + '<p>Aucune HSA à répartir avec le scénario actif.</p>'
+        + '</div>';
+    }
+
+    if (rows.length === 0 && nonRepartie > 0) {
+      return '<div class="rep-hsa-empty">'
+        + '<div class="rep-hsa-empty-icon">⏳</div>'
+        + '<p><strong>' + nonRepartie + 'h</strong> de HSA scénario en attente.</p>'
+        + '<p class="rep-saisie-hint">Aucun enseignant n\'est encore affecté sur les disciplines concernées — '
+        + 'affectez au moins une classe pour que l\'enveloppe se répartisse.</p>'
         + '</div>';
     }
 
@@ -841,6 +851,7 @@ const DGHRepartition = (() => {
     return '<div class="rep-hsa-banner scen-actif-banner">'
         + '<span>⚡ Scénario : <strong>' + _esc(scen.nom || 'Sans nom') + '</strong></span>'
         + '<span class="rep-hsa-banner-kpi font-mono">' + totalHSA + 'h HSA total dont ' + totalScen + 'h issues du scénario</span>'
+        + (nonRepartie > 0 ? '<span class="rep-hsa-banner-kpi font-mono rep-hsa-nonrep">' + nonRepartie + 'h en attente ⏳</span>' : '')
         + '<span class="rep-scen-info">— ajustez ligne par ligne dans l\'onglet Besoins & Apports</span>'
       + '</div>'
       + '<div class="rep-hsa-table-wrap">'
@@ -852,7 +863,12 @@ const DGHRepartition = (() => {
           + '</tr></tfoot>'
         + '</table>'
       + '</div>'
-      + '<p class="rep-saisie-hint" style="margin-top:.75rem">Répartition auto par ordre décroissant d\'ORS. '
+      + (nonRepartie > 0
+          ? '<p class="rep-saisie-hint" style="margin-top:.5rem">⏳ <strong>' + nonRepartie + 'h</strong> de scénario restent non réparties : '
+            + 'aucun enseignant n\'a encore de classe réelle affectée sur la ou les disciplines concernées.</p>'
+          : '')
+      + '<p class="rep-saisie-hint" style="margin-top:.75rem">Répartition auto au prorata des heures déjà affectées à chaque enseignant '
+        + '(un enseignant sans affectation réelle ne reçoit rien tant qu\'il n\'est pas posé sur au moins une classe). '
         + 'Ajustez les heures par enseignant dans <strong>Besoins &amp; Apports → HSA absorbées</strong>.</p>';
   }
 

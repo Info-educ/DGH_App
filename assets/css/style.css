@@ -4512,6 +4512,7 @@ td.col-grille {
 .rep-hsa-empty-icon { font-size: 2.5rem; margin-bottom: .75rem; opacity: .5; }
 .rep-hsa-banner { margin-bottom: 1rem; }
 .rep-hsa-banner-kpi { font-size: .82rem; background: var(--c-amber-bg); color: var(--c-amber); border-radius: 99px; padding: 1px 8px; font-weight: 600; }
+.rep-hsa-banner-kpi.rep-hsa-nonrep { background: var(--c-surface2); color: var(--c-text-muted); }
 .rep-hsa-table-wrap { overflow-x: auto; border: 1.5px solid var(--c-border); border-radius: 8px; }
 .rep-hsa-table { border-collapse: collapse; width: 100%; font-size: .83rem; }
 .rep-hsa-table thead tr { background: var(--c-surface2); border-bottom: 2px solid var(--c-border); }

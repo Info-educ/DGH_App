@@ -505,9 +505,35 @@ const Calculs = (() => {
 
 
 /**
+ * Heures réelles (hors scénario) qu'un enseignant porte déjà sur une discipline
+ * donnée — somme de ens.disciplines[].heures pour les entrées correspondant à
+ * discNom. Ces heures sont recalculées automatiquement depuis les affectations
+ * réelles (voir data.js _recomputeHeuresFromAffectations) dès qu'il en existe
+ * au moins une pour le couple (enseignant, discipline).
+ *
+ * @param {Object} ens     - fiche enseignant
+ * @param {string} discNom - nom de la discipline
+ * @returns {number}
+ */
+function _heuresReellesDiscipline(ens, discNom) {
+  return (Array.isArray(ens.disciplines) ? ens.disciplines : [])
+    .filter(d => (d.discNom || '').toLowerCase().trim() === (discNom || '').toLowerCase().trim())
+    .reduce((s, d) => s + (parseFloat(d.heures) || 0), 0);
+}
+
+/**
  * Attribue les heures HSA de scénario (dédoublements, co-enseignement, etc.)
- * aux enseignants d'une discipline, par ordre décroissant d'ORS (le plus fort
- * ORS absorbe en premier), en heures entières ou demi-heures uniquement.
+ * aux enseignants d'une discipline, au PRORATA de leurs heures réelles déjà
+ * affectées sur cette discipline (en heures entières ou demi-heures).
+ *
+ * Principe (Sprint 22, suite au retour terrain) : tant qu'AUCUN enseignant de
+ * la discipline n'a de vraie affectation, l'enveloppe scénario n'est attribuée
+ * à personne — elle reste "non répartie" (voir bilanScenario / onglet HSA).
+ * Ça évite qu'un enseignant non affecté apparaisse comme ayant déjà atteint
+ * son ORS via un volume purement projeté par le scénario.
+ * Dès qu'au moins un enseignant a des heures réelles, l'enveloppe est répartie
+ * proportionnellement à ce que chacun porte déjà — pas de priorité ORS qui
+ * ferait "rafler" tout le paquet au premier enseignant affecté.
  *
  * Retourne un objet { [ensId]: heures } représentant les heures de scénario
  * attribuées à chaque enseignant — utilisable comme point de départ pour
@@ -538,25 +564,43 @@ function attribuerHSAScenario(enseignants, disciplineId, discNom, hsaTotal, manu
   );
   if (profsDisc.length === 0) return {};
 
-  // Trier par ORS décroissant (le plus fort ORS absorbe en premier)
-  const tries = profsDisc.slice().sort((a, b) => {
-    const oa = getORS(a.grade, a.orsManuel);
-    const ob = getORS(b.grade, b.orsManuel);
-    return ob - oa; // décroissant
+  // Ne retenir que ceux ayant déjà des heures RÉELLES sur cette discipline.
+  // Aucun enseignant affecté → enveloppe non répartie (retour {}).
+  const engages = profsDisc
+    .map(ens => ({ ens, hReel: _heuresReellesDiscipline(ens, discNom) }))
+    .filter(x => x.hReel > 0);
+  if (engages.length === 0) return {};
+
+  const totalReel = engages.reduce((s, x) => s + x.hReel, 0);
+  if (totalReel <= 0) return {};
+
+  // Travail en demi-heures (entiers) pour un arrondi exact et déterministe.
+  const halfTotal = Math.round(hsaTotal * 2);
+
+  const parts = engages.map(x => {
+    const exact = halfTotal * (x.hReel / totalReel); // part exacte en demi-heures
+    return { ens: x.ens, hReel: x.hReel, exact, floor: Math.floor(exact), reste: exact - Math.floor(exact) };
   });
 
-  const result = {};
-  let restant = Math.round(hsaTotal * 2) / 2;
+  let attribueHalf = parts.reduce((s, p) => s + p.floor, 0);
+  let leftover = halfTotal - attribueHalf;
 
-  tries.forEach(ens => {
-    if (restant <= 0) return;
-    // Attribuer en heures entières ou demi-heures
-    const aAttribuer = Math.min(restant, Math.round(restant)); // au plus ce qui reste
-    const attrib = Math.round(aAttribuer * 2) / 2; // arrondi demi-heure
-    if (attrib > 0) {
-      result[ens.id] = attrib;
-      restant = Math.round((restant - attrib) * 2) / 2;
-    }
+  // Distribue les demi-heures restantes (arrondi) aux plus forts restes ;
+  // à égalité, priorité à celui qui porte déjà le plus d'heures réelles
+  // (cohérent avec la logique "au prorata de ce qu'on porte déjà").
+  const ordreLeftover = parts.slice().sort((a, b) => {
+    if (b.reste !== a.reste) return b.reste - a.reste;
+    return b.hReel - a.hReel;
+  });
+  for (let i = 0; i < ordreLeftover.length && leftover > 0; i++) {
+    ordreLeftover[i].floor += 1;
+    leftover--;
+  }
+
+  const result = {};
+  parts.forEach(p => {
+    const h = p.floor / 2;
+    if (h > 0) result[p.ens.id] = h;
   });
 
   return result;
@@ -1449,7 +1493,8 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
     // Attribuer les HSA scénario à chaque enseignant par discipline
     // hsaScenParEns : { ensId: total_heures_scen }
     const hsaScenParEns = {};
-    const attribParDisc = {}; // { disciplineId: { ensId: h } } — pour l'onglet HSA
+    const attribParDisc = {};    // { disciplineId: { ensId: h } } — pour l'onglet HSA
+    const nonRepartieParDisc = {}; // { disciplineId: heures } — enveloppe sans aucun prof engagé
 
     Object.entries(deltaParDisc).forEach(([discId, hsaTot]) => {
       const disc = (anneeData.disciplines || []).find(d => d.id === discId);
@@ -1457,6 +1502,9 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
       const manuel = habs[discId] ? (habs[discId].profs || {}) : {};
       const attrib = attribuerHSAScenario(list, discId, disc.nom, hsaTot, manuel);
       attribParDisc[discId] = attrib;
+      const attribue = Object.values(attrib).reduce((s, h) => s + (h || 0), 0);
+      const reste = Math.round((hsaTot - attribue) * 2) / 2;
+      if (reste > 0) nonRepartieParDisc[discId] = reste;
       Object.entries(attrib).forEach(([ensId, h]) => {
         hsaScenParEns[ensId] = Math.round(((hsaScenParEns[ensId] || 0) + h) * 2) / 2;
       });
@@ -1503,6 +1551,10 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
       parStatut: Object.values(parStatut),
       attribParDisc,
       deltaParDisc,
+      nonRepartieParDisc,
+      nonRepartieTotal: Math.round(
+        Object.values(nonRepartieParDisc).reduce((s, h) => s + h, 0) * 2
+      ) / 2,
       rows
     };
   }

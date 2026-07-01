@@ -3,6 +3,23 @@
 Toutes les modifications notables sont documentées ici.  
 Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF`
 
+## [4.19.1] — Correction attribution HSA scénario
+
+### Corrigé
+- **Bug : un enseignant non affecté apparaissait comme ayant déjà atteint son ORS.** `attribuerHSAScenario()` répartissait l'enveloppe HSA du scénario par ordre décroissant d'ORS, sans tenir compte des affectations réelles — le premier enseignant du classement (souvent non affecté à une seule classe) pouvait absorber toute l'enveloppe scénario d'un coup, faisant apparaître un total de service quasi complet avant toute affectation réelle.
+- **Nouvelle règle** :
+  - Tant qu'**aucun** enseignant de la discipline n'a de vraie affectation, l'enveloppe scénario n'est attribuée à personne (retour `{}`) — elle est affichée comme *« en attente »* dans l'onglet Répartition des HSA.
+  - Dès qu'au moins un enseignant a des heures réelles, l'enveloppe est répartie **au prorata de ce que chacun porte déjà** (arrondi demi-heure, méthode des plus forts restes pour un total exact), et non plus par priorité de grade.
+  - L'ajustement manuel (`hsaAbsorbees[disciplineId].profs`) reste toujours prioritaire et inchangé.
+
+### Technique
+- `calculs.js` : nouvelle fonction privée `_heuresReellesDiscipline(ens, discNom)`. `attribuerHSAScenario()` réécrite (prorata sur heures réelles au lieu du tri ORS glouton).
+- `bilanEquipeAvecScenario()` expose désormais `nonRepartieParDisc` et `nonRepartieTotal` (heures de scénario non attribuables faute d'enseignant engagé).
+- `repartition.js` — onglet « Répartition des HSA » : nouvel état vide *« HSA en attente »* quand l'enveloppe n'est pas répartie, bandeau mis à jour avec le total en attente, texte d'aide reformulé (prorata au lieu d'ORS).
+- `style.css` : `.rep-hsa-banner-kpi.rep-hsa-nonrep`.
+
+---
+
 ## [4.18.0] — Sprint 15
 
 ### Ajouté
