@@ -1,5 +1,5 @@
 /**
- * DGH App — Moteur de calcul v4.22.1
+ * DGH App — Moteur de calcul v4.22.2
  * Fonctions pures : zéro DOM, zéro localStorage
  *
  * v3.0.0 — Sprint 5 :
@@ -24,6 +24,17 @@
  *   réel du groupe. Toute discipline organisée en groupes de cours dans
  *   Dotation DGH — partagée ou non — est désormais vérifiée uniquement sur
  *   le volume réel du groupe.
+ * v4.22.2 — besoinsParDiscipline : hasGroupes était un interrupteur tout-ou-
+ *   rien par discipline. Dès qu'un seul groupe de cours était créé (ex. un
+ *   groupe germanistes sur une seule classe), le besoin théorique de TOUTE
+ *   la discipline basculait sur la somme des groupes définis, et les
+ *   classes non couvertes par un groupe disparaissaient silencieusement du
+ *   budget (leur besoin MEN n'était plus compté nulle part). Remplacé par
+ *   une couverture mixte, division par division : les classes couvertes
+ *   par un groupe comptent au volume réel du groupe (heuresGroupesReel),
+ *   les classes non couvertes retombent automatiquement sur la grille MEN
+ *   standard (besoinResiduelMEN), sans qu'aucun groupe supplémentaire ne
+ *   soit nécessaire pour les disciplines à classe entière (ex. Anglais).
  */
 
 
@@ -269,11 +280,29 @@ const Calculs = (() => {
         }, 0) * 2
       ) / 2;
       const hasGroupes = gcs.length > 0;
-      // Besoin affiché : si groupes → coût réel (h × classes), sinon besoin MEN
-      const besoinTheorique = hasGroupes ? heuresGroupesReel : besoinMEN;
+      // Couverture mixte (v4.22.2) : les divisions couvertes par un groupe de
+      // cours comptent au volume réel du groupe (heuresGroupesReel) ; toute
+      // division NON couverte reste sur la grille MEN standard, comme si la
+      // discipline n'avait aucun groupe. Avant : dès qu'un seul groupe était
+      // créé, la discipline entière basculait sur les groupes et les classes
+      // non couvertes disparaissaient silencieusement du besoin (ex. créer un
+      // groupe germanistes en 6eA faisait perdre le besoin MEN de 6eB, alors
+      // que 6eB n'a simplement pas encore de groupe défini).
+      const divisionsCouvertes = new Set();
+      gcs.forEach(g => (g.classesIds||[]).forEach(id => divisionsCouvertes.add(id)));
+      let besoinResiduelMEN = 0;
+      (structures||[]).forEach(div => {
+        if (divisionsCouvertes.has(div.id)) return; // couverte par un groupe : comptée dans heuresGroupesReel
+        const hMEN = heuresGrille(div.niveau, disc);
+        const hOverride = grillesOverride[disc.nom] && grillesOverride[disc.nom][div.niveau] !== undefined
+          ? grillesOverride[disc.nom][div.niveau] : hMEN;
+        besoinResiduelMEN += hOverride;
+      });
+      besoinResiduelMEN = Math.round(besoinResiduelMEN * 2) / 2;
+      const besoinTheorique = Math.round((heuresGroupesReel + besoinResiduelMEN) * 2) / 2;
       return {
         disciplineId: disc.id, nom: disc.nom, couleur: disc.couleur,
-        besoinTheorique, besoinMEN, hPoste, hsa, total,
+        besoinTheorique, besoinMEN, besoinResiduelMEN, hPoste, hsa, total,
         heuresGroupes: Math.round(heuresGroupesBrut*2)/2,
         heuresGroupesReel,
         hasGroupes,

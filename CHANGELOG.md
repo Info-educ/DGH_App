@@ -3,6 +3,19 @@
 Toutes les modifications notables sont documentées ici.  
 Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF`
 
+## [4.22.2] — Dotation DGH : couverture mixte groupe / grille MEN (fin du tout-ou-rien)
+
+### Corrigé
+- **Créer un seul groupe de cours sur une discipline faisait disparaître le besoin MEN de toutes les autres classes de cette discipline.** `hasGroupes` était un interrupteur global par discipline : dès qu'un groupe existait (ex. un groupe germanistes sur 6eA seulement), le besoin théorique de **toute** la discipline Allemand basculait sur la somme des groupes définis, et 6eB/5eA/5eB… (non couvertes par un groupe) sortaient silencieusement du calcul — ni comptées en grille, ni en groupe. C'était la cause du symptôme « il faut créer un groupe partout, même là où ce n'est pas pertinent ».
+- **Couverture mixte, classe par classe :** une classe couverte par un groupe de cours compte au volume réel du groupe ; une classe non couverte retombe automatiquement sur la grille MEN standard, exactement comme si la discipline n'avait aucun groupe. Une discipline à classe entière (ex. Anglais LV1) n'a donc plus besoin d'aucun groupe de cours — seules les disciplines réellement organisées en groupes partiels (ex. Allemand LV2, un sous-ensemble d'élèves par classe) en ont besoin, et uniquement sur les classes concernées.
+- Le tableau Dotation DGH affiche désormais le détail du calcul (« X h groupes + Y h grille (classes non couvertes) ») au lieu du seul total des groupes.
+
+### Technique
+- `calculs.js` : `besoinsParDiscipline()` — `besoinTheorique` = `heuresGroupesReel` (classes couvertes par un groupe) + `besoinResiduelMEN` (classes restantes, grille MEN/override). Nouveau champ retourné `besoinResiduelMEN`. Comportement inchangé quand aucun groupe n'existe (`besoinResiduelMEN` = `besoinMEN`).
+- `dotation.js` : affichage de la ligne « besoin théorique » mis à jour pour refléter la couverture mixte.
+
+---
+
 ## [4.22.1] — Répartition de service : fausse alerte sur les disciplines en groupes non partagés
 
 ### Corrigé
