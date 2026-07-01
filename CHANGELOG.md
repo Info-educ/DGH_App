@@ -3,6 +3,22 @@
 Toutes les modifications notables sont documentées ici.  
 Format : [Semantic Versioning](https://semver.org/) — `MAJEUR.MINEUR.CORRECTIF`
 
+## [4.19.2] — Attribution HSA scénario : case par case (cohérence avec la saisie rapide)
+
+### Corrigé
+- **Incohérence entre la ligne récap et la cellule cochée** (ex : ligne récap "6h HP dont +1,5h⚡" alors que la classe cochée affichait "4,5h / 5,5h⚡"). La v4.19.1 répartissait l'enveloppe scénario **au prorata des heures réelles sur toute la discipline** — un enseignant pouvait donc absorber une part du delta d'une classe qu'il n'a même pas, tant que le total collait.
+- **Nouvelle règle, plus stricte** : l'attribution se fait désormais **classe par classe**. Pour chaque division où le scénario apporte un delta, seuls les enseignants **réellement affectés sur cette classe précise** se le partagent (au prorata de leurs heures dans cette case — gère le partage à 2 profs). Une classe sans personne d'affecté ne contribue à personne : son delta reste "en attente".
+- Résultat : la ligne récap d'un enseignant = exactement la somme des `+Xh⚡` visibles sur ses propres cases cochées dans la saisie rapide. Plus aucun écart possible entre les deux affichages.
+
+### Technique
+- `calculs.js` : `deltaScenarioParCase(modificateurs, disciplineId, divisionId)` — extraite de `repartition.js`, devient la source unique de vérité (pure, exportée).
+- `attribuerHSAScenario()` change de signature : `(divisions, affectations, disciplineId, modificateurs, manuelProfs)` → `{ attrib, nonRepartie }`. Ne dépend plus de la liste des enseignants ni d'un total pré-calculé ; parcourt les classes une à une et n'attribue qu'aux affectations réelles de chaque case.
+- `bilanEquipeAvecScenario()` reconstruit `hsaScenParEns` en itérant `anneeData.disciplines × anneeData.structures` au lieu de `bilanScenario().detailParMod` ; `deltaParDisc` retiré (plus utilisé).
+- `repartition.js` : `_deltaScenarioParCase()` délègue à `Calculs.deltaScenarioParCase()` (suppression du doublon) ; `_htmlRecapEns()` appelle la nouvelle signature via `DGHData.getStructures()` / `DGHData.getAffectations()`.
+- Textes d'aide de l'onglet « Répartition des HSA » reformulés (répartition classe par classe, plus « prorata des heures déjà affectées »).
+
+---
+
 ## [4.19.1] — Correction attribution HSA scénario
 
 ### Corrigé

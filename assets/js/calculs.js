@@ -505,105 +505,93 @@ const Calculs = (() => {
 
 
 /**
- * Heures réelles (hors scénario) qu'un enseignant porte déjà sur une discipline
- * donnée — somme de ens.disciplines[].heures pour les entrées correspondant à
- * discNom. Ces heures sont recalculées automatiquement depuis les affectations
- * réelles (voir data.js _recomputeHeuresFromAffectations) dès qu'il en existe
- * au moins une pour le couple (enseignant, discipline).
- *
- * @param {Object} ens     - fiche enseignant
- * @param {string} discNom - nom de la discipline
- * @returns {number}
+ * Calcule le delta heures apporté par le scénario actif pour un couple
+ * (disciplineId, divisionId) précis. Parcourt tous les modificateurs pédagogiques
+ * dont classeIds inclut divisionId et dont disciplineId correspond.
+ * Fonction pure — source unique de vérité, utilisée à la fois pour l'affichage
+ * des cellules (répartition.js) et pour l'attribution des HSA de scénario.
+ * @returns {number} delta en heures (0 si aucun modificateur)
  */
-function _heuresReellesDiscipline(ens, discNom) {
-  return (Array.isArray(ens.disciplines) ? ens.disciplines : [])
-    .filter(d => (d.discNom || '').toLowerCase().trim() === (discNom || '').toLowerCase().trim())
-    .reduce((s, d) => s + (parseFloat(d.heures) || 0), 0);
+function deltaScenarioParCase(modificateurs, disciplineId, divisionId) {
+  if (!Array.isArray(modificateurs) || modificateurs.length === 0) return 0;
+  const MODS_PEDAGOGIQUES = ['dedoublement','co-enseignement','groupe-effectif-reduit','groupes-besoins','autre'];
+  let delta = 0;
+  modificateurs.forEach(mod => {
+    if (!MODS_PEDAGOGIQUES.includes(mod.type)) return;
+    if (mod.disciplineId !== disciplineId) return;
+    if (!Array.isArray(mod.classeIds) || !mod.classeIds.includes(divisionId)) return;
+    if (mod.type === 'groupes-besoins') {
+      // groupes-besoins : coût = heuresParGroupe × ceil(nbClasses/2), réparti uniformément
+      const nbClasses = mod.classeIds.length;
+      const nbGroupes = Math.max(1, Math.ceil(nbClasses / 2));
+      delta += Math.round((mod.heuresParGroupe || 0) * nbGroupes / nbClasses * 2) / 2;
+    } else {
+      delta += mod.heuresParGroupe || 0;
+    }
+  });
+  return Math.round(delta * 2) / 2;
 }
 
 /**
  * Attribue les heures HSA de scénario (dédoublements, co-enseignement, etc.)
- * aux enseignants d'une discipline, au PRORATA de leurs heures réelles déjà
- * affectées sur cette discipline (en heures entières ou demi-heures).
+ * aux enseignants d'une discipline, CASE PAR CASE (division × discipline) :
+ * pour chaque classe où le scénario apporte un delta, on ne l'attribue qu'aux
+ * enseignants RÉELLEMENT affectés sur cette case précise, au prorata de leurs
+ * heures réelles dans cette case (gère le partage de classe entre 2 profs).
  *
- * Principe (Sprint 22, suite au retour terrain) : tant qu'AUCUN enseignant de
- * la discipline n'a de vraie affectation, l'enveloppe scénario n'est attribuée
- * à personne — elle reste "non répartie" (voir bilanScenario / onglet HSA).
- * Ça évite qu'un enseignant non affecté apparaisse comme ayant déjà atteint
- * son ORS via un volume purement projeté par le scénario.
- * Dès qu'au moins un enseignant a des heures réelles, l'enveloppe est répartie
- * proportionnellement à ce que chacun porte déjà — pas de priorité ORS qui
- * ferait "rafler" tout le paquet au premier enseignant affecté.
- *
- * Retourne un objet { [ensId]: heures } représentant les heures de scénario
- * attribuées à chaque enseignant — utilisable comme point de départ pour
- * l'onglet "Répartition des HSA".
+ * Principe (Sprint 22, suite au retour terrain) : une classe sans aucun
+ * enseignant affecté ne contribue à personne — son delta reste "non réparti"
+ * (retourné dans nonRepartie) tant qu'elle n'est pas posée. Ça évite qu'un
+ * enseignant non affecté sur une classe donnée absorbe malgré tout le delta
+ * scénario d'une AUTRE classe de la même discipline : le nombre affiché sur
+ * la ligne récap correspond exactement à la somme des cases réellement
+ * cochées pour cet enseignant, comme dans les cellules de la saisie rapide.
  *
  * Si hsaAbsorbees[disciplineId].profs est déjà renseigné (ajustement manuel),
  * on retourne directement ces valeurs sans recalculer.
  *
- * @param {Array}  enseignants   - DGHData.getEnseignants()
+ * @param {Array}  divisions     - DGHData.getStructures() (toutes les classes)
+ * @param {Array}  affectations  - DGHData.getAffectations() (toutes, non filtrées)
  * @param {string} disciplineId  - identifiant de la discipline
- * @param {string} discNom       - nom de la discipline (pour matcher ens.disciplines)
- * @param {number} hsaTotal      - total heures HSA à absorber (depuis bilanScenario)
+ * @param {Array}  modificateurs - scénario actif (scen.modificateurs)
  * @param {Object} manuelProfs   - { [ensId]: heures } overrides manuels éventuels
- * @returns {{ [ensId]: number }}
+ * @returns {{ attrib: {[ensId]: number}, nonRepartie: number }}
  */
-function attribuerHSAScenario(enseignants, disciplineId, discNom, hsaTotal, manuelProfs) {
+function attribuerHSAScenario(divisions, affectations, disciplineId, modificateurs, manuelProfs) {
   // Override manuel : si déjà saisi, on l'utilise directement
   if (manuelProfs && Object.keys(manuelProfs).length > 0) {
-    return Object.assign({}, manuelProfs);
-  }
-  if (!hsaTotal || hsaTotal <= 0) return {};
-
-  // Filtrer les enseignants de cette discipline
-  const profsDisc = (enseignants || []).filter(ens =>
-    Array.isArray(ens.disciplines) && ens.disciplines.some(d =>
-      (d.discNom || '').toLowerCase().trim() === (discNom || '').toLowerCase().trim()
-    )
-  );
-  if (profsDisc.length === 0) return {};
-
-  // Ne retenir que ceux ayant déjà des heures RÉELLES sur cette discipline.
-  // Aucun enseignant affecté → enveloppe non répartie (retour {}).
-  const engages = profsDisc
-    .map(ens => ({ ens, hReel: _heuresReellesDiscipline(ens, discNom) }))
-    .filter(x => x.hReel > 0);
-  if (engages.length === 0) return {};
-
-  const totalReel = engages.reduce((s, x) => s + x.hReel, 0);
-  if (totalReel <= 0) return {};
-
-  // Travail en demi-heures (entiers) pour un arrondi exact et déterministe.
-  const halfTotal = Math.round(hsaTotal * 2);
-
-  const parts = engages.map(x => {
-    const exact = halfTotal * (x.hReel / totalReel); // part exacte en demi-heures
-    return { ens: x.ens, hReel: x.hReel, exact, floor: Math.floor(exact), reste: exact - Math.floor(exact) };
-  });
-
-  let attribueHalf = parts.reduce((s, p) => s + p.floor, 0);
-  let leftover = halfTotal - attribueHalf;
-
-  // Distribue les demi-heures restantes (arrondi) aux plus forts restes ;
-  // à égalité, priorité à celui qui porte déjà le plus d'heures réelles
-  // (cohérent avec la logique "au prorata de ce qu'on porte déjà").
-  const ordreLeftover = parts.slice().sort((a, b) => {
-    if (b.reste !== a.reste) return b.reste - a.reste;
-    return b.hReel - a.hReel;
-  });
-  for (let i = 0; i < ordreLeftover.length && leftover > 0; i++) {
-    ordreLeftover[i].floor += 1;
-    leftover--;
+    return { attrib: Object.assign({}, manuelProfs), nonRepartie: 0 };
   }
 
-  const result = {};
-  parts.forEach(p => {
-    const h = p.floor / 2;
-    if (h > 0) result[p.ens.id] = h;
+  const divs = Array.isArray(divisions) ? divisions : [];
+  const affs = Array.isArray(affectations) ? affectations : [];
+  const attrib = {};
+  let nonRepartie = 0;
+
+  divs.forEach(div => {
+    const delta = deltaScenarioParCase(modificateurs, disciplineId, div.id);
+    if (!delta || delta <= 0) return;
+
+    const cell = affs.filter(a => a.divisionId === div.id && a.disciplineId === disciplineId);
+    const totalReel = cell.reduce((s, a) => s + (parseFloat(a.heures) || 0), 0);
+
+    if (cell.length === 0 || totalReel <= 0) {
+      // Personne d'affecté sur cette case : delta non réparti (pas de fantôme)
+      nonRepartie = Math.round((nonRepartie + delta) * 2) / 2;
+      return;
+    }
+
+    // Réparti au prorata des heures réelles de chaque enseignant DANS cette case
+    // (1 seul enseignant → il prend tout ; classe partagée → prorata entre eux)
+    cell.forEach(aff => {
+      const part = Math.round((delta * ((parseFloat(aff.heures) || 0) / totalReel)) * 2) / 2;
+      if (part > 0) {
+        attrib[aff.ensId] = Math.round(((attrib[aff.ensId] || 0) + part) * 2) / 2;
+      }
+    });
   });
 
-  return result;
+  return { attrib, nonRepartie };
 }
 
 /**
@@ -1478,34 +1466,25 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
     const list  = Array.isArray(enseignants) ? enseignants : [];
     const habs  = hsaAbsorbees || {};
 
-    // Calculer le delta HSA par discipline depuis le scénario
-    const bScen = mods.length > 0 ? bilanScenario(anneeData, mods) : null;
-    // deltaHSAParDisc : { disciplineId: heures_hsa_scenario }
-    const deltaParDisc = {};
-    if (bScen) {
-      (bScen.detailParMod || []).forEach(d => {
-        if (d.disciplineId) {
-          deltaParDisc[d.disciplineId] = Math.round(((deltaParDisc[d.disciplineId] || 0) + (d.hsa || 0) + (d.hp || 0)) * 2) / 2;
-        }
-      });
-    }
+    // Attribuer les HSA scénario à chaque enseignant, CASE PAR CASE (division ×
+    // discipline), en ne comptant que les affectations réelles — voir
+    // attribuerHSAScenario(). Le résultat par enseignant est donc exactement la
+    // somme des deltas des classes qu'il a réellement (celles cochées dans la
+    // saisie rapide), jamais une part théorique d'une autre classe.
+    const divisions    = anneeData.structures    || [];
+    const affectations = anneeData.affectations  || [];
+    const disciplines  = anneeData.disciplines   || [];
 
-    // Attribuer les HSA scénario à chaque enseignant par discipline
-    // hsaScenParEns : { ensId: total_heures_scen }
     const hsaScenParEns = {};
-    const attribParDisc = {};    // { disciplineId: { ensId: h } } — pour l'onglet HSA
-    const nonRepartieParDisc = {}; // { disciplineId: heures } — enveloppe sans aucun prof engagé
+    const attribParDisc = {};      // { disciplineId: { ensId: h } } — pour l'onglet HSA
+    const nonRepartieParDisc = {}; // { disciplineId: heures } — classes sans prof affecté
 
-    Object.entries(deltaParDisc).forEach(([discId, hsaTot]) => {
-      const disc = (anneeData.disciplines || []).find(d => d.id === discId);
-      if (!disc) return;
-      const manuel = habs[discId] ? (habs[discId].profs || {}) : {};
-      const attrib = attribuerHSAScenario(list, discId, disc.nom, hsaTot, manuel);
-      attribParDisc[discId] = attrib;
-      const attribue = Object.values(attrib).reduce((s, h) => s + (h || 0), 0);
-      const reste = Math.round((hsaTot - attribue) * 2) / 2;
-      if (reste > 0) nonRepartieParDisc[discId] = reste;
-      Object.entries(attrib).forEach(([ensId, h]) => {
+    disciplines.forEach(disc => {
+      const manuel = habs[disc.id] ? (habs[disc.id].profs || {}) : {};
+      const res = attribuerHSAScenario(divisions, affectations, disc.id, mods, manuel);
+      attribParDisc[disc.id] = res.attrib;
+      if (res.nonRepartie > 0) nonRepartieParDisc[disc.id] = res.nonRepartie;
+      Object.entries(res.attrib).forEach(([ensId, h]) => {
         hsaScenParEns[ensId] = Math.round(((hsaScenParEns[ensId] || 0) + h) * 2) / 2;
       });
     });
@@ -1550,7 +1529,6 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
       totalGeneral: Math.round(totalGeneral * 2) / 2,
       parStatut: Object.values(parStatut),
       attribParDisc,
-      deltaParDisc,
       nonRepartieParDisc,
       nonRepartieTotal: Math.round(
         Object.values(nonRepartieParDisc).reduce((s, h) => s + h, 0) * 2
@@ -1565,6 +1543,7 @@ function creneauBleuOptimal(enseignants, indisponibilites, contraintesLibres, cr
     resumeStructures, bilanDotation, besoinsParDiscipline,
     suggererRepartition, bilanHPC, genererAlertes, serviceTotalEnseignant, bilanEquipe,
     bilanEquipeAvecScenario, attribuerHSAScenario, serviceTotalAvecScenario,
+    deltaScenarioParCase,
     bilanBesoinsApports,
     bilanScenario, comparerScenarios, comparatifDisciplines,
     syntheseCA, dialogueGestion, recapServices,

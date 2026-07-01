@@ -69,28 +69,12 @@ const DGHRepartition = (() => {
 
   /**
    * Calcule le delta heures apporté par le scénario actif pour un couple
-   * (disciplineId, divisionId) précis. Parcourt tous les modificateurs pédagogiques
-   * dont classeIds inclut divisionId et dont disciplineId correspond.
+   * (disciplineId, divisionId) précis. Délègue à Calculs.deltaScenarioParCase,
+   * source unique de vérité (partagée avec l'attribution des HSA de scénario).
    * @returns {number} delta en heures (0 si aucun modificateur)
    */
   function _deltaScenarioParCase(modificateurs, disciplineId, divisionId) {
-    if (!Array.isArray(modificateurs) || modificateurs.length === 0) return 0;
-    const MODS_PEDAGOGIQUES = ['dedoublement','co-enseignement','groupe-effectif-reduit','groupes-besoins','autre'];
-    let delta = 0;
-    modificateurs.forEach(mod => {
-      if (!MODS_PEDAGOGIQUES.includes(mod.type)) return;
-      if (mod.disciplineId !== disciplineId) return;
-      if (!Array.isArray(mod.classeIds) || !mod.classeIds.includes(divisionId)) return;
-      if (mod.type === 'groupes-besoins') {
-        // groupes-besoins : coût = heuresParGroupe × ceil(nbClasses/2), réparti uniformément
-        const nbClasses = mod.classeIds.length;
-        const nbGroupes = Math.max(1, Math.ceil(nbClasses / 2));
-        delta += Math.round((mod.heuresParGroupe || 0) * nbGroupes / nbClasses * 2) / 2;
-      } else {
-        delta += mod.heuresParGroupe || 0;
-      }
-    });
-    return Math.round(delta * 2) / 2;
+    return Calculs.deltaScenarioParCase(modificateurs, disciplineId, divisionId);
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -720,31 +704,18 @@ const DGHRepartition = (() => {
   function _htmlRecapEns(ens, disc, allDivs, mods) {
     const hpcs = DGHData.getHeuresPedaComp();
 
-    // Heures de scénario attribuées à cet enseignant sur cette discipline
+    // Heures de scénario attribuées à cet enseignant sur cette discipline —
+    // exactement la somme des deltas des classes qu'il a réellement (cohérent
+    // avec les indicateurs +Xh⚡ affichés sur ses propres cases cochées).
     const hsaAbsorbees = DGHData.getHsaAbsorbees();
-    const data         = DGHData.getAnnee();
     const scen         = DGHData.getScenarioActif();
     const modsActifs   = scen ? (scen.modificateurs || []) : mods;
+    const divisions    = DGHData.getStructures();
+    const affectations = DGHData.getAffectations();
 
-    // Delta scénario total sur cette discipline
-    let deltaDisc = 0;
-    const MODS_PED = ['dedoublement','co-enseignement','groupe-effectif-reduit','groupes-besoins','autre'];
-    modsActifs.forEach(mod => {
-      if (!MODS_PED.includes(mod.type)) return;
-      if (mod.disciplineId !== disc.id) return;
-      deltaDisc += mod.heuresParGroupe || 0;
-    });
-    deltaDisc = Math.round(deltaDisc * 2) / 2;
-
-    // Attribution scénario pour cette discipline
-    let hScen = 0;
-    if (deltaDisc > 0) {
-      const manuel = hsaAbsorbees[disc.id] ? (hsaAbsorbees[disc.id].profs || {}) : {};
-      const attrib = Calculs.attribuerHSAScenario(
-        DGHData.getEnseignants(), disc.id, disc.nom, deltaDisc, manuel
-      );
-      hScen = attrib[ens.id] || 0;
-    }
+    const manuel = hsaAbsorbees[disc.id] ? (hsaAbsorbees[disc.id].profs || {}) : {};
+    const res    = Calculs.attribuerHSAScenario(divisions, affectations, disc.id, modsActifs, manuel);
+    const hScen  = res.attrib[ens.id] || 0;
 
     const sv = Calculs.serviceTotalAvecScenario(ens, hpcs, hScen);
 
@@ -804,8 +775,8 @@ const DGHRepartition = (() => {
       return '<div class="rep-hsa-empty">'
         + '<div class="rep-hsa-empty-icon">⏳</div>'
         + '<p><strong>' + nonRepartie + 'h</strong> de HSA scénario en attente.</p>'
-        + '<p class="rep-saisie-hint">Aucun enseignant n\'est encore affecté sur les disciplines concernées — '
-        + 'affectez au moins une classe pour que l\'enveloppe se répartisse.</p>'
+        + '<p class="rep-saisie-hint">Aucune des classes concernées par le scénario n\'a encore d\'enseignant réellement affecté — '
+        + 'affectez au moins une classe pour que son delta se répartisse.</p>'
         + '</div>';
     }
 
@@ -865,10 +836,10 @@ const DGHRepartition = (() => {
       + '</div>'
       + (nonRepartie > 0
           ? '<p class="rep-saisie-hint" style="margin-top:.5rem">⏳ <strong>' + nonRepartie + 'h</strong> de scénario restent non réparties : '
-            + 'aucun enseignant n\'a encore de classe réelle affectée sur la ou les disciplines concernées.</p>'
+            + 'certaines classes concernées par le scénario n\'ont encore aucun enseignant réellement affecté.</p>'
           : '')
-      + '<p class="rep-saisie-hint" style="margin-top:.75rem">Répartition auto au prorata des heures déjà affectées à chaque enseignant '
-        + '(un enseignant sans affectation réelle ne reçoit rien tant qu\'il n\'est pas posé sur au moins une classe). '
+      + '<p class="rep-saisie-hint" style="margin-top:.75rem">Répartition auto classe par classe : chaque enseignant reçoit exactement '
+        + 'le delta scénario des classes où il est réellement affecté (une classe partagée répartit son delta au prorata des heures de chaque enseignant sur cette classe). '
         + 'Ajustez les heures par enseignant dans <strong>Besoins &amp; Apports → HSA absorbées</strong>.</p>';
   }
 
